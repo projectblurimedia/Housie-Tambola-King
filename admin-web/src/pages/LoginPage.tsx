@@ -3,36 +3,32 @@ import { Navigate } from 'react-router-dom';
 import { errorText, isConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/Auth';
 
-/** Phone OTP sign-in, same Supabase Auth as the app. Admin role is checked after sign-in. */
+/**
+ * Temporary admin sign-in: mobile number + password (no SMS provider is connected yet).
+ * Each admin is a Supabase email/password user whose email is derived from the number,
+ * created by SQL (see docs/environment.md → "Admin login"). The admin role is still
+ * checked server-side on every admin RPC. Planned: switch back to phone OTP + 2FA.
+ */
+export function adminEmailFor(mobile: string): string {
+  return `91${mobile.replace(/\D/g, '').slice(-10)}@admin.housietambolaking.app`;
+}
+
 export function LoginPage() {
   const { session } = useAuth();
   const [phone, setPhone] = useState('');
-  const [code, setCode] = useState('');
-  const [sent, setSent] = useState(false);
+  const [password, setPassword] = useState('');
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
 
   if (session) return <Navigate to="/" replace />;
 
-  const e164 = `+91${phone.replace(/\D/g, '').slice(-10)}`;
-
-  const send = async (e: FormEvent) => {
+  const signIn = async (e: FormEvent) => {
     e.preventDefault();
     setBusy(true);
     setError('');
-    const { error: err } = await supabase.auth.signInWithOtp({ phone: e164, options: { shouldCreateUser: false } });
+    const { error: err } = await supabase.auth.signInWithPassword({ email: adminEmailFor(phone), password });
     setBusy(false);
-    if (err) setError(errorText(err));
-    else setSent(true);
-  };
-
-  const verify = async (e: FormEvent) => {
-    e.preventDefault();
-    setBusy(true);
-    setError('');
-    const { error: err } = await supabase.auth.verifyOtp({ phone: e164, token: code, type: 'sms' });
-    setBusy(false);
-    if (err) setError(errorText(err));
+    if (err) setError(err.message.includes('Invalid login') ? 'Wrong mobile number or password' : errorText(err));
   };
 
   return (
@@ -47,27 +43,18 @@ export function LoginPage() {
         </div>
         {!isConfigured ? (
           <p className="error">Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in admin-web/.env.local</p>
-        ) : !sent ? (
-          <form onSubmit={send} style={{ display: 'grid', gap: 12 }}>
+        ) : (
+          <form onSubmit={signIn} style={{ display: 'grid', gap: 12 }}>
             <label className="field">
               Admin mobile number
               <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="10-digit mobile" inputMode="numeric" autoFocus />
             </label>
-            <button className="btn" disabled={busy || phone.replace(/\D/g, '').length < 10}>
-              {busy ? 'Sending…' : 'Send code'}
-            </button>
-          </form>
-        ) : (
-          <form onSubmit={verify} style={{ display: 'grid', gap: 12 }}>
             <label className="field">
-              Code sent to {e164}
-              <input value={code} onChange={(e) => setCode(e.target.value.replace(/\D/g, '').slice(0, 6))} inputMode="numeric" autoFocus />
+              Password
+              <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
             </label>
-            <button className="btn" disabled={busy || code.length !== 6}>
-              {busy ? 'Verifying…' : 'Sign in'}
-            </button>
-            <button type="button" className="btn ghost" onClick={() => setSent(false)}>
-              Change number
+            <button className="btn" disabled={busy || phone.replace(/\D/g, '').length < 10 || !password}>
+              {busy ? 'Signing in…' : 'Sign in'}
             </button>
           </form>
         )}

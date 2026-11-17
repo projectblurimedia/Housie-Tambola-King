@@ -19,3 +19,10 @@ The anon key is public by design — Row Level Security and the SECURITY DEFINER
 3. **Integrations → Cron**: pg_cron is enabled by the migration; jobs `housie-game-tick` (1 s), `housie-cleanup-stale`, `housie-cron-history-prune` should be listed.
 4. **Realtime → Settings**: keep "Allow public access" **off** (game channels are private).
 
+
+## Admin login (temporary)
+Until an SMS provider is connected, admins sign in to admin-web with **mobile number + password**.
+Each admin is a Supabase email/password user whose email is `91<mobile>@admin.housietambolaking.app`
+(created directly in `auth.users` with `extensions.crypt(...)`, then `profiles.role = 'admin'`).
+Current admin: 7093054784. Change a password in Supabase Dashboard → Authentication → Users.
+Planned: phone OTP + 2FA for admins.
