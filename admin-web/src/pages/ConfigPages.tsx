@@ -40,7 +40,6 @@ export function SettingsPage() {
   };
   return (
     <>
-      <h1>Settings</h1>
       <div className="panel" style={{ maxWidth: 640, display: 'grid', gap: 14 }}>
         <label className="field">
           Minimum app version
@@ -77,7 +76,6 @@ export function AuditPage() {
   const { data } = useAsync(() => must<AuditRow[]>(supabase.from('audit_log').select('*').order('id', { ascending: false }).limit(200)));
   return (
     <>
-      <h1>Audit Log</h1>
       <p className="muted">Append-only record of admin actions and config changes (latest 200).</p>
       <div className="panel table-wrap">
         <table>

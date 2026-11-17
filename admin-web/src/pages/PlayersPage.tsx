@@ -40,7 +40,6 @@ export function PlayersPage() {
 
   return (
     <>
-      <h1>Players</h1>
       <form
         className="row"
         onSubmit={(e) => {

@@ -7,8 +7,6 @@ import type { RootStackParamList } from './types';
 
 import { LanguageSelectScreen } from '@/screens/auth/LanguageSelectScreen';
 import { WelcomeScreen } from '@/screens/auth/WelcomeScreen';
-import { PhoneScreen } from '@/screens/auth/PhoneScreen';
-import { OtpScreen } from '@/screens/auth/OtpScreen';
 import { HomeScreen } from '@/screens/home/HomeScreen';
 import { CreateRoomScreen } from '@/screens/room/CreateRoomScreen';
 import { JoinRoomScreen } from '@/screens/room/JoinRoomScreen';
@@ -37,8 +35,6 @@ export function RootNavigator() {
       ) : !session ? (
         <>
           <Stack.Screen name="Welcome" component={WelcomeScreen} />
-          <Stack.Screen name="Phone" component={PhoneScreen} initialParams={{ mode: 'login' }} />
-          <Stack.Screen name="Otp" component={OtpScreen} />
         </>
       ) : (
         <>
@@ -53,8 +49,6 @@ export function RootNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="HowToPlay" component={HowToPlayScreen} />
-          <Stack.Screen name="Phone" component={PhoneScreen} />
-          <Stack.Screen name="Otp" component={OtpScreen} />
         </>
       )}
     </Stack.Navigator>

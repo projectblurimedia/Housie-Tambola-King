@@ -16,7 +16,8 @@ _Last updated: 2026-11-17_
 - Secondary: Solo vs bots (offline), Caller Mode (printable tickets).
 
 ### Accounts
-Name entry → guest (Supabase anonymous, name in metadata) → play instantly. Optional phone OTP (Fast2SMS) to keep the account.
+**Testing phase (owner, 2026-11-18):** name + mobile number → logged in directly, **no OTP** (`phone_login` RPC, migration 20261118000001). Same number = same account. No guest/anonymous mode. Must be replaced by real SMS OTP before public launch (anyone can sign in as any number today).
+Admin web: mobile + password (temporary), admin 7093054784.
 
 ## Status
 | Area | State |
@@ -26,11 +27,11 @@ Name entry → guest (Supabase anonymous, name in metadata) → play instantly. 
 | App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |
 | GitHub | https://github.com/projectblurimedia/Housie-Tambola-King (`main`) |
-| E2E `scripts/smoke-test.mjs` | Needs "Allow anonymous sign-ins" ON in Supabase Auth settings |
+| E2E `scripts/smoke-test.mjs` | **Passes live** against the hosted project (2026-11-18) |
 
 All accounts for this project belong to projectblurimedia@gmail.com (owner's rule). This PC's default Vercel/GitHub logins are NearbyU's — use `--global-config C:/Users/MANIKANTA/.vercel-projectblurimedia` for Vercel and the `projectblurimedia@` remote URL for git.
 
 Removed in the 2026-11-17 redesign (never shipped): coins/wallet, daily bonus, Razorpay, public auto-scheduled tiers, global leaderboard.
 
 ## Pending from owner
-Supabase project URL + anon key + access token + DB password; Fast2SMS key (optional — guests work without SMS); privacy/terms URLs, support email.
+Fast2SMS key (to add real OTP), privacy/terms URLs, support email.

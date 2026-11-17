@@ -3,8 +3,8 @@ export const fonts = {
   medium: 'Poppins_500Medium',
   semibold: 'Poppins_600SemiBold',
   bold: 'Poppins_700Bold',
-  /** Big numbers & headings — rounded, playful, supports Telugu-adjacent Indic feel. */
-  display: 'Baloo2_800ExtraBold',
+  /** Big numbers & headings. Poppins everywhere (owner preference). */
+  display: 'Poppins_800ExtraBold',
 } as const;
 
 export const typography = {

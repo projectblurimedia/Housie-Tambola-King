@@ -6,8 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import * as Updates from 'expo-updates';
 import * as Notifications from 'expo-notifications';
-import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold } from '@expo-google-fonts/poppins';
-import { Baloo2_800ExtraBold } from '@expo-google-fonts/baloo-2';
+import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from '@expo-google-fonts/poppins';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
@@ -104,7 +103,7 @@ export default function App() {
     Poppins_500Medium,
     Poppins_600SemiBold,
     Poppins_700Bold,
-    Baloo2_800ExtraBold,
+    Poppins_800ExtraBold,
   });
   const { colors, isDark } = useThemeColors();
   const sessionReady = useSessionStore((s) => s.isReady);

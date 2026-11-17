@@ -55,7 +55,7 @@ export function ProfileScreen() {
   });
 
   const logout = () =>
-    Alert.alert('', me.data?.isGuest ? t('profile.logoutGuestWarning') : t('profile.logoutConfirm'), [
+    Alert.alert('', t('profile.logoutConfirm'), [
       { text: t('common.cancel'), style: 'cancel' },
       {
         text: t('profile.logout'),
@@ -85,9 +85,9 @@ export function ProfileScreen() {
           <View style={{ flex: 1 }}>
             <T variant="h2">{p?.displayName}</T>
             <Row gap={4}>
-              <Ionicons name={p?.isGuest ? 'person-outline' : 'shield-checkmark'} size={14} color={p?.isGuest ? colors.textMuted : colors.success} />
+              <Ionicons name="call" size={14} color={colors.success} />
               <T variant="small" muted>
-                {p?.isGuest ? t('profile.guest') : `${t('profile.verified')} · ${p?.phone ?? ''}`}
+                {p?.phone ? `+${p.phone.slice(0, 2)} ${p.phone.slice(2)}` : ''}
               </T>
             </Row>
           </View>
@@ -111,20 +111,6 @@ export function ProfileScreen() {
         </Row>
       </Card>
 
-      {p?.isGuest ? (
-        <Card style={{ marginTop: spacing.md, borderColor: colors.warning, borderWidth: 2 }} onPress={() => navigation.navigate('Phone', { mode: 'link' })}>
-          <Row>
-            <Ionicons name="shield-half" size={26} color={colors.warning} />
-            <View style={{ flex: 1 }}>
-              <T variant="h3">{t('profile.linkPhone')}</T>
-              <T variant="small" muted>
-                {t('profile.linkPhoneDesc')}
-              </T>
-            </View>
-            <Ionicons name="chevron-forward" size={20} color={colors.textMuted} />
-          </Row>
-        </Card>
-      ) : null}
 
       <T variant="h2" style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
         {t('profile.settings')}

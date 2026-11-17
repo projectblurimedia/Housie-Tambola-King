@@ -2,7 +2,14 @@
 
 All calls go through `supabase-js` with the user's JWT. Errors are raised as a bare code in `error.message` (e.g. `ROOM_FULL`); the app maps codes via `app/src/localization/*.json → errors.*`.
 
-## Player RPCs (`authenticated`, guests included)
+## Login (`anon`)
+| RPC | Args | Returns | Errors |
+|---|---|---|---|
+| `phone_login` | `p_phone, p_name` | `{email, password}` one-time credentials → `signInWithPassword` | `INVALID_PHONE`, `INVALID_DISPLAY_NAME`, `ACCOUNT_BANNED` |
+
+Testing phase only: no proof of owning the number. Replace with SMS OTP before launch.
+
+## Player RPCs (`authenticated`)
 | RPC | Args | Returns | Errors |
 |---|---|---|---|
 | `get_me` | – | profile + stats | `PROFILE_NOT_FOUND` |

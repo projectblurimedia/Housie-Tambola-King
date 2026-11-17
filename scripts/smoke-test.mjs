@@ -1,13 +1,13 @@
 #!/usr/bin/env node
 /**
  * End-to-end smoke test against the real Supabase backend:
- * two guest players → series room (2 games) → tickets → prize amounts = pot → start →
+ * two players → series room (2 games) → tickets → prize amounts = pot → start →
  * numbers called by the server clock over private realtime → both players "strike" and
  * claim like the app does → payouts → next game opens automatically → standings.
  *
  *   node scripts/smoke-test.mjs            (reads app/.env)
  *
- * Creates two throwaway guest accounts and deletes them at the end.
+ * Creates two throwaway accounts (random mobile numbers) and deletes them at the end.
  */
 import { readFileSync } from 'node:fs';
 import { createRequire } from 'node:module';
@@ -52,8 +52,12 @@ function complete(cells, called, prize) {
 
 async function guest(name) {
   const client = createClient(URL, KEY, { auth: { persistSession: false } });
-  const { error } = await client.auth.signInAnonymously({ options: { data: { display_name: name } } });
-  if (error) throw new Error(`guest sign-in failed: ${error.message}`);
+  // Same path as the app: mobile number + name → phone_login → sign in (no OTP yet).
+  const mobile = '6' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0');
+  const creds = await client.rpc('phone_login', { p_phone: mobile, p_name: name });
+  if (creds.error) throw new Error(`phone_login failed: ${creds.error.message}`);
+  const { error } = await client.auth.signInWithPassword(creds.data);
+  if (error) throw new Error(`sign-in failed: ${error.message}`);
   const rpc = async (fn, args) => {
     const { data, error: e } = await client.rpc(fn, args);
     if (e) throw new Error(`${name}.${fn}: ${e.message}`);

@@ -1,19 +1,18 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Animated, Easing, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Button, T } from '@/components/ui';
 import { NumberBall } from '@/components/NumberBall';
-import { authService } from '@/services/authService';
+import { authService, normalizeIndianMobile } from '@/services/authService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { useSettingsStore } from '@/state/settingsStore';
 import { APP_NAME } from '@/constants/config';
 import { fonts, heroGradient, radius, spacing } from '@/theme';
-import type { ScreenProps } from '@/navigation/types';
 
-const FLOATING = [7, 21, 45, 66, 88];
+const FLOATING = [3, 7, 11, 31, 65];
 
 function FloatingBall({ n, index }: { n: number; index: number }) {
   const v = useRef(new Animated.Value(0)).current;
@@ -32,18 +31,22 @@ function FloatingBall({ n, index }: { n: number; index: number }) {
   );
 }
 
-export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
+/** First screen: name + mobile number → straight in (no OTP during testing). */
+export function WelcomeScreen() {
   const { t } = useTranslation();
   const language = useSettingsStore((s) => s.language);
   const [name, setName] = useState('');
+  const [mobile, setMobile] = useState('');
   const [loading, setLoading] = useState(false);
-  const valid = name.trim().length >= 2;
+  const mobileRef = useRef<React.ComponentRef<typeof TextInput>>(null);
+  const valid = name.trim().length >= 2 && normalizeIndianMobile(mobile) !== null;
 
   const play = async () => {
     if (!valid) return;
     setLoading(true);
     try {
-      await authService.playAsGuest(name, language);
+      await authService.loginWithPhone(mobile, name, language);
+      // RootNavigator switches to Home on the auth state change.
     } catch (err) {
       showToast({ variant: 'error', title: errorMessage(err) });
     } finally {
@@ -61,7 +64,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
                 <FloatingBall key={n} n={n} index={i} />
               ))}
             </View>
-            <T variant="tiny" center color="#FDE68A" style={styles.crown}>
+            <T center color="#FDE68A" style={styles.crown}>
               👑
             </T>
             <T variant="hero" center color="#fff">
@@ -73,6 +76,9 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
 
             <View style={styles.card}>
               <T variant="h2" color="#fff">
+                {t('auth.welcomeTitle')}
+              </T>
+              <T variant="smallBold" color="rgba(255,255,255,0.85)" style={styles.label}>
                 {t('auth.namePrompt')}
               </T>
               <TextInput
@@ -82,10 +88,34 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
                 placeholderTextColor="rgba(255,255,255,0.55)"
                 maxLength={30}
                 autoCapitalize="words"
-                returnKeyType="go"
-                onSubmitEditing={play}
+                returnKeyType="next"
+                onSubmitEditing={() => mobileRef.current?.focus()}
                 style={styles.input}
               />
+              <T variant="smallBold" color="rgba(255,255,255,0.85)" style={styles.label}>
+                {t('auth.phoneTitle')}
+              </T>
+              <View style={styles.phoneRow}>
+                <View style={[styles.input, styles.prefix]}>
+                  <T variant="h3" color="#fff">
+                    +91
+                  </T>
+                </View>
+                <TextInput
+                  ref={mobileRef}
+                  value={mobile}
+                  onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
+                  placeholder={t('auth.phonePlaceholder')}
+                  placeholderTextColor="rgba(255,255,255,0.55)"
+                  keyboardType="phone-pad"
+                  maxLength={10}
+                  textContentType="telephoneNumber"
+                  autoComplete="tel"
+                  returnKeyType="go"
+                  onSubmitEditing={play}
+                  style={[styles.input, { flex: 1 }]}
+                />
+              </View>
               <T variant="small" color="rgba(255,255,255,0.75)">
                 {t('auth.nameHelp')}
               </T>
@@ -100,11 +130,6 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
               />
             </View>
 
-            <Pressable onPress={() => navigation.navigate('Phone', { mode: 'login' })} style={{ marginTop: spacing.lg }}>
-              <T variant="smallBold" center color="#fff" style={{ textDecorationLine: 'underline' }}>
-                {t('auth.loginWithPhone')}
-              </T>
-            </Pressable>
             <T variant="tiny" center color="rgba(255,255,255,0.6)" style={{ marginTop: spacing.md }}>
               {t('auth.terms')}
             </T>
@@ -118,7 +143,7 @@ export function WelcomeScreen({ navigation }: ScreenProps<'Welcome'>) {
 const styles = StyleSheet.create({
   scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.lg },
   balls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 6, marginBottom: spacing.lg },
-  crown: { fontSize: 34, lineHeight: 40 },
+  crown: { fontSize: 34, lineHeight: 44 },
   card: {
     marginTop: spacing.xl,
     backgroundColor: 'rgba(255,255,255,0.12)',
@@ -127,8 +152,12 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.2)',
   },
+  label: { marginTop: spacing.md },
+  phoneRow: { flexDirection: 'row', gap: spacing.sm },
+  prefix: { justifyContent: 'center', paddingHorizontal: spacing.md },
   input: {
-    marginVertical: spacing.md,
+    marginTop: 6,
+    marginBottom: spacing.sm,
     borderRadius: radius.md,
     borderWidth: 1.5,
     borderColor: 'rgba(255,255,255,0.4)',

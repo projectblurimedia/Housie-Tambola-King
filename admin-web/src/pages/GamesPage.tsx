@@ -46,8 +46,7 @@ export function RoomsPage() {
 
   return (
     <>
-      <div className="row" style={{ justifyContent: 'space-between' }}>
-        <h1>Rooms</h1>
+      <div className="row" style={{ justifyContent: 'space-between', marginBottom: 14 }}>
         <button className="btn ghost small" onClick={reload}>
           Refresh
         </button>

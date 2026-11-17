@@ -2,6 +2,7 @@ import { FormEvent, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { errorText, isConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/components/Auth';
+import { BrandMark } from '@/components/Layout';
 
 /**
  * Temporary admin sign-in: mobile number + password (no SMS provider is connected yet).
@@ -32,19 +33,23 @@ export function LoginPage() {
   };
 
   return (
-    <div className="center" style={{ background: 'linear-gradient(135deg,#4c1d95,#7c3aed,#c026d3)' }}>
-      <div className="panel" style={{ width: 360 }}>
-        <div className="row" style={{ marginBottom: 16 }}>
-          <img src="/favicon.svg" width={40} height={40} alt="" />
+    <div className="center">
+      <div className="glass login-card">
+        <div className="sidebar-brand">
+          <span className="brand-mark">
+            <BrandMark />
+          </span>
           <div>
-            <h2 style={{ margin: 0 }}>Housie Tambola King</h2>
-            <div className="muted small">Admin console</div>
+            <div className="brand-name">Housie Tambola King</div>
+            <div className="brand-sub">Admin control centre</div>
           </div>
         </div>
         {!isConfigured ? (
-          <p className="error">Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in admin-web/.env.local</p>
+          <p className="error" style={{ padding: 24 }}>
+            Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in admin-web/.env.local
+          </p>
         ) : (
-          <form onSubmit={signIn} style={{ display: 'grid', gap: 12 }}>
+          <form onSubmit={signIn}>
             <label className="field">
               Admin mobile number
               <input value={phone} onChange={(e) => setPhone(e.target.value)} placeholder="10-digit mobile" inputMode="numeric" autoFocus />

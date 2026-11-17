@@ -4,8 +4,6 @@ import type { BotDifficulty } from '@/game/engine/solo';
 export type RootStackParamList = {
   LanguageSelect: undefined;
   Welcome: undefined;
-  Phone: { mode: 'login' | 'link' };
-  Otp: { phone: string; mode: 'login' | 'link' };
   Home: undefined;
   CreateRoom: undefined;
   JoinRoom: { code?: string } | undefined;

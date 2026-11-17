@@ -48,7 +48,7 @@ export function NumberBall({ number, size = 120, subtitle }: { number: number | 
           style={[styles.ball, { width: size, height: size, borderRadius: size / 2 }]}
         >
           <View style={[styles.inner, { width: size * 0.66, height: size * 0.66, borderRadius: size * 0.33 }]}>
-            <Text style={[styles.text, { fontSize: size * 0.36, lineHeight: size * 0.44 }]}>{number ?? '–'}</Text>
+            <Text style={[styles.text, { fontSize: size * 0.34, lineHeight: size * 0.5, includeFontPadding: false }]}>{number ?? '–'}</Text>
           </View>
         </LinearGradient>
       </Animated.View>
