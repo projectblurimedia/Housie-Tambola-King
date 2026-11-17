@@ -14,7 +14,6 @@ import { RoomScreen } from '@/screens/room/RoomScreen';
 import { SoloSetupScreen } from '@/screens/solo/SoloSetupScreen';
 import { SoloGameScreen } from '@/screens/solo/SoloGameScreen';
 import { CallerScreen } from '@/screens/caller/CallerScreen';
-import { PrintTicketsScreen } from '@/screens/caller/PrintTicketsScreen';
 import { ProfileScreen } from '@/screens/profile/ProfileScreen';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { HowToPlayScreen } from '@/screens/profile/HowToPlayScreen';
@@ -45,7 +44,6 @@ export function RootNavigator() {
           <Stack.Screen name="SoloSetup" component={SoloSetupScreen} />
           <Stack.Screen name="SoloGame" component={SoloGameScreen} options={{ gestureEnabled: false }} />
           <Stack.Screen name="Caller" component={CallerScreen} />
-          <Stack.Screen name="PrintTickets" component={PrintTicketsScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="HowToPlay" component={HowToPlayScreen} />

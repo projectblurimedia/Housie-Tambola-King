@@ -14,6 +14,8 @@ _Last updated: 2026-11-19_
 - Prizes chosen at creation without amounts; host sets prize set + amounts before every game.
 - Series: unlimited by default (host ends it) or a fixed 2–50.
 - Tickets: 5 per row AND 5 per column group.
+- Claim rule per room: fastest finger or fair play (server awards same-number completions); optional auto-mark. 8 s pause after a win. Host can pause/resume, change speed, remove players. Default speed 3 s.
+- Print tickets removed (owner).
 - Caller voice: numbers only; Telugu spelled in Telugu words; per-language voice picker.
 - **Never run eas build / eas update without the owner's explicit OK.**
 - Numbers spoken aloud on every phone. Players **tap to strike**; completing a prize auto-claims. First wins; same called number = split equally.

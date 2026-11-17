@@ -156,6 +156,15 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
   });
 
   const playersReady = state.members.filter((m) => m.tickets > 0).length;
+  const [removing, setRemoving] = useState<{ userId: string; name: string } | null>(null);
+  const remove = useMutation({
+    mutationFn: (userId: string) => roomService.removeMember(room.id, userId),
+    onSuccess: () => {
+      setRemoving(null);
+      refresh();
+    },
+    onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
+  });
   const openSetup = (m: 'edit' | 'start') => {
     setMode(m);
     setEditing(true);
@@ -207,13 +216,36 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
             {t('lobby.potFormula', { tickets: game.ticketCount, price: formatRupees(game.ticketPrice) })}
           </T>
         </View>
-        <View style={{ alignItems: 'flex-end' }}>
-          <T style={{ fontSize: 40, lineHeight: 50 }}>💰</T>
-          <T variant="tiny" color="#7C2D12">
-            {t('lobby.readyCount', { ready: playersReady, total: state.members.length })}
-          </T>
-        </View>
+        <T style={{ fontSize: 40, lineHeight: 50 }}>💰</T>
       </LinearGradient>
+
+      <Card style={{ gap: spacing.sm }}>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <T variant="h3" style={{ flex: 1 }}>
+            {t('lobby.playersThisGame')}
+          </T>
+          <Pill label={t('lobby.readyCount', { ready: playersReady, total: state.members.length })} color={colors.primary} />
+        </Row>
+        {state.members.map((m) => {
+          const ready = m.tickets > 0;
+          return (
+            <Row key={m.userId} style={styles.readyRow}>
+              <Avatar avatarKey={m.avatarKey} size={34} ring={m.userId === room.hostId ? colors.gold : undefined} />
+              <T variant="bodyMedium" numberOfLines={1} style={{ flex: 1 }}>
+                {m.name}
+                {m.userId === me.id ? ` (${t('common.you')})` : ''}
+              </T>
+              <Pill
+                label={ready ? `✓ ${t('lobby.readyWithTickets', { count: m.tickets })}` : t('lobby.notReady')}
+                color={ready ? colors.success : colors.textMuted}
+              />
+              {isHost && m.userId !== me.id ? (
+                <IconButton icon="person-remove" size={20} color={colors.error} onPress={() => setRemoving({ userId: m.userId, name: m.name })} />
+              ) : null}
+            </Row>
+          );
+        })}
+      </Card>
 
       <Card style={{ gap: spacing.sm }}>
         <Row style={{ justifyContent: 'space-between' }}>
@@ -254,6 +286,16 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
         hint={t('lobby.setAmountsHint', { players: game.playerCount, tickets: game.ticketCount })}
         onSave={(amounts) => saveAmounts.mutate(amounts)}
         onClose={() => setEditing(false)}
+      />
+      <ConfirmModal
+        visible={removing !== null}
+        icon="person-remove"
+        title={t('lobby.removeTitle', { name: removing?.name ?? '' })}
+        message={t('lobby.removeMessage')}
+        confirmLabel={t('lobby.remove')}
+        loading={remove.isPending}
+        onConfirm={() => removing && remove.mutate(removing.userId)}
+        onCancel={() => setRemoving(null)}
       />
     </View>
   );
@@ -407,7 +449,10 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
           qc.invalidateQueries({ queryKey: ['myRooms'] });
           break;
         case 'members':
-          if (e.joined) showToast({ variant: 'info', title: t('room.joined', { name: e.joined }) });
+          if (e.removed && e.removed === meRef.current) {
+            showToast({ variant: 'error', title: t('room.removedYou') });
+            navigation.goBack();
+          } else if (e.joined) showToast({ variant: 'info', title: t('room.joined', { name: e.joined }) });
           break;
         case 'join_request':
           showToast({ variant: 'info', title: t('join.requestToast', { name: e.name }) });
@@ -416,7 +461,7 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
           break;
       }
     },
-    [caller, announce, t, qc],
+    [caller, announce, t, qc, navigation],
   );
 
   const roomQuery = useRoom(roomId, onEvent);
@@ -507,7 +552,7 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
           onChange={setTab}
           options={[
             { value: 'game', label: t('room.tabPlay') },
-            { value: 'players', label: requests ? `${t('room.tabPlayers')} • ${requests}` : `${t('room.tabPlayers')} ${state.room.memberCount}` },
+            { value: 'players', label: requests ? `${t('room.tabPlayers')} (${state.room.memberCount}) • ${requests}` : `${t('room.tabPlayers')} (${state.room.memberCount})` },
             { value: 'standings', label: t('room.tabStandings') },
           ]}
         />
@@ -567,4 +612,5 @@ const styles = StyleSheet.create({
   potCard: { borderRadius: radius.xl, padding: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   endedBanner: { borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center' },
   waitWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },
+  readyRow: { paddingVertical: 4 },
 });

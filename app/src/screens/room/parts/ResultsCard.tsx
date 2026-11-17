@@ -2,13 +2,15 @@ import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
+import { Avatar } from '@/components/Avatar';
 import { PrizeList } from '@/components/PrizeList';
 import { formatRupees } from '@/components/Money';
 import { Card, Loading, Row, T } from '@/components/ui';
 import { roomService } from '@/services/roomService';
 import { spacing, useThemeColors } from '@/theme';
+import { NetAmount } from './StandingsList';
 
-/** Who won what in one finished game. */
+/** One finished game: each player's +/− first, then who won which prize. */
 export function ResultsCard({ gameId, meId, highlight }: { gameId: string; meId?: string; highlight?: string }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -29,17 +31,29 @@ export function ResultsCard({ gameId, meId, highlight }: { gameId: string; meId?
           {t('lobby.pot')} {formatRupees(r.pot)}
         </T>
       </Row>
-      <View>
-        <PrizeList
-          compact
-          rows={r.prizes.map((p) => ({
-            prize: p.prize,
-            amount: Number(p.amount),
-            status: p.status,
-            winners: p.winners.map((w) => ({ name: w.name, avatarKey: w.avatarKey, isMe: w.userId === meId, amount: Number(w.amount ?? 0) })),
-          }))}
-        />
+      <View style={{ gap: 6 }}>
+        {(r.players ?? []).map((p) => (
+          <Row key={p.userId}>
+            <Avatar avatarKey={p.avatarKey} size={28} />
+            <T variant="bodyMedium" numberOfLines={1} style={{ flex: 1 }} color={p.userId === meId ? colors.primary : undefined}>
+              {p.userId === meId ? t('common.you') : p.name}
+            </T>
+            <T variant="tiny" muted>
+              🎫 {p.tickets}
+            </T>
+            <NetAmount value={p.net} size={16} />
+          </Row>
+        ))}
       </View>
+      <PrizeList
+        compact
+        rows={r.prizes.map((p) => ({
+          prize: p.prize,
+          amount: Number(p.amount),
+          status: p.status,
+          winners: p.winners.map((w) => ({ name: w.name, avatarKey: w.avatarKey, isMe: w.userId === meId, amount: Number(w.amount ?? 0) })),
+        }))}
+      />
     </Card>
   );
 }

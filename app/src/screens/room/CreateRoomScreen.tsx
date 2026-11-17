@@ -9,7 +9,7 @@ import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { COLUMN_PRIZES, FAST_PRIZES, LINE_PRIZES, PrizeType } from '@/game/engine/ticket';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
-import type { RoomKind, RoomVisibility } from '@/types/api';
+import type { ClaimMode, RoomKind, RoomVisibility } from '@/types/api';
 import type { ScreenProps } from '@/navigation/types';
 
 /**
@@ -88,7 +88,9 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [visibility, setVisibility] = useState<RoomVisibility>('private');
   const [maxPlayers, setMaxPlayers] = useState(10);
   const [price, setPrice] = useState('10');
-  const [speed, setSpeed] = useState(6);
+  const [speed, setSpeed] = useState(3);
+  const [claimMode, setClaimMode] = useState<ClaimMode>('fastest');
+  const [autoMark, setAutoMark] = useState(false);
   const [groupsOn, setGroupsOn] = useState<Record<Group, boolean>>({ fast: true, lines: true, columns: true });
   const [selected, setSelected] = useState<Set<PrizeType>>(new Set<PrizeType>(['fast_5', ...LINE_PRIZES, ...COLUMN_PRIZES]));
   const [loading, setLoading] = useState(false);
@@ -129,6 +131,8 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         callIntervalSeconds: speed,
         seriesLength: kind === 'series' ? (limitGames ? seriesLength : 0) : 1,
         prizes: Object.fromEntries(chosen.map((p) => [p, DEFAULT_WEIGHTS[p]])),
+        claimMode,
+        autoMark,
       });
       qc.invalidateQueries({ queryKey: ['myRooms'] });
       navigation.replace('Room', { roomId });
@@ -238,6 +242,32 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
           <Chip key={s} label={t('common.seconds', { count: s })} active={speed === s} onPress={() => setSpeed(s)} />
         ))}
       </ScrollView>
+
+      <T variant="smallBold" muted style={styles.sectionLabel}>
+        {t('create.claimRule')}
+      </T>
+      <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
+        {(['fastest', 'fair'] as ClaimMode[]).map((m) => (
+          <Card key={m} onPress={() => setClaimMode(m)} style={[styles.option, claimMode === m && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}>
+            <Ionicons name={m === 'fastest' ? 'flash' : 'shield-checkmark'} size={24} color={claimMode === m ? colors.primary : colors.textMuted} />
+            <T variant="h3">{t(`create.claim_${m}`)}</T>
+            <T variant="tiny" muted>
+              {t(`create.claim_${m}_desc`)}
+            </T>
+          </Card>
+        ))}
+      </Row>
+      <Card style={[styles.group, { marginTop: spacing.sm }]}>
+        <Row>
+          <View style={{ flex: 1 }}>
+            <T variant="h3">{t('create.autoMark')}</T>
+            <T variant="tiny" muted>
+              {t('create.autoMarkDesc')}
+            </T>
+          </View>
+          <Toggle value={autoMark} onValueChange={setAutoMark} />
+        </Row>
+      </Card>
 
       <Spacer h={spacing.xl} />
       <T variant="h1">{t('create.prizesTitle')}</T>

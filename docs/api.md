@@ -24,10 +24,13 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `set_my_tickets` | `p_game, p_count (1–4)`, once per game | my tickets | `INVALID_TICKET_COUNT`, `TICKETS_ALREADY_CHOSEN`, `GAME_ALREADY_STARTED`, `NOT_IN_ROOM` |
 | `set_game_prizes` | `p_game, p_amounts {prize: ₹}` (host) — the keys ARE this game's prize set (Full Housie required); becomes the room default | – | `PRIZES_MUST_EQUAL_POT`, `INVALID_PRIZES`, `NOT_HOST` |
 | `start_game` | `p_game` (host) | – | `NEED_TWO_PLAYERS`, `NOT_HOST` |
+| `set_game_paused` | `p_game, p_paused` (host) | – | `NOT_HOST`, `GAME_NOT_RUNNING` |
+| `set_call_speed` | `p_room, p_seconds (3–20)` (host) | – | `NOT_HOST`, `INVALID_SPEED` |
+| `remove_member` | `p_room, p_user` (host) | – | `NOT_HOST`, `CANNOT_REMOVE_SELF` |
 | `claim_prize` | `p_ticket, p_prize` | `{result: won/shared/already_claimed/already_yours/not_complete}` | `GAME_NOT_RUNNING`, `TOO_MANY_CLAIMS` |
 | `nudge_game` | `p_game` | – (advances only if a call is overdue) | – |
 | `get_room_state` | `p_room` | room + current game + prizes + my tickets + members + previousGameId + serverTime | `NOT_IN_ROOM` |
-| `get_game_results` | `p_game` | prizes with winners, numbers, amounts | `NOT_IN_ROOM` |
+| `get_game_results` | `p_game` | prizes with winners, numbers, amounts + per-player tickets/spent/won/net | `NOT_IN_ROOM` |
 | `get_room_standings` | `p_room` | per player: games, tickets, spent, wins, won, net, list | `NOT_IN_ROOM` |
 | `list_public_rooms` / `get_my_rooms` | – | summaries | – |
 | `register_push_token` | `p_token, p_platform` | – | `INVALID_PUSH_TOKEN` |

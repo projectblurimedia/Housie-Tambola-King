@@ -24,9 +24,16 @@
 | Left / Center / Right Column | all numbers in columns 1–3 / 4–6 / 7–9 |
 | Full Housie | all 15 numbers |
 
+## Room options
+- **Claim rule**: *Fastest finger* (first tap wins; anyone completing the same prize on the same number can still claim a share while the winner announcement shows) or *Fair play* (the server awards everyone whose ticket completed the prize on that number — no tapping race).
+- **Auto-mark**: called numbers are circled on tickets automatically.
+- Default calling speed 3 s. During a game the host can **pause/resume** and change the speed; every player can change their own voice.
+- Numbers pause for 8 s after a prize is won so everyone sees the winner announcement.
+- The host can remove a player from the room.
+
 ## Calling, striking, winning
 - Numbers 1–90 in a secure random order fixed on the server at start; every phone speaks each number.
-- Players **tap called numbers to strike them** (uncalled numbers can't be struck).
+- Players **tap called numbers to strike them**; tapping a number not called yet just wiggles (no message).
 - The moment a player's strikes complete a prize, the app claims it; the server verifies against the numbers it called.
 - **First claim wins.** Anyone else who completed the same prize on the **same called number** and claims before the next number is called **shares it equally**.
 - Every phone shows the winner announcement: name, prize, the winning numbers, amount (or "each" when split).

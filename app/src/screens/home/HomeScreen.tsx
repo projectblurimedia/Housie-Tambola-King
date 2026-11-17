@@ -59,16 +59,14 @@ function BigAction({
               { transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] }) }] },
             ]}
           >
-            <Ionicons name={icon} size={22} color="#fff" />
+            <Ionicons name={icon} size={28} color="#fff" />
           </Animated.View>
-          <View style={{ flex: 1 }}>
-            <T variant="h3" color="#fff" numberOfLines={1}>
-              {title}
-            </T>
-            <T variant="tiny" color="rgba(255,255,255,0.85)" numberOfLines={1}>
-              {desc}
-            </T>
-          </View>
+          <T variant="h2" color="#fff" numberOfLines={1} style={{ marginTop: spacing.sm }}>
+            {title}
+          </T>
+          <T variant="small" color="rgba(255,255,255,0.88)" numberOfLines={2}>
+            {desc}
+          </T>
         </LinearGradient>
       </Pressable>
     </Animated.View>
@@ -250,7 +248,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
             [
               ['hardware-chip', t('home.solo'), t('home.soloDesc'), () => navigation.navigate('SoloSetup')],
               ['megaphone', t('home.caller'), t('home.callerDesc'), () => navigation.navigate('Caller')],
-              ['help-circle', t('home.howToPlay'), '', () => navigation.navigate('HowToPlay')],
+              ['help-circle', t('home.howToPlay'), t('home.howToPlayDesc'), () => navigation.navigate('HowToPlay')],
             ] as [IconName, string, string, () => void][]
           ).map(([icon, title, desc, onPress]) => (
             <Card key={title} onPress={onPress} style={{ flex: 1, padding: spacing.md, alignItems: 'center' }}>
@@ -273,12 +271,12 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 
 const styles = StyleSheet.create({
   hero: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
-  big: { borderRadius: radius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, elevation: 4 },
+  big: { borderRadius: radius.xl, padding: spacing.lg, minHeight: 136, elevation: 5 },
   greeting: { fontFamily: fonts.medium, fontSize: 15, color: '#fff', includeFontPadding: false },
   bigIcon: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+    width: 50,
+    height: 50,
+    borderRadius: 25,
     backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',

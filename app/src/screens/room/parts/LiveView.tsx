@@ -1,7 +1,8 @@
-import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { ScrollView, StyleSheet, View } from 'react-native';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useTranslation } from 'react-i18next';
@@ -26,6 +27,7 @@ import { isPrizeComplete, prizeCompletedAt, remainingFor } from '@/game/engine/t
 import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { Me, RoomState, Ticket } from '@/types/api';
 import { StandingsList } from './StandingsList';
+import { GameSettingsSheet } from './GameSettingsSheet';
 import { gameLabel } from '@/utils/gameLabel';
 
 type Tab = 'tickets' | 'board' | 'prizes' | 'standings';
@@ -63,9 +65,18 @@ export function LiveView({
   const last = called.length ? called[called.length - 1] : null;
   const previous = called.slice(-6, -1).reverse();
 
+  const autoMark = room.autoMark;
+  const fair = room.claimMode === 'fair';
+  const isHost = room.hostId === me.id;
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const struckSets = useMemo(
-    () => state.myTickets.map((tk) => new Set((marks[tk.id] ?? NO_STRIKES).filter((n) => calledSet.has(n)))),
-    [state.myTickets, marks, calledSet],
+    () =>
+      state.myTickets.map((tk) =>
+        autoMark
+          ? new Set(tk.cells.filter((n) => n > 0 && calledSet.has(n)))
+          : new Set((marks[tk.id] ?? NO_STRIKES).filter((n) => calledSet.has(n))),
+      ),
+    [state.myTickets, marks, calledSet, autoMark],
   );
 
   const msToNext = game.nextCallAt ? new Date(game.nextCallAt).getTime() - serverNow() : 0;
@@ -74,6 +85,7 @@ export function LiveView({
   /** After a strike: claim every prize this ticket's strikes now complete. */
   const tryClaims = useCallback(
     async (ticket: Ticket, struck: ReadonlySet<number>) => {
+      if (fair) return;
       for (const p of state.prizes) {
         const key = `${ticket.id}:${p.prize}`;
         if (attempted.current.has(key) || p.winners.some((w) => w.userId === me.id)) continue;
@@ -100,16 +112,17 @@ export function LiveView({
         }
       }
     },
-    [state.prizes, me.id, called, caller, t, qc, room.id],
+    [fair, state.prizes, me.id, called, caller, t, qc, room.id],
   );
 
+  useEffect(() => {
+    if (!autoMark || fair) return;
+    state.myTickets.forEach((tk, i) => tryClaims(tk, struckSets[i]));
+  }, [autoMark, fair, called.length]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Uncalled numbers never reach here: the tile just wiggles (canStrike below).
   const onPressNumber = (ticket: Ticket, index: number) => (n: number) => {
-    if (!calledSet.has(n)) {
-      caller.buzz();
-      showToast({ variant: 'info', title: t('game.notCalled', { n }) });
-      return;
-    }
-    if (struckSets[index].has(n)) return;
+    if (autoMark || struckSets[index].has(n)) return;
     strike(ticket.id, n);
     if (haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
     const next = new Set(struckSets[index]);
@@ -150,9 +163,7 @@ export function LiveView({
                 {connected ? gameLabel(room, game.gameNo) : t('game.reconnecting')}
               </T>
             </View>
-            <View style={{ minWidth: 40, alignItems: 'flex-end' }}>
-              <Pill label={`● ${t('game.live')}`} color={colors.error} />
-            </View>
+            <IconButton icon="settings-sharp" color="#fff" onPress={() => setSettingsOpen(true)} accessibilityLabel={t('game.settings')} />
           </Row>
           <Row style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }} gap={spacing.lg}>
             <NumberBall number={last} size={112} />
@@ -196,6 +207,14 @@ export function LiveView({
         </SafeAreaView>
       </LinearGradient>
 
+      {game.paused ? (
+        <Pressable onPress={isHost ? () => setSettingsOpen(true) : undefined} style={[styles.pausedBar, { backgroundColor: colors.warning }]}>
+          <Ionicons name="pause-circle" size={18} color="#fff" />
+          <T variant="smallBold" color="#fff">
+            {isHost ? t('game.pausedHost') : t('game.paused')}
+          </T>
+        </Pressable>
+      ) : null}
       <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.md }}>
         <Segmented
           value={tab}
@@ -220,7 +239,8 @@ export function LiveView({
           ) : (
             <>
               <T variant="small" muted center>
-                👆 {t('game.tapToStrike')}
+                {autoMark ? '✨ ' + t('game.autoMarkHint') : '👆 ' + t('game.tapToStrike')}
+                {fair ? ' ' + t('game.fairHint') : ''}
               </T>
               {state.myTickets.map((tk, i) => (
                 <TicketView
@@ -228,7 +248,8 @@ export function LiveView({
                   cells={tk.cells}
                   marked={struckSets[i]}
                   lastCalled={last}
-                  onPressNumber={onPressNumber(tk, i)}
+                  onPressNumber={autoMark ? undefined : onPressNumber(tk, i)}
+                  canStrike={(n) => calledSet.has(n)}
                   label={`#${tk.serial}`}
                   badge={wonByTicket(tk.id) || undefined}
                 />
@@ -241,6 +262,7 @@ export function LiveView({
         {tab === 'prizes' ? <PrizeList rows={prizeRows} /> : null}
         {tab === 'standings' ? <StandingsList roomId={room.id} meId={me.id} /> : null}
       </ScrollView>
+      <GameSettingsSheet visible={settingsOpen} state={state} isHost={isHost} onClose={() => setSettingsOpen(false)} />
       <ConfirmModal
         visible={confirmLeave}
         icon="exit-outline"
@@ -260,5 +282,6 @@ export function LiveView({
 
 const styles = StyleSheet.create({
   top: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  pausedBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 },
   progress: { height: 6, borderRadius: 3, marginTop: spacing.sm, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.25)' },
 });

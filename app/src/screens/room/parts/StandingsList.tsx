@@ -9,11 +9,26 @@ import { MiniBall } from '@/components/NumberBall';
 import { Card, EmptyState, Loading, Row, T } from '@/components/ui';
 import { roomService } from '@/services/roomService';
 import { standingsKey } from '@/hooks/useRoom';
-import { radius, spacing, useThemeColors } from '@/theme';
+import { fonts, radius, spacing, useThemeColors } from '@/theme';
 
 const MEDALS = ['🥇', '🥈', '🥉'];
 
-/** Room/series scoreboard: total won, tickets, net, and every win game by game. */
+/** "+₹10" / "−₹10" / "₹0" — the one number everyone wants to see. */
+export function signedRupees(n: number): string {
+  const v = Math.round(Number(n) * 100) / 100;
+  if (v > 0) return `+${formatRupees(v)}`;
+  if (v < 0) return `−${formatRupees(-v)}`;
+  return formatRupees(0);
+}
+
+export function NetAmount({ value, size = 18 }: { value: number; size?: number }) {
+  const { colors } = useThemeColors();
+  const v = Number(value);
+  const color = v > 0 ? colors.success : v < 0 ? colors.error : colors.textMuted;
+  return <T style={{ fontFamily: fonts.bold, fontSize: size, color, includeFontPadding: false }}>{signedRupees(v)}</T>;
+}
+
+/** Room/series scoreboard: each player's +/− (best first); tap a row for the details. */
 export function StandingsList({ roomId, meId }: { roomId: string; meId?: string }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -42,31 +57,39 @@ export function StandingsList({ roomId, meId }: { roomId: string; meId?: string 
                     {r.name}
                     {isMe ? ` (${t('common.you')})` : ''}
                   </T>
-                  <T variant="small" muted>
+                  <T variant="tiny" muted>
                     {t('standings.wins', { count: r.wins })} · {t('standings.games', { count: r.games })}
                   </T>
                 </View>
-                <View style={{ alignItems: 'flex-end' }}>
-                  <T variant="h3" color={colors.goldDark}>
-                    {formatRupees(r.won)}
-                  </T>
-                  <T variant="tiny" color={r.net >= 0 ? colors.success : colors.error}>
-                    {t('standings.net')} {r.net >= 0 ? '+' : ''}
-                    {formatRupees(r.net)}
-                  </T>
-                </View>
+                <NetAmount value={r.net} size={19} />
                 <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
               </Row>
             </Pressable>
             {expanded ? (
               <View style={[styles.details, { borderTopColor: colors.border }]}>
-                <Row style={{ justifyContent: 'space-between' }}>
-                  <T variant="small" muted>
-                    {t('standings.spent')}: 🎫 {r.tickets} · {formatRupees(r.spent)}
-                  </T>
-                  <T variant="small" muted>
-                    {t('standings.won')}: {formatRupees(r.won)}
-                  </T>
+                <Row gap={spacing.sm}>
+                  <View style={[styles.stat, { backgroundColor: 'rgba(22,163,74,0.1)' }]}>
+                    <T variant="tiny" muted>
+                      {t('standings.won')}
+                    </T>
+                    <T variant="h3" color={colors.success}>
+                      {formatRupees(r.won)}
+                    </T>
+                  </View>
+                  <View style={[styles.stat, { backgroundColor: 'rgba(220,38,38,0.08)' }]}>
+                    <T variant="tiny" muted>
+                      {t('standings.spentTickets', { count: r.tickets })}
+                    </T>
+                    <T variant="h3" color={colors.error}>
+                      {formatRupees(r.spent)}
+                    </T>
+                  </View>
+                  <View style={[styles.stat, { backgroundColor: colors.surfaceAlt }]}>
+                    <T variant="tiny" muted>
+                      {t('standings.net')}
+                    </T>
+                    <NetAmount value={r.net} size={16} />
+                  </View>
                 </Row>
                 {r.list.map((w, k) => (
                   <View key={k} style={[styles.win, { backgroundColor: colors.surfaceAlt }]}>
@@ -74,8 +97,8 @@ export function StandingsList({ roomId, meId }: { roomId: string; meId?: string 
                       <T variant="smallBold">
                         {t('standings.gameShort', { n: w.gameNo })} · {t(`prizes.${w.prize}`)}
                       </T>
-                      <T variant="smallBold" color={colors.goldDark}>
-                        {formatRupees(w.amount)}
+                      <T variant="smallBold" color={colors.success}>
+                        +{formatRupees(w.amount)}
                       </T>
                     </Row>
                     <Row gap={4} style={{ flexWrap: 'wrap', marginTop: 4 }}>
@@ -95,6 +118,7 @@ export function StandingsList({ roomId, meId }: { roomId: string; meId?: string 
 }
 
 const styles = StyleSheet.create({
-  details: { marginTop: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, gap: spacing.sm },
+  details: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, gap: spacing.sm },
+  stat: { flex: 1, borderRadius: radius.md, padding: spacing.sm, alignItems: 'center' },
   win: { borderRadius: radius.md, padding: spacing.sm },
 });

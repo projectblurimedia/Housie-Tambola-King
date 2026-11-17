@@ -1,17 +1,19 @@
 import { useCallback, useEffect } from 'react';
 import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
-import { useSettingsStore } from '@/state/settingsStore';
+import { useSettingsStore, VOICE_STYLES, VoiceStyle } from '@/state/settingsStore';
 import { speechLanguageCode, spokenCall } from '@/game/engine/calls';
 import type { SupportedLanguage } from '@/localization/languages';
 
 /** Speaks one number in a language, with the player's chosen voice for that language. */
-export function speakNumber(n: number, language: SupportedLanguage, voiceId?: string | null) {
+export function speakNumber(n: number, language: SupportedLanguage, voiceId?: string | null, style: VoiceStyle = 'normal') {
+  const { pitch, rate } = VOICE_STYLES[style] ?? VOICE_STYLES.normal;
   Speech.stop();
   Speech.speak(spokenCall(n, language), {
     language: speechLanguageCode(language),
     voice: voiceId ?? undefined,
-    rate: 0.9,
+    pitch,
+    rate,
     volume: 1,
   });
 }
@@ -25,6 +27,7 @@ export function useCaller(voiceLanguage?: SupportedLanguage) {
   const appLanguage = useSettingsStore((s) => s.language);
   const haptics = useSettingsStore((s) => s.haptics);
   const voiceByLanguage = useSettingsStore((s) => s.voiceByLanguage);
+  const voiceStyle = useSettingsStore((s) => s.voiceStyle);
   const language = voiceLanguage ?? appLanguage;
   const voiceId = voiceByLanguage[language];
 
@@ -33,9 +36,9 @@ export function useCaller(voiceLanguage?: SupportedLanguage) {
   const announce = useCallback(
     (n: number) => {
       if (haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
-      if (voice) speakNumber(n, language, voiceId);
+      if (voice) speakNumber(n, language, voiceId, voiceStyle);
     },
-    [voice, language, voiceId, haptics],
+    [voice, language, voiceId, voiceStyle, haptics],
   );
 
   const celebrate = useCallback(() => {

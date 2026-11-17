@@ -5,6 +5,16 @@ import i18n, { deviceLanguage, SupportedLanguage } from '@/localization/i18n';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
+/** Pitch/speed variations so the same engine voice can sound different. */
+export const VOICE_STYLES = {
+  normal: { pitch: 1, rate: 0.9 },
+  deep: { pitch: 0.72, rate: 0.85 },
+  high: { pitch: 1.35, rate: 0.95 },
+  slow: { pitch: 1, rate: 0.68 },
+  fast: { pitch: 1.05, rate: 1.15 },
+} as const;
+export type VoiceStyle = keyof typeof VOICE_STYLES;
+
 interface SettingsState {
   language: SupportedLanguage;
   hasSelectedLanguage: boolean;
@@ -14,10 +24,11 @@ interface SettingsState {
   haptics: boolean;
   /** Chosen TTS voice identifier per language (null = phone default for that language). */
   voiceByLanguage: Partial<Record<SupportedLanguage, string | null>>;
+  voiceStyle: VoiceStyle;
   isHydrated: boolean;
   setLanguage: (language: SupportedLanguage) => void;
   confirmLanguage: () => void;
-  set: (patch: Partial<Pick<SettingsState, 'themeMode' | 'voice' | 'haptics'>>) => void;
+  set: (patch: Partial<Pick<SettingsState, 'themeMode' | 'voice' | 'haptics' | 'voiceStyle'>>) => void;
   setVoiceFor: (language: SupportedLanguage, voiceId: string | null) => void;
 }
 
@@ -30,6 +41,7 @@ export const useSettingsStore = create<SettingsState>()(
       voice: true,
       haptics: true,
       voiceByLanguage: {},
+      voiceStyle: 'normal',
       isHydrated: false,
       setLanguage: (language) => {
         i18n.changeLanguage(language);

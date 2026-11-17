@@ -58,7 +58,6 @@
           "icon": "./assets/android-icon-monochrome.png"
         }
       ],
-      "expo-sharing",
       [
         "expo-build-properties",
         {

@@ -49,11 +49,11 @@ function Tile({ icon, label, onPress, disabled, danger }: { icon: keyof typeof I
   );
 }
 
-export function CallerScreen({ navigation }: ScreenProps<'Caller'>) {
+export function CallerScreen(_props: ScreenProps<'Caller'>) {
   useKeepAwake();
   const { t } = useTranslation();
   const { colors } = useThemeColors();
-  const { called, intervalSeconds, voiceLanguage, undo, reset, setInterval: setSpeed, setVoiceLanguage } = useCallerStore();
+  const { called, intervalSeconds, voiceLanguage, mode, undo, reset, setInterval: setSpeed, setVoiceLanguage, setMode } = useCallerStore();
   const caller = useCaller(voiceLanguage);
   const [auto, setAuto] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -84,7 +84,12 @@ export function CallerScreen({ navigation }: ScreenProps<'Caller'>) {
 
   const start = () => {
     next();
-    setAuto(true);
+    if (mode === 'auto') setAuto(true);
+  };
+
+  const changeMode = (m: 'auto' | 'manual') => {
+    setMode(m);
+    if (m === 'manual') setAuto(false);
   };
 
   const openHistory = () => {
@@ -131,30 +136,39 @@ export function CallerScreen({ navigation }: ScreenProps<'Caller'>) {
         <Button title={t('caller.start')} variant="gold" icon="play" onPress={start} />
       ) : (
         <Row gap={spacing.sm}>
-          <Button title={t('caller.next')} variant="gold" icon="arrow-forward-circle" style={{ flex: 2 }} onPress={next} disabled={auto || done} />
-          <Button
-            title={auto ? t('caller.stop') : t('caller.auto')}
-            variant={auto ? 'danger' : 'primary'}
-            icon={auto ? 'stop' : 'play'}
-            style={{ flex: 1 }}
-            onPress={() => setAuto((a) => !a)}
-            disabled={done}
-          />
+          {mode === 'auto' ? (
+            <Button
+              title={auto ? t('caller.pause') : t('caller.play')}
+              variant={auto ? 'danger' : 'gold'}
+              icon={auto ? 'pause' : 'play'}
+              style={{ flex: 2 }}
+              onPress={() => setAuto((a) => !a)}
+              disabled={done}
+            />
+          ) : (
+            <Button title={t('caller.next')} variant="gold" icon="arrow-forward-circle" style={{ flex: 2 }} onPress={next} disabled={done} />
+          )}
+          <Button title={t('caller.history')} variant="secondary" icon="list" style={{ flex: 1 }} onPress={openHistory} />
         </Row>
       )}
       <T variant="tiny" muted center style={{ marginTop: spacing.sm }}>
-        {t('caller.statusLine', {
-          speed: t('common.seconds', { count: intervalSeconds }),
-          voice: voiceLanguage === 'te' ? 'తెలుగు' : 'English',
-        })}
+        {mode === 'auto'
+          ? t('caller.statusLine', { speed: t('common.seconds', { count: intervalSeconds }), voice: voiceLanguage === 'te' ? 'తెలుగు' : 'English' })
+          : t('caller.statusManual', { voice: voiceLanguage === 'te' ? 'తెలుగు' : 'English' })}
       </T>
 
       <Spacer h={spacing.lg} />
       <CalledBoard called={calledSet} last={last} cellSize={32} />
 
       <Sheet visible={settingsOpen} title={t('caller.settings')} onClose={() => setSettingsOpen(false)}>
+        <T variant="smallBold" muted style={[styles.label, { marginTop: 0 }]}>
+          {t('caller.mode')}
+        </T>
         <Row gap={spacing.sm}>
-          <Tile icon="list" label={t('caller.history')} onPress={openHistory} />
+          <Chip label={t('caller.modeAuto')} active={mode === 'auto'} onPress={() => changeMode('auto')} />
+          <Chip label={t('caller.modeManual')} active={mode === 'manual'} onPress={() => changeMode('manual')} />
+        </Row>
+        <Row gap={spacing.sm} style={{ marginTop: spacing.lg }}>
           <Tile
             icon="arrow-undo"
             label={t('caller.undo')}
@@ -173,14 +187,6 @@ export function CallerScreen({ navigation }: ScreenProps<'Caller'>) {
               setConfirmReset(true);
             }}
             disabled={!called.length}
-          />
-          <Tile
-            icon="print-outline"
-            label={t('caller.printTickets')}
-            onPress={() => {
-              setSettingsOpen(false);
-              navigation.navigate('PrintTickets');
-            }}
           />
         </Row>
 

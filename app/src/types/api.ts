@@ -69,7 +69,13 @@ export interface Room {
   totalGames: number;
   gamesPlayed: number;
   memberCount: number;
+  /** 'fastest' = first tap wins; 'fair' = server awards everyone completing on that number. */
+  claimMode: ClaimMode;
+  /** Called numbers are circled on tickets automatically. */
+  autoMark: boolean;
 }
+
+export type ClaimMode = 'fastest' | 'fair';
 
 export interface Game {
   id: string;
@@ -83,6 +89,7 @@ export interface Game {
   calledNumbers: number[];
   lastCalledAt: string | null;
   nextCallAt: string | null;
+  paused: boolean;
   startedAt: string | null;
   finishedAt: string | null;
 }
@@ -123,6 +130,8 @@ export interface GameResults {
   calledCount: number;
   finishedAt: string | null;
   prizes: GamePrize[];
+  /** Each player's result for this game, best first. */
+  players: { userId: string; name: string; avatarKey: string; tickets: number; spent: number; won: number; net: number }[];
 }
 
 export interface StandingRow {

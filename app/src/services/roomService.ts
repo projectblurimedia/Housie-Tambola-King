@@ -1,6 +1,7 @@
 import { supabase } from '@/lib/supabase';
 import type { PrizeType } from '@/game/engine/ticket';
 import type {
+  ClaimMode,
   GameResults,
   JoinResult,
   MyJoinStatus,
@@ -24,9 +25,11 @@ export interface CreateRoomInput {
   seriesLength: number;
   /** Enabled prizes → template amount (₹). */
   prizes: Partial<Record<PrizeType, number>>;
+  claimMode: ClaimMode;
+  autoMark: boolean;
 }
 
-export type ClaimResult = 'won' | 'shared' | 'already_claimed' | 'already_yours' | 'not_complete';
+export type ClaimResult = 'won' | 'shared' | 'already_claimed' | 'already_yours' | 'not_complete' | 'auto';
 
 export const roomService = {
   async create(input: CreateRoomInput): Promise<{ roomId: string; code: string }> {
@@ -40,6 +43,8 @@ export const roomService = {
         p_call_interval_seconds: input.callIntervalSeconds,
         p_series_length: input.seriesLength,
         p_prizes: input.prizes,
+        p_claim_mode: input.claimMode,
+        p_auto_mark: input.autoMark,
       }),
     ) as { roomId: string; code: string };
   },
@@ -59,6 +64,18 @@ export const roomService = {
 
   async respondJoin(roomId: string, userId: string, accept: boolean): Promise<void> {
     unwrap(await supabase.rpc('respond_join_request', { p_room: roomId, p_user: userId, p_accept: accept }));
+  },
+
+  async setPaused(gameId: string, paused: boolean): Promise<void> {
+    unwrap(await supabase.rpc('set_game_paused', { p_game: gameId, p_paused: paused }));
+  },
+
+  async setSpeed(roomId: string, seconds: number): Promise<void> {
+    unwrap(await supabase.rpc('set_call_speed', { p_room: roomId, p_seconds: seconds }));
+  },
+
+  async removeMember(roomId: string, userId: string): Promise<void> {
+    unwrap(await supabase.rpc('remove_member', { p_room: roomId, p_user: userId }));
   },
 
   async leave(roomId: string): Promise<void> {

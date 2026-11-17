@@ -11,7 +11,7 @@ export type RoomEvent =
   | { type: 'prize_settled'; gameId: string; prize: PrizeType; each: number; winners: number }
   | { type: 'state'; gameId: string; gameNo: number; status: 'running' | 'finished' }
   | { type: 'game'; gameId: string; gameNo: number }
-  | { type: 'members'; memberCount: number; joined?: string }
+  | { type: 'members'; memberCount: number; joined?: string; removed?: string }
   | { type: 'room_ended'; reason: string }
   | { type: 'join_request'; userId: string; name: string };
 
@@ -88,6 +88,8 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
             : old,
         );
         emit({ type: 'prize', gameId: p.gameId, prize: p.prize, amount: p.amount, winners: p.winners });
+        // The clock pauses for the announcement — pick up the new nextCallAt.
+        refetch();
       })
       .on('broadcast', { event: 'prize_settled' }, ({ payload }) => {
         refetch();
@@ -105,7 +107,7 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
       })
       .on('broadcast', { event: 'members' }, ({ payload }) => {
         refetch();
-        emit({ type: 'members', ...(payload as { memberCount: number; joined?: string }) });
+        emit({ type: 'members', ...(payload as { memberCount: number; joined?: string; removed?: string }) });
       })
       .on('broadcast', { event: 'state' }, ({ payload }) => {
         refetch();
@@ -121,6 +123,8 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
         emit({ type: 'join_request', ...(payload as { userId: string; name: string }) });
       })
       .on('broadcast', { event: 'join_decided' }, () => refetch())
+      .on('broadcast', { event: 'paused' }, () => refetch())
+      .on('broadcast', { event: 'speed' }, () => refetch())
       .on('broadcast', { event: 'room_ended' }, ({ payload }) => {
         refetch();
         refetchStandings();
@@ -147,8 +151,9 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
   const gameId = query.data?.game?.id;
   const status = query.data?.game?.status;
   const nextCallAt = query.data?.game?.nextCallAt;
+  const paused = query.data?.game?.paused ?? false;
   useEffect(() => {
-    if (status !== 'running' || !nextCallAt || !gameId) return;
+    if (status !== 'running' || !nextCallAt || !gameId || paused) return;
     let lastNudge = 0;
     const timer = setInterval(() => {
       const serverNow = Date.now() + offsetRef.current;
@@ -161,7 +166,7 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
       }
     }, 1000);
     return () => clearInterval(timer);
-  }, [status, nextCallAt, gameId, roomId, qc]);
+  }, [status, nextCallAt, gameId, paused, roomId, qc]);
 
   return {
     ...query,

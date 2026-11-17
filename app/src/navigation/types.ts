@@ -11,7 +11,6 @@ export type RootStackParamList = {
   SoloSetup: undefined;
   SoloGame: { bots: number; myTickets: number; difficulty: BotDifficulty };
   Caller: undefined;
-  PrintTickets: undefined;
   Profile: undefined;
   EditProfile: undefined;
   HowToPlay: undefined;
