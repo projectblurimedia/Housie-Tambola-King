@@ -21,12 +21,14 @@ Name entry → guest (Supabase anonymous, name in metadata) → play instantly. 
 ## Status
 | Area | State |
 |---|---|
-| DB (5 migrations: core, rooms_games, realtime, cron, push_admin) | Written; **not yet applied** (no Supabase project linked) |
-| Edge Function send-sms-hook | Written; not deployed |
-| App | typecheck clean, 23 unit tests, Android bundle builds, expo-doctor 20/20 |
-| Admin web | build passes |
-| E2E `scripts/smoke-test.mjs` | Written for the room/series flow; runs once keys exist |
-| APK | Pending Supabase keys (EAS account `projectblurimedia` is logged in) |
+| DB (5 migrations) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
+| App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
+| Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |
+| GitHub | https://github.com/projectblurimedia/Housie-Tambola-King (`main`) |
+| E2E `scripts/smoke-test.mjs` | Needs "Allow anonymous sign-ins" ON in Supabase Auth settings |
+
+All accounts for this project belong to projectblurimedia@gmail.com (owner's rule). This PC's default Vercel/GitHub logins are NearbyU's — use `--global-config C:/Users/MANIKANTA/.vercel-projectblurimedia` for Vercel and the `projectblurimedia@` remote URL for git.
 
 Removed in the 2026-11-17 redesign (never shipped): coins/wallet, daily bonus, Razorpay, public auto-scheduled tiers, global leaderboard.
 

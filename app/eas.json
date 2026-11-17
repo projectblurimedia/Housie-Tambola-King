@@ -15,7 +15,8 @@
       "channel": "preview",
       "environment": "preview",
       "android": {
-        "buildType": "apk"
+        "buildType": "apk",
+        "credentialsSource": "local"
       }
     },
     "production": {
