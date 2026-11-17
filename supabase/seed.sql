@@ -1,0 +1,2 @@
+-- Local development seed (npx supabase db reset). Tiers, coin packs and settings are
+-- created by the migrations themselves, so production and local start identical.

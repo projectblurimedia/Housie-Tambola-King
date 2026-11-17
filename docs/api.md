@@ -1,0 +1,35 @@
+# API (Supabase RPCs & Edge Functions)
+
+All calls go through `supabase-js` with the user's JWT. Errors are raised as a bare code in `error.message` (e.g. `ROOM_FULL`); the app maps codes via `app/src/localization/*.json → errors.*`.
+
+## Player RPCs (`authenticated`, guests included)
+| RPC | Args | Returns | Errors |
+|---|---|---|---|
+| `get_me` | – | profile + stats | `PROFILE_NOT_FOUND` |
+| `update_my_profile` | `p_display_name?, p_avatar_key?, p_language?` | `get_me` | `INVALID_DISPLAY_NAME`, `INVALID_AVATAR` |
+| `delete_my_account` | – | – | – |
+| `create_room` | `p_title, p_kind (normal/series), p_visibility (public/private), p_max_players, p_ticket_price, p_call_interval_seconds, p_series_length, p_prizes {prize: ₹}` | `{roomId, code}` | `INVALID_PRIZES`, `INVALID_TICKET_PRICE`, `INVALID_MAX_PLAYERS`, `INVALID_SERIES_LENGTH`, `TOO_MANY_OPEN_ROOMS` |
+| `join_room_by_code` | `p_code` | room id | `ROOM_NOT_FOUND`, `ROOM_FULL`, `ROOM_ENDED` |
+| `join_public_room` | `p_room` | room id | same |
+| `leave_room` / `end_room` / `play_again` | `p_room` | – | `NOT_HOST`, `ROOM_STILL_PLAYING` |
+| `set_my_tickets` | `p_game, p_count (0–4)` | my tickets | `INVALID_TICKET_COUNT`, `GAME_ALREADY_STARTED`, `NOT_IN_ROOM` |
+| `set_game_prizes` | `p_game, p_amounts {prize: ₹}` (host) | – | `PRIZES_MUST_EQUAL_POT`, `INVALID_PRIZES`, `NOT_HOST` |
+| `start_game` | `p_game` (host) | – | `NEED_TWO_PLAYERS`, `NOT_HOST` |
+| `claim_prize` | `p_ticket, p_prize` | `{result: won/shared/already_claimed/already_yours/not_complete}` | `GAME_NOT_RUNNING`, `TOO_MANY_CLAIMS` |
+| `nudge_game` | `p_game` | – (advances only if a call is overdue) | – |
+| `get_room_state` | `p_room` | room + current game + prizes + my tickets + members + previousGameId + serverTime | `NOT_IN_ROOM` |
+| `get_game_results` | `p_game` | prizes with winners, numbers, amounts | `NOT_IN_ROOM` |
+| `get_room_standings` | `p_room` | per player: games, tickets, spent, wins, won, net, list | `NOT_IN_ROOM` |
+| `list_public_rooms` / `get_my_rooms` | – | summaries | – |
+| `register_push_token` | `p_token, p_platform` | – | `INVALID_PUSH_TOKEN` |
+
+## Realtime
+Private channel `room:<roomId>` (members only, receive-only). Events: `call {gameId, n, index, nextCallAt}`, `prize {gameId, prize, amount, callIndex, winners[{userId, name, avatarKey, ticketSerial, numbers}]}`, `prize_settled {gameId, prize, each, winners}`, `lobby {gameId, ticketCount, playerCount, pot}`, `members {memberCount, joined?}`, `state {gameId, gameNo, status}`, `game {gameId, gameNo}` (next lobby opened), `room_ended {reason}`.
+
+## Admin RPCs (`role = admin`)
+`admin_dashboard`, `admin_list_players`, `admin_get_player`, `admin_set_ban`, `admin_set_role`, `admin_list_rooms`, `admin_end_room`. `app_settings` is edited directly under admin-only RLS (audit-logged).
+
+## Edge Functions
+| Function | Auth | Purpose |
+|---|---|---|
+| `send-sms-hook` | Standard-Webhooks signature | Supabase Auth OTP → Fast2SMS |
