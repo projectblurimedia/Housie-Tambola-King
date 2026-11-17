@@ -3,7 +3,7 @@ import { Animated, Easing, KeyboardAvoidingView, Platform, ScrollView, StyleShee
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { Button, T } from '@/components/ui';
+import { Button, centeredInput, T } from '@/components/ui';
 import { NumberBall } from '@/components/NumberBall';
 import { authService, normalizeIndianMobile } from '@/services/authService';
 import { errorMessage } from '@/localization/errorMessages';
@@ -166,6 +166,7 @@ const styles = StyleSheet.create({
     fontFamily: fonts.semibold,
     fontSize: 18,
     paddingHorizontal: spacing.md,
-    paddingVertical: 12,
+    height: 52,
+    ...centeredInput,
   },
 });

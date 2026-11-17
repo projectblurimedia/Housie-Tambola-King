@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Header, Row, Screen, Spacer, Stepper, T } from '@/components/ui';
+import { Button, Card, Row, Screen, Spacer, Stepper, T } from '@/components/ui';
 import { generateTicket, COLS } from '@/game/engine/ticket';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
@@ -59,8 +59,7 @@ export function PrintTicketsScreen() {
   };
 
   return (
-    <Screen>
-      <Header title={t('caller.printTitle')} />
+    <Screen title={t('caller.printTitle')}>
       <T muted>{t('caller.printSubtitle')}</T>
       <Spacer h={spacing.xl} />
       <Card>

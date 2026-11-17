@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { formatRupees } from '@/components/Money';
-import { Button, Row, T } from '@/components/ui';
+import { Button, centeredInput, Row, T } from '@/components/ui';
 import { splitPot, sumAmounts } from '@/game/engine/split';
 import type { PrizeType } from '@/game/engine/ticket';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
@@ -14,6 +14,8 @@ export function PrizeAmountsModal({
   pot,
   prizes,
   saving,
+  saveLabel,
+  hint,
   onSave,
   onClose,
 }: {
@@ -21,6 +23,9 @@ export function PrizeAmountsModal({
   pot: number;
   prizes: GamePrize[];
   saving?: boolean;
+  /** e.g. "Save & Start" when opened from the host's Start button. */
+  saveLabel?: string;
+  hint?: string;
   onSave: (amounts: Partial<Record<PrizeType, number>>) => void;
   onClose: () => void;
 }) {
@@ -46,6 +51,11 @@ export function PrizeAmountsModal({
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
           <T variant="h1">{t('lobby.amountsTitle')}</T>
+          {hint ? (
+            <T variant="small" muted style={{ marginTop: 4 }}>
+              {hint}
+            </T>
+          ) : null}
           <T variant="smallBold" color={matches ? colors.success : colors.error} style={{ marginTop: 4 }}>
             {t('lobby.amountsTotal', { total: formatRupees(total), pot: formatRupees(pot) })}
           </T>
@@ -64,7 +74,7 @@ export function PrizeAmountsModal({
                     onChangeText={(v) => setValues((s) => ({ ...s, [p.prize]: v.replace(/[^0-9.]/g, '').slice(0, 9) }))}
                     keyboardType="decimal-pad"
                     selectTextOnFocus
-                    style={[styles.inputText, { color: colors.text }]}
+                    style={[styles.inputText, centeredInput, { color: colors.text }]}
                   />
                 </View>
               </Row>
@@ -78,7 +88,7 @@ export function PrizeAmountsModal({
           <Row gap={spacing.sm} style={{ marginTop: spacing.lg }}>
             <Button title={t('lobby.autoSplit')} variant="secondary" icon="git-compare" style={{ flex: 1 }} onPress={autoSplit} />
             <Button
-              title={t('common.save')}
+              title={saveLabel ?? t('common.save')}
               icon="checkmark"
               style={{ flex: 1 }}
               loading={saving}
@@ -96,6 +106,6 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, paddingBottom: spacing.xxl },
   row: { paddingVertical: spacing.sm, borderBottomWidth: 1 },
-  input: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: radius.sm, paddingHorizontal: 8, width: 110 },
-  inputText: { flex: 1, fontFamily: fonts.bold, fontSize: 16, paddingVertical: 6, paddingHorizontal: 4 },
+  input: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: radius.sm, paddingHorizontal: 8, width: 120, height: 46 },
+  inputText: { flex: 1, fontFamily: fonts.bold, fontSize: 16, height: 46, paddingHorizontal: 4 },
 });

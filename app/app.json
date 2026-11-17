@@ -76,7 +76,7 @@
     "updates": {
       "enabled": true,
       "fallbackToCacheTimeout": 0,
-      "checkAutomatically": "ON_LOAD",
+      "checkAutomatically": "ON_ERROR_RECOVERY",
       "url": "https://u.expo.dev/029428f2-fcac-4e06-abd2-f27f3731a9ed"
     },
     "extra": {

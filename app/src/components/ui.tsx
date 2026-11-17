@@ -10,6 +10,7 @@ import {
   ScrollView,
   StyleProp,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TextInputProps,
@@ -17,11 +18,11 @@ import {
   View,
   ViewStyle,
 } from 'react-native';
-import { SafeAreaView, Edge } from 'react-native-safe-area-context';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
-import { goldGradient, radius, spacing, typography, useThemeColors } from '@/theme';
+import { goldGradient, heroGradient, radius, spacing, typography, useThemeColors } from '@/theme';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -57,28 +58,43 @@ export function T({
 }
 
 // ─── Screen ───────────────────────────────────────────────────────────────────
+/**
+ * Every screen. With a `title` it gets the purple gradient header, which also sits behind
+ * the status bar — the status bar text is always white (App.tsx), so the area under it is
+ * always the gradient. Without a title, a gradient strip still covers the status bar.
+ */
 export function Screen({
   children,
   scroll,
-  edges = ['top', 'bottom'],
+  title,
+  right,
+  onBack,
   padded = true,
   refreshControl,
   style,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
-  edges?: Edge[];
+  title?: string;
+  right?: React.ReactNode;
+  onBack?: () => void;
   padded?: boolean;
   refreshControl?: React.ReactElement;
   style?: StyleProp<ViewStyle>;
 }) {
   const { colors } = useThemeColors();
+  const insets = useSafeAreaInsets();
   const inner = padded ? { paddingHorizontal: spacing.lg } : undefined;
   return (
-    <SafeAreaView edges={edges} style={[{ flex: 1, backgroundColor: colors.background }, style]}>
+    <View style={[{ flex: 1, backgroundColor: colors.background, paddingBottom: insets.bottom }, style]}>
+      {title !== undefined ? (
+        <Header title={title} right={right} onBack={onBack} />
+      ) : (
+        <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: insets.top }} />
+      )}
       {scroll ? (
         <ScrollView
-          contentContainerStyle={[inner, { paddingBottom: spacing.xxl }]}
+          contentContainerStyle={[inner, { paddingTop: spacing.lg, paddingBottom: spacing.xxl }]}
           keyboardShouldPersistTaps="handled"
           refreshControl={refreshControl as never}
           showsVerticalScrollIndicator={false}
@@ -86,28 +102,29 @@ export function Screen({
           {children}
         </ScrollView>
       ) : (
-        <View style={[{ flex: 1 }, inner]}>{children}</View>
+        <View style={[{ flex: 1, paddingTop: spacing.lg }, inner]}>{children}</View>
       )}
-    </SafeAreaView>
+    </View>
   );
 }
 
+/** Gradient header bar: back button, centered title (wraps to 2 lines if long), optional action. */
 export function Header({ title, right, onBack }: { title?: string; right?: React.ReactNode; onBack?: () => void }) {
   const navigation = useNavigation();
-  const { colors } = useThemeColors();
+  const insets = useSafeAreaInsets();
   return (
-    <View style={styles.header}>
-      <IconButton
-        icon="chevron-back"
-        onPress={onBack ?? (() => navigation.goBack())}
-        color={colors.text}
-        accessibilityLabel="back"
-      />
-      <T variant="h2" style={{ flex: 1, textAlign: 'center' }} numberOfLines={1}>
+    <LinearGradient
+      colors={heroGradient}
+      start={{ x: 0, y: 0 }}
+      end={{ x: 1, y: 1 }}
+      style={[styles.header, { paddingTop: insets.top + spacing.xs }]}
+    >
+      <IconButton icon="chevron-back" onPress={onBack ?? (() => navigation.goBack())} color="#fff" accessibilityLabel="back" />
+      <T variant="h2" color="#fff" style={{ flex: 1, textAlign: 'center' }} numberOfLines={1}>
         {title ?? ''}
       </T>
       <View style={{ minWidth: 40, alignItems: 'flex-end' }}>{right}</View>
-    </View>
+    </LinearGradient>
   );
 }
 
@@ -242,6 +259,53 @@ export function Spacer({ h = spacing.md }: { h?: number }) {
 }
 
 // ─── Inputs ───────────────────────────────────────────────────────────────────
+/**
+ * Poppins has tall built-in font padding on Android, which pushes typed text and
+ * placeholders below the middle of an input. Every TextInput in the app spreads this:
+ * no font padding, no lineHeight, zero vertical padding, and a fixed height so the text
+ * sits exactly in the vertical centre.
+ */
+export const centeredInput: TextStyle = {
+  includeFontPadding: false,
+  textAlignVertical: 'center',
+  paddingTop: 0,
+  paddingBottom: 0,
+  lineHeight: undefined,
+};
+
+/** Brand-coloured on/off switch (purple track, gold thumb when on) — never the default green. */
+export function Toggle({ value, onValueChange, disabled }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean }) {
+  const { colors } = useThemeColors();
+  return (
+    <Switch
+      value={value}
+      onValueChange={onValueChange}
+      disabled={disabled}
+      trackColor={{ false: colors.border, true: colors.primaryLight }}
+      thumbColor={value ? colors.primary : '#f4f3f4'}
+      ios_backgroundColor={colors.border}
+    />
+  );
+}
+
+/** Small selectable pill (multi-select options, speed choices…). */
+export function Chip({ label, active, onPress }: { label: string; active: boolean; onPress: () => void }) {
+  const { colors } = useThemeColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.chip,
+        { backgroundColor: active ? colors.primary : colors.surface, borderColor: active ? colors.primary : colors.border },
+        pressed && { opacity: 0.8 },
+      ]}
+    >
+      {active ? <Ionicons name="checkmark" size={14} color="#fff" /> : null}
+      <Text style={[typography.smallBold, { color: active ? '#fff' : colors.text }]}>{label}</Text>
+    </Pressable>
+  );
+}
+
 export function TextField({ label, error, style, ...props }: TextInputProps & { label?: string; error?: string }) {
   const { colors } = useThemeColors();
   return (
@@ -256,6 +320,7 @@ export function TextField({ label, error, style, ...props }: TextInputProps & { 
         style={[
           typography.bodyMedium,
           styles.input,
+          centeredInput,
           { color: colors.text, backgroundColor: colors.surface, borderColor: error ? colors.error : colors.border },
           style,
         ]}
@@ -374,7 +439,23 @@ export function Pill({ label, color, textColor }: { label: string; color: string
 }
 
 const styles = StyleSheet.create({
-  header: { flexDirection: 'row', alignItems: 'center', paddingVertical: spacing.sm, minHeight: 52 },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.sm,
+    paddingBottom: spacing.md,
+    borderBottomLeftRadius: radius.xl,
+    borderBottomRightRadius: radius.xl,
+  },
+  chip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: radius.pill,
+    borderWidth: 1.5,
+  },
   buttonInner: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -387,7 +468,7 @@ const styles = StyleSheet.create({
   pressed: { transform: [{ scale: 0.98 }], opacity: 0.9 },
   iconButton: { padding: 4, minWidth: 40, alignItems: 'center', justifyContent: 'center' },
   card: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.lg },
-  input: { borderWidth: 1.5, borderRadius: radius.md, paddingHorizontal: spacing.md, paddingVertical: 12, fontSize: 16 },
+  input: { borderWidth: 1.5, borderRadius: radius.md, paddingHorizontal: spacing.md, height: 52, fontSize: 16 },
   segmented: { flexDirection: 'row', borderRadius: radius.md, padding: 4 },
   segment: { flex: 1, paddingVertical: 10, borderRadius: radius.sm, alignItems: 'center', paddingHorizontal: 4 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },

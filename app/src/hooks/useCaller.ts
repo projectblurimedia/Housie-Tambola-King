@@ -3,13 +3,17 @@ import * as Speech from 'expo-speech';
 import * as Haptics from 'expo-haptics';
 import { useSettingsStore } from '@/state/settingsStore';
 import { speechLanguageCode, spokenCall } from '@/game/engine/calls';
+import type { SupportedLanguage } from '@/localization/languages';
 
-/** Announces called numbers (voice + haptic tick) according to the player's settings. */
-export function useCaller() {
+/**
+ * Announces called numbers (voice + haptic tick). The voice language follows the app
+ * language unless the caller passes its own (Caller Mode has an English/Telugu switch).
+ */
+export function useCaller(voiceLanguage?: SupportedLanguage) {
   const voice = useSettingsStore((s) => s.voice);
-  const language = useSettingsStore((s) => s.language);
-  const callStyle = useSettingsStore((s) => s.callStyle);
+  const appLanguage = useSettingsStore((s) => s.language);
   const haptics = useSettingsStore((s) => s.haptics);
+  const language = voiceLanguage ?? appLanguage;
 
   useEffect(() => () => void Speech.stop(), []);
 
@@ -18,14 +22,9 @@ export function useCaller() {
       if (haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
       if (!voice) return;
       Speech.stop();
-      Speech.speak(spokenCall(n, language, callStyle), {
-        language: speechLanguageCode(language),
-        rate: 0.95,
-        volume: 1,
-        pitch: 1.05,
-      });
+      Speech.speak(spokenCall(n), { language: speechLanguageCode(language), rate: 0.9, volume: 1 });
     },
-    [voice, language, callStyle, haptics],
+    [voice, language, haptics],
   );
 
   const celebrate = useCallback(() => {

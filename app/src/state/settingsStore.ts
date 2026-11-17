@@ -2,7 +2,6 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n, { deviceLanguage, SupportedLanguage } from '@/localization/i18n';
-import type { CallStyle } from '@/game/engine/calls';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -12,12 +11,11 @@ interface SettingsState {
   themeMode: ThemeMode;
   /** Speak each called number aloud. */
   voice: boolean;
-  callStyle: CallStyle;
   haptics: boolean;
   isHydrated: boolean;
   setLanguage: (language: SupportedLanguage) => void;
   confirmLanguage: () => void;
-  set: (patch: Partial<Pick<SettingsState, 'themeMode' | 'voice' | 'callStyle' | 'haptics'>>) => void;
+  set: (patch: Partial<Pick<SettingsState, 'themeMode' | 'voice' | 'haptics'>>) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -27,7 +25,6 @@ export const useSettingsStore = create<SettingsState>()(
       hasSelectedLanguage: false,
       themeMode: 'system',
       voice: true,
-      callStyle: 'classic',
       haptics: true,
       isHydrated: false,
       setLanguage: (language) => {

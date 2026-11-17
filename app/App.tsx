@@ -1,5 +1,5 @@
 import '@/localization/i18n';
-import React, { useEffect } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { AppState, AppStateStatus, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
@@ -16,6 +16,7 @@ import { IS_CONFIGURED } from '@/constants/config';
 import { RootNavigator } from '@/navigation/RootNavigator';
 import { ToastHost } from '@/components/ToastHost';
 import { WinnerOverlay } from '@/components/WinnerOverlay';
+import { UpdateOverlay } from '@/components/UpdateOverlay';
 import { Screen, T } from '@/components/ui';
 import { useSessionStore } from '@/state/sessionStore';
 import { useSettingsStore } from '@/state/settingsStore';
@@ -34,6 +35,8 @@ Notifications.setNotificationHandler({
     shouldSetBadge: false,
   }),
 });
+
+const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -129,13 +132,64 @@ export default function App() {
     SystemUI.setBackgroundColorAsync(colors.background).catch(() => undefined);
   }, [colors.background]);
 
-  // OTA updates: fetch in the background; applied on next launch (never mid-game).
+  // OTA updates (EAS Update), same as NearbyU: checked on launch, when the app returns to
+  // the foreground and every 5 minutes. A found update downloads behind a full-screen
+  // progress overlay, then the app restarts into it. expo-updates gives no byte progress,
+  // so the bar is a simulated ramp (5% → 88%) snapped to 100% when the update is ready.
+  // Game state lives on the server and strikes are persisted, so a restart mid-game is safe.
+  const { isUpdateAvailable, isUpdatePending, isDownloading } = Updates.useUpdates();
+  const [showUpdateOverlay, setShowUpdateOverlay] = useState(false);
+  const [downloadProgress, setDownloadProgress] = useState(0);
+  const appStateRef = useRef(AppState.currentState);
+
   useEffect(() => {
+    if (!isUpdateAvailable) return;
+    setShowUpdateOverlay(true);
+    setDownloadProgress(0);
+    Updates.fetchUpdateAsync().catch(() => setShowUpdateOverlay(false));
+  }, [isUpdateAvailable]);
+
+  useEffect(() => {
+    if (!isDownloading) return;
+    let current = 0.05;
+    setDownloadProgress(current);
+    const id = setInterval(() => {
+      current = Math.min(current + Math.random() * 0.1 + 0.04, 0.88);
+      setDownloadProgress(current);
+    }, 400);
+    return () => clearInterval(id);
+  }, [isDownloading]);
+
+  useEffect(() => {
+    if (!isUpdatePending || !showUpdateOverlay) return;
+    setDownloadProgress(1);
+    const timeout = setTimeout(() => Updates.reloadAsync().catch(() => undefined), 1800);
+    return () => clearTimeout(timeout);
+  }, [isUpdatePending, showUpdateOverlay]);
+
+  const checkForUpdate = useCallback(async () => {
     if (__DEV__ || !Updates.isEnabled) return;
-    Updates.checkForUpdateAsync()
-      .then((r) => (r.isAvailable ? Updates.fetchUpdateAsync() : undefined))
-      .catch(() => undefined);
+    try {
+      await Updates.checkForUpdateAsync();
+    } catch {
+      // Offline / update server unreachable — the installed version keeps working.
+    }
   }, []);
+
+  useEffect(() => {
+    checkForUpdate();
+    const sub = AppState.addEventListener('change', (status) => {
+      if (appStateRef.current !== 'active' && status === 'active') checkForUpdate();
+      appStateRef.current = status;
+    });
+    const interval = setInterval(() => {
+      if (appStateRef.current === 'active') checkForUpdate();
+    }, UPDATE_CHECK_INTERVAL_MS);
+    return () => {
+      sub.remove();
+      clearInterval(interval);
+    };
+  }, [checkForUpdate]);
 
   const ready = (fontsLoaded || !!fontError) && settingsHydrated && (sessionReady || !IS_CONFIGURED);
 
@@ -161,11 +215,13 @@ export default function App() {
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
         <NavigationContainer theme={navTheme}>
-          <StatusBar style={isDark ? 'light' : 'dark'} />
+          {/* Always white: every screen has the purple gradient behind the status bar. */}
+          <StatusBar style="light" />
           {IS_CONFIGURED ? <SessionGate /> : <NotConfigured />}
         </NavigationContainer>
         <WinnerOverlay />
         <ToastHost />
+        {showUpdateOverlay ? <UpdateOverlay progress={downloadProgress} /> : null}
       </QueryClientProvider>
     </SafeAreaProvider>
   );

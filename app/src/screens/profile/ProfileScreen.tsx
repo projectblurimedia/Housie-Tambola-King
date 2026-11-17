@@ -1,13 +1,14 @@
-import React from 'react';
-import { Alert, Linking, Pressable, StyleSheet, Switch, View } from 'react-native';
+import React, { useState } from 'react';
+import { Linking, Pressable, StyleSheet, View } from 'react-native';
 import Constants from 'expo-constants';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useNavigation } from '@react-navigation/native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { formatRupees } from '@/components/Money';
-import { Button, Card, Header, Row, Screen, Segmented, Spacer, T } from '@/components/ui';
+import { Card, Row, Screen, Segmented, Spacer, T, Toggle } from '@/components/ui';
 import { useMe } from '@/hooks/useMe';
 import { authService } from '@/services/authService';
 import { profileService } from '@/services/profileService';
@@ -16,23 +17,35 @@ import { SupportedLanguage } from '@/localization/i18n';
 import { showToast } from '@/state/toastStore';
 import { ThemeMode, useSettingsStore } from '@/state/settingsStore';
 import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/constants/config';
-import { spacing, useThemeColors } from '@/theme';
+import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
+import type { ScreenProps } from '@/navigation/types';
 
-function SettingRow({ label, children }: { label: string; children: React.ReactNode }) {
+type IconName = keyof typeof Ionicons.glyphMap;
+
+function SettingRow({ icon, label, children }: { icon: IconName; label: string; children: React.ReactNode }) {
+  const { colors } = useThemeColors();
   return (
-    <Row style={{ justifyContent: 'space-between', paddingVertical: 6 }}>
-      <T variant="bodyMedium">{label}</T>
+    <Row style={styles.settingRow}>
+      <View style={[styles.settingIcon, { backgroundColor: colors.surfaceAlt }]}>
+        <Ionicons name={icon} size={18} color={colors.primary} />
+      </View>
+      <T variant="bodyMedium" style={{ flex: 1 }}>
+        {label}
+      </T>
       {children}
     </Row>
   );
 }
 
-function LinkRow({ icon, label, onPress, color }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; color?: string }) {
+function LinkRow({ icon, label, onPress, danger }: { icon: IconName; label: string; onPress: () => void; danger?: boolean }) {
   const { colors } = useThemeColors();
+  const tint = danger ? colors.error : colors.primary;
   return (
-    <Pressable onPress={onPress} style={styles.link}>
-      <Ionicons name={icon} size={20} color={color ?? colors.primary} />
-      <T variant="bodyMedium" color={color} style={{ flex: 1 }}>
+    <Pressable onPress={onPress} style={({ pressed }) => [styles.settingRow, pressed && { opacity: 0.7 }]}>
+      <View style={[styles.settingIcon, { backgroundColor: danger ? 'rgba(220,38,38,0.1)' : colors.surfaceAlt }]}>
+        <Ionicons name={icon} size={18} color={tint} />
+      </View>
+      <T variant="bodyMedium" color={danger ? colors.error : undefined} style={{ flex: 1 }}>
         {label}
       </T>
       <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
@@ -40,13 +53,14 @@ function LinkRow({ icon, label, onPress, color }: { icon: keyof typeof Ionicons.
   );
 }
 
-export function ProfileScreen() {
+export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
-  const navigation = useNavigation();
   const qc = useQueryClient();
   const me = useMe();
   const settings = useSettingsStore();
+  const [confirm, setConfirm] = useState<'logout' | 'delete' | null>(null);
+  const [busy, setBusy] = useState(false);
 
   const changeLanguage = useMutation({
     mutationFn: (language: SupportedLanguage) => profileService.updateProfile({ language }),
@@ -54,65 +68,63 @@ export function ProfileScreen() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ['me'] }),
   });
 
-  const logout = () =>
-    Alert.alert('', t('profile.logoutConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('profile.logout'),
-        style: 'destructive',
-        onPress: () => authService.signOut().catch((err) => showToast({ variant: 'error', title: errorMessage(err) })),
-      },
-    ]);
-
-  const deleteAccount = () =>
-    Alert.alert(t('profile.deleteAccount'), t('profile.deleteConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('profile.deleteAccount'),
-        style: 'destructive',
-        onPress: () => authService.deleteAccount().catch((err) => showToast({ variant: 'error', title: errorMessage(err) })),
-      },
-    ]);
+  const runConfirm = async () => {
+    setBusy(true);
+    try {
+      if (confirm === 'logout') await authService.signOut();
+      else await authService.deleteAccount();
+    } catch (err) {
+      showToast({ variant: 'error', title: errorMessage(err) });
+    } finally {
+      setBusy(false);
+      setConfirm(null);
+    }
+  };
 
   const p = me.data;
+  const phone = p?.phone ? `+${p.phone.slice(0, 2)} ${p.phone.slice(2, 7)} ${p.phone.slice(7)}` : '';
+  const stats: [IconName, string, string][] = [
+    ['game-controller', String(p?.gamesPlayed ?? 0), t('profile.gamesPlayed')],
+    ['trophy', String(p?.prizesWon ?? 0), t('profile.prizesWon')],
+    ['cash', formatRupees(Number(p?.amountWon ?? 0)), t('profile.amountWon')],
+  ];
 
   return (
-    <Screen scroll>
-      <Header title={t('profile.title')} />
-      <Card>
-        <Row gap={spacing.md}>
-          <Avatar avatarKey={p?.avatarKey ?? 'a1'} size={64} />
-          <View style={{ flex: 1 }}>
-            <T variant="h2">{p?.displayName}</T>
-            <Row gap={4}>
-              <Ionicons name="call" size={14} color={colors.success} />
-              <T variant="small" muted>
-                {p?.phone ? `+${p.phone.slice(0, 2)} ${p.phone.slice(2)}` : ''}
-              </T>
-            </Row>
+    <Screen scroll title={t('profile.title')}>
+      <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+        <View style={styles.avatarWrap}>
+          <Avatar avatarKey={p?.avatarKey ?? 'a1'} size={92} ring="#FDE68A" />
+          <Pressable style={styles.editBadge} onPress={() => navigation.navigate('EditProfile')} hitSlop={8}>
+            <Ionicons name="pencil" size={14} color="#3B1D00" />
+          </Pressable>
+        </View>
+        <T style={styles.name} center numberOfLines={2}>
+          {p?.displayName}
+        </T>
+        {phone ? (
+          <View style={styles.phonePill}>
+            <Ionicons name="call" size={13} color="#FDE68A" />
+            <T variant="smallBold" color="#fff">
+              {phone}
+            </T>
           </View>
-          <Button title={t('profile.edit')} small variant="secondary" onPress={() => navigation.navigate('EditProfile')} />
-        </Row>
-        <Row style={{ justifyContent: 'space-around', marginTop: spacing.lg }}>
-          {[
-            [t('profile.gamesPlayed'), String(p?.gamesPlayed ?? 0)],
-            [t('profile.prizesWon'), String(p?.prizesWon ?? 0)],
-            [t('profile.amountWon'), formatRupees(Number(p?.amountWon ?? 0))],
-          ].map(([label, value]) => (
-            <View key={label} style={{ alignItems: 'center' }}>
-              <T variant="h2" color={colors.primary}>
+        ) : null}
+        <Row gap={spacing.sm} style={{ marginTop: spacing.lg, alignSelf: 'stretch' }}>
+          {stats.map(([icon, value, label]) => (
+            <View key={label} style={styles.stat}>
+              <Ionicons name={icon} size={18} color="#FDE68A" />
+              <T variant="h3" color="#fff" numberOfLines={1} style={{ marginTop: 4 }}>
                 {value}
               </T>
-              <T variant="tiny" muted>
+              <T variant="tiny" color="rgba(255,255,255,0.8)" numberOfLines={1}>
                 {label}
               </T>
             </View>
           ))}
         </Row>
-      </Card>
+      </LinearGradient>
 
-
-      <T variant="h2" style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
+      <T variant="smallBold" muted style={styles.sectionLabel}>
         {t('profile.settings')}
       </T>
       <Card style={{ gap: spacing.sm }}>
@@ -140,40 +152,82 @@ export function ProfileScreen() {
           ]}
         />
         <Spacer h={spacing.xs} />
-        <SettingRow label={t('profile.voice')}>
-          <Switch value={settings.voice} onValueChange={(voice) => settings.set({ voice })} trackColor={{ true: colors.primary }} />
+        <SettingRow icon="volume-high" label={t('profile.voice')}>
+          <Toggle value={settings.voice} onValueChange={(voice) => settings.set({ voice })} />
         </SettingRow>
-        {settings.voice && settings.language === 'en' ? (
-          <Segmented
-            value={settings.callStyle}
-            onChange={(callStyle) => settings.set({ callStyle })}
-            options={[
-              { value: 'simple', label: t('profile.callSimple') },
-              { value: 'classic', label: t('profile.callClassic') },
-            ]}
-          />
-        ) : null}
-        <SettingRow label={t('profile.haptics')}>
-          <Switch value={settings.haptics} onValueChange={(haptics) => settings.set({ haptics })} trackColor={{ true: colors.primary }} />
+        <SettingRow icon="phone-portrait" label={t('profile.haptics')}>
+          <Toggle value={settings.haptics} onValueChange={(haptics) => settings.set({ haptics })} />
         </SettingRow>
       </Card>
 
-      <Spacer />
+      <T variant="smallBold" muted style={styles.sectionLabel}>
+        {t('profile.more')}
+      </T>
       <Card style={{ paddingVertical: spacing.xs }}>
+        <LinkRow icon="create-outline" label={t('profile.edit')} onPress={() => navigation.navigate('EditProfile')} />
         <LinkRow icon="help-circle-outline" label={t('profile.howToPlay')} onPress={() => navigation.navigate('HowToPlay')} />
         <LinkRow icon="mail-outline" label={t('profile.support')} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)} />
         <LinkRow icon="document-text-outline" label={t('profile.terms')} onPress={() => Linking.openURL(TERMS_URL)} />
         <LinkRow icon="lock-closed-outline" label={t('profile.privacy')} onPress={() => Linking.openURL(PRIVACY_URL)} />
-        <LinkRow icon="log-out-outline" label={t('profile.logout')} onPress={logout} color={colors.error} />
-        <LinkRow icon="trash-outline" label={t('profile.deleteAccount')} onPress={deleteAccount} color={colors.error} />
+        <LinkRow icon="log-out-outline" label={t('profile.logout')} onPress={() => setConfirm('logout')} danger />
+        <LinkRow icon="trash-outline" label={t('profile.deleteAccount')} onPress={() => setConfirm('delete')} danger />
       </Card>
       <T variant="tiny" muted center style={{ marginTop: spacing.lg }}>
         {t('profile.version', { version: Constants.expoConfig?.version ?? '1.0.0' })}
       </T>
+
+      <ConfirmModal
+        visible={confirm !== null}
+        icon={confirm === 'delete' ? 'trash' : 'log-out'}
+        title={confirm === 'delete' ? t('profile.deleteAccount') : t('profile.logout')}
+        message={confirm === 'delete' ? t('profile.deleteConfirm') : t('profile.logoutConfirm')}
+        confirmLabel={confirm === 'delete' ? t('profile.deleteAccount') : t('profile.logout')}
+        loading={busy}
+        onConfirm={runConfirm}
+        onCancel={() => setConfirm(null)}
+      />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  link: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
+  hero: { borderRadius: radius.xl, padding: spacing.lg, alignItems: 'center' },
+  avatarWrap: { marginTop: spacing.sm },
+  editBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#FDE68A',
+    borderWidth: 2,
+    borderColor: '#fff',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  name: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 30, color: '#fff', marginTop: spacing.md, paddingHorizontal: spacing.sm },
+  phonePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginTop: spacing.sm,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: radius.pill,
+    backgroundColor: 'rgba(255,255,255,0.16)',
+  },
+  stat: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: spacing.md,
+    paddingHorizontal: 4,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.2)',
+  },
+  sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
+  settingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
+  settingIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
 });

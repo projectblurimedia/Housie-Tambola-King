@@ -1,5 +1,6 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, ScrollView, StyleSheet, View } from 'react-native';
+import { ScrollView, StyleSheet, View } from 'react-native';
+import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -21,7 +22,6 @@ import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { useMarksStore } from '@/state/marksStore';
 import { useSettingsStore } from '@/state/settingsStore';
-import { classicPhrase } from '@/game/engine/calls';
 import { isPrizeComplete, prizeCompletedAt, remainingFor } from '@/game/engine/ticket';
 import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { Me, RoomState, Ticket } from '@/types/api';
@@ -48,7 +48,6 @@ export function LiveView({
   const qc = useQueryClient();
   const caller = useCaller();
   const haptics = useSettingsStore((s) => s.haptics);
-  const language = useSettingsStore((s) => s.language);
   useNow(500);
   const { room } = state;
   const game = state.game!;
@@ -133,11 +132,8 @@ export function LiveView({
       .map((p) => t(`prizes.${p.prize}`))
       .join(' · ');
 
-  const leave = () =>
-    Alert.alert('', t('game.leaveConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('common.ok'), onPress: () => navigation.goBack() },
-    ]);
+  const [confirmLeave, setConfirmLeave] = useState(false);
+  const leave = () => setConfirmLeave(true);
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -181,11 +177,6 @@ export function LiveView({
                       {t('lobby.pot')} {formatRupees(game.pot)}
                     </T>
                   </Row>
-                  {last && language === 'en' && classicPhrase(last) ? (
-                    <T variant="small" color="rgba(255,255,255,0.9)" style={{ fontStyle: 'italic' }}>
-                      “{classicPhrase(last)}”
-                    </T>
-                  ) : null}
                   <View style={styles.progress}>
                     <View
                       style={{
@@ -253,6 +244,19 @@ export function LiveView({
         {tab === 'prizes' ? <PrizeList rows={prizeRows} /> : null}
         {tab === 'standings' ? <StandingsList roomId={room.id} meId={me.id} /> : null}
       </ScrollView>
+      <ConfirmModal
+        visible={confirmLeave}
+        icon="exit-outline"
+        gradient={BRAND_GRADIENT}
+        title={t('game.leaveTitle')}
+        message={t('game.leaveConfirm')}
+        confirmLabel={t('common.ok')}
+        onCancel={() => setConfirmLeave(false)}
+        onConfirm={() => {
+          setConfirmLeave(false);
+          navigation.goBack();
+        }}
+      />
     </View>
   );
 }

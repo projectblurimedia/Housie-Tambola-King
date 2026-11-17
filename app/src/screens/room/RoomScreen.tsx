@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { Alert, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
+import { ConfirmModal } from '@/components/ConfirmModal';
 import { formatRupees } from '@/components/Money';
 import { PrizeList } from '@/components/PrizeList';
 import { TicketView } from '@/components/TicketView';
@@ -89,9 +90,13 @@ function LobbyPanel({ state, me, onOpenPicker }: { state: RoomState; me: Me; onO
   const refresh = () => qc.invalidateQueries({ queryKey: roomKey(room.id) });
   const onError = (err: unknown) => showToast({ variant: 'error', title: errorMessage(err) });
 
-  const start = useMutation({ mutationFn: () => roomService.start(game.id), onSuccess: refresh, onError });
+  /** 'edit' = just save amounts; 'start' = host tapped Start: confirm amounts against the real pot, then start. */
+  const [mode, setMode] = useState<'edit' | 'start'>('edit');
   const saveAmounts = useMutation({
-    mutationFn: (amounts: Partial<Record<PrizeType, number>>) => roomService.setPrizeAmounts(game.id, amounts),
+    mutationFn: async (amounts: Partial<Record<PrizeType, number>>) => {
+      await roomService.setPrizeAmounts(game.id, amounts);
+      if (mode === 'start') await roomService.start(game.id);
+    },
     onSuccess: () => {
       setEditing(false);
       refresh();
@@ -149,7 +154,18 @@ function LobbyPanel({ state, me, onOpenPicker }: { state: RoomState; me: Me; onO
             <T variant="h3">{t('lobby.prizes')}</T>
             {game.prizesCustom ? <Pill label={t('lobby.custom')} color={colors.primary} /> : null}
           </Row>
-          {isHost ? <Button title={t('lobby.editAmounts')} small variant="secondary" icon="create" onPress={() => setEditing(true)} /> : null}
+          {isHost ? (
+            <Button
+              title={t('lobby.editAmounts')}
+              small
+              variant="secondary"
+              icon="create"
+              onPress={() => {
+                setMode('edit');
+                setEditing(true);
+              }}
+            />
+          ) : null}
         </Row>
         <PrizeList
           compact
@@ -163,9 +179,11 @@ function LobbyPanel({ state, me, onOpenPicker }: { state: RoomState; me: Me; onO
             title={t('lobby.start')}
             variant="gold"
             icon="play"
-            loading={start.isPending}
             disabled={game.playerCount < 2}
-            onPress={() => start.mutate()}
+            onPress={() => {
+              setMode('start');
+              setEditing(true);
+            }}
           />
           {game.playerCount < 2 ? (
             <T variant="small" muted center style={{ marginTop: 6 }}>
@@ -185,6 +203,8 @@ function LobbyPanel({ state, me, onOpenPicker }: { state: RoomState; me: Me; onO
         pot={Number(game.pot)}
         prizes={state.prizes}
         saving={saveAmounts.isPending}
+        saveLabel={mode === 'start' ? t('lobby.saveAndStart') : undefined}
+        hint={mode === 'start' ? t('lobby.setAmountsHint', { players: game.playerCount, tickets: game.ticketCount }) : undefined}
         onSave={(amounts) => saveAmounts.mutate(amounts)}
         onClose={() => setEditing(false)}
       />
@@ -271,6 +291,8 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
   const [tab, setTab] = useState<Tab>('game');
   const [pickerOpen, setPickerOpen] = useState(false);
   const promptedGame = useRef<string | null>(null);
+  const [confirm, setConfirm] = useState<'leave' | 'end' | null>(null);
+  const [confirmBusy, setConfirmBusy] = useState(false);
 
   const onEvent = useCallback(
     (e: RoomEvent) => {
@@ -330,37 +352,25 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
     onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
   });
 
-  const leave = () =>
-    Alert.alert('', t('room.leaveConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('room.leave'),
-        style: 'destructive',
-        onPress: async () => {
-          try {
-            await roomService.leave(roomId);
-            qc.invalidateQueries({ queryKey: ['myRooms'] });
-            navigation.goBack();
-          } catch (err) {
-            showToast({ variant: 'error', title: errorMessage(err) });
-          }
-        },
-      },
-    ]);
-
-  const endRoom = () =>
-    Alert.alert('', t('room.endRoomConfirm'), [
-      { text: t('common.cancel'), style: 'cancel' },
-      {
-        text: t('room.endRoom'),
-        style: 'destructive',
-        onPress: () =>
-          roomService
-            .end(roomId)
-            .then(() => qc.invalidateQueries({ queryKey: roomKey(roomId) }))
-            .catch((err) => showToast({ variant: 'error', title: errorMessage(err) })),
-      },
-    ]);
+  const runConfirm = async () => {
+    setConfirmBusy(true);
+    try {
+      if (confirm === 'leave') {
+        await roomService.leave(roomId);
+        qc.invalidateQueries({ queryKey: ['myRooms'] });
+        setConfirm(null);
+        navigation.goBack();
+        return;
+      }
+      await roomService.end(roomId);
+      qc.invalidateQueries({ queryKey: roomKey(roomId) });
+      setConfirm(null);
+    } catch (err) {
+      showToast({ variant: 'error', title: errorMessage(err) });
+    } finally {
+      setConfirmBusy(false);
+    }
+  };
 
   if (roomQuery.isLoading || !me.data) return <Loading />;
   if (roomQuery.error || !state) {
@@ -403,7 +413,7 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
             <LobbyPanel state={state} me={me.data} onOpenPicker={() => setPickerOpen(true)} />
           )
         ) : null}
-        {tab === 'players' ? <PlayersPanel state={state} me={me.data} onLeave={leave} onEnd={endRoom} /> : null}
+        {tab === 'players' ? <PlayersPanel state={state} me={me.data} onLeave={() => setConfirm('leave')} onEnd={() => setConfirm('end')} /> : null}
         {tab === 'standings' ? <StandingsList roomId={roomId} meId={me.data.id} /> : null}
       </ScrollView>
 
@@ -422,6 +432,16 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
           onClose={() => setPickerOpen(false)}
         />
       ) : null}
+      <ConfirmModal
+        visible={confirm !== null}
+        icon={confirm === 'end' ? 'stop-circle' : 'exit-outline'}
+        title={confirm === 'end' ? t('room.endRoom') : t('room.leave')}
+        message={confirm === 'end' ? t('room.endRoomConfirm') : t('room.leaveConfirm')}
+        confirmLabel={confirm === 'end' ? t('room.endRoom') : t('room.leave')}
+        loading={confirmBusy}
+        onConfirm={runConfirm}
+        onCancel={() => setConfirm(null)}
+      />
     </View>
   );
 }

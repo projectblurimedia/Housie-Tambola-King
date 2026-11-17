@@ -1,7 +1,7 @@
 import React from 'react';
 import { View } from 'react-native';
 import { useTranslation } from 'react-i18next';
-import { Card, Header, Row, Screen, Spacer, T } from '@/components/ui';
+import { Card, Row, Screen, Spacer, T } from '@/components/ui';
 import { TicketView } from '@/components/TicketView';
 import { spacing, useThemeColors } from '@/theme';
 
@@ -14,8 +14,7 @@ export function HowToPlayScreen() {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   return (
-    <Screen scroll>
-      <Header title={t('howToPlay.title')} />
+    <Screen scroll title={t('howToPlay.title')}>
       <TicketView cells={DEMO} marked={TOP_LINE} label={t('prizes.line_1')} badge="✓" />
       <Spacer />
       <View style={{ gap: spacing.md }}>

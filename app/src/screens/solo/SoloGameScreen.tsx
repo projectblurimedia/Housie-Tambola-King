@@ -13,9 +13,7 @@ import { useCaller } from '@/hooks/useCaller';
 import { useMe } from '@/hooks/useMe';
 import { callNext, claimForMe, createSoloGame, SoloState } from '@/game/engine/solo';
 import { isPrizeComplete, PrizeType, remainingFor } from '@/game/engine/ticket';
-import { classicPhrase } from '@/game/engine/calls';
 import { showToast } from '@/state/toastStore';
-import { useSettingsStore } from '@/state/settingsStore';
 import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
 
@@ -30,7 +28,6 @@ export function SoloGameScreen({ route, navigation }: ScreenProps<'SoloGame'>) {
   const { colors } = useThemeColors();
   const me = useMe();
   const caller = useCaller();
-  const language = useSettingsStore((s) => s.language);
 
   const newGame = () =>
     createSoloGame({
@@ -151,11 +148,6 @@ export function SoloGameScreen({ route, navigation }: ScreenProps<'SoloGame'>) {
                     : t('solo.botsWin')
                   : t('game.calledCount', { count: game.called.length })}
               </T>
-              {last && language === 'en' && classicPhrase(last) ? (
-                <T variant="small" color="rgba(255,255,255,0.9)" style={{ fontStyle: 'italic' }}>
-                  “{classicPhrase(last)}”
-                </T>
-              ) : null}
               <Row gap={6} style={{ marginTop: spacing.sm }}>
                 {game.called
                   .slice(-6, -1)

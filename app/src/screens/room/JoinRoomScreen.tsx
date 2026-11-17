@@ -5,7 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '@/components/Avatar';
 import { formatRupees } from '@/components/Money';
-import { Button, Card, EmptyState, Header, Pill, Row, Screen, Spacer, T, TextField } from '@/components/ui';
+import { Button, Card, EmptyState, Pill, Row, Screen, Spacer, T, TextField } from '@/components/ui';
 import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
@@ -49,8 +49,7 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
   };
 
   return (
-    <Screen>
-      <Header title={t('join.title')} />
+    <Screen title={t('join.title')}>
       <FlatList
         data={rooms.data ?? []}
         keyExtractor={(r) => r.id}
@@ -74,10 +73,10 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
                     maxLength={6}
                     error={error}
                     onSubmitEditing={joinCode}
-                    style={{ fontFamily: fonts.display, fontSize: 26, letterSpacing: 6, textAlign: 'center' }}
+                    style={{ fontFamily: fonts.bold, fontSize: 24, letterSpacing: 6, textAlign: 'center', height: 56 }}
                   />
                 </View>
-                <Button title={t('join.join')} onPress={joinCode} loading={loading} disabled={code.length !== 6} style={{ marginTop: 4 }} />
+                <Button title={t('join.join')} onPress={joinCode} loading={loading} disabled={code.length !== 6} style={{ height: 56 }} />
               </Row>
             </Card>
             <T variant="h2" style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>

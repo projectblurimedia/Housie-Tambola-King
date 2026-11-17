@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { Button, Card, Header, Row, Screen, Segmented, Spacer, Stepper, T } from '@/components/ui';
+import { Button, Card, Row, Screen, Segmented, Spacer, Stepper, T } from '@/components/ui';
 import type { BotDifficulty } from '@/game/engine/solo';
 import { spacing } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
@@ -12,8 +12,7 @@ export function SoloSetupScreen({ navigation }: ScreenProps<'SoloSetup'>) {
   const [difficulty, setDifficulty] = useState<BotDifficulty>('medium');
 
   return (
-    <Screen scroll>
-      <Header title={t('solo.title')} />
+    <Screen scroll title={t('solo.title')}>
       <T muted>{t('solo.subtitle')}</T>
       <Spacer h={spacing.xl} />
       <Card>

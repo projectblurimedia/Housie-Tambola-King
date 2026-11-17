@@ -3,7 +3,7 @@ import { Pressable, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar, AVATAR_KEYS } from '@/components/Avatar';
-import { Button, Header, Screen, Spacer, T, TextField } from '@/components/ui';
+import { Button, Screen, Spacer, T, TextField } from '@/components/ui';
 import { useMe } from '@/hooks/useMe';
 import { profileService } from '@/services/profileService';
 import { errorMessage } from '@/localization/errorMessages';
@@ -37,12 +37,11 @@ export function EditProfileScreen({ navigation }: ScreenProps<'EditProfile'>) {
   });
 
   return (
-    <Screen scroll>
-      <Header title={t('profile.edit')} />
+    <Screen scroll title={t('profile.edit')}>
       <View style={{ alignItems: 'center', marginVertical: spacing.lg }}>
         <Avatar avatarKey={avatar} size={96} ring={colors.gold} />
       </View>
-      <TextField label={t('profile.displayName')} value={name} onChangeText={setName} maxLength={20} autoCapitalize="words" />
+      <TextField label={t('profile.displayName')} value={name} onChangeText={setName} maxLength={30} autoCapitalize="words" />
       <T variant="smallBold" muted style={{ marginBottom: spacing.sm }}>
         {t('profile.avatar')}
       </T>

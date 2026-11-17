@@ -181,7 +181,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
         refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
       >
-        <Row gap={spacing.md} style={{ paddingHorizontal: spacing.lg, marginTop: -spacing.xl, alignItems: 'stretch' }}>
+        <Row gap={spacing.md} style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg, alignItems: 'stretch' }}>
           <BigAction
             icon="add-circle"
             title={t('home.createRoom')}
@@ -270,7 +270,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingBottom: spacing.xxl + spacing.md, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  hero: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
   big: { borderRadius: radius.xl, padding: spacing.lg, minHeight: 170, elevation: 6 },
   bigIcon: {
     width: 58,
