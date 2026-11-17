@@ -83,6 +83,8 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [title, setTitle] = useState('');
   const [kind, setKind] = useState<RoomKind>('normal');
   const [seriesLength, setSeriesLength] = useState(5);
+  /** Off = no limit: the series runs until the host taps End series. */
+  const [limitGames, setLimitGames] = useState(false);
   const [visibility, setVisibility] = useState<RoomVisibility>('private');
   const [maxPlayers, setMaxPlayers] = useState(10);
   const [price, setPrice] = useState('10');
@@ -125,7 +127,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         maxPlayers,
         ticketPrice: priceNum,
         callIntervalSeconds: speed,
-        seriesLength: kind === 'series' ? seriesLength : 1,
+        seriesLength: kind === 'series' ? (limitGames ? seriesLength : 0) : 1,
         prizes: Object.fromEntries(chosen.map((p) => [p, DEFAULT_WEIGHTS[p]])),
       });
       qc.invalidateQueries({ queryKey: ['myRooms'] });
@@ -156,10 +158,23 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         ))}
       </Row>
       {kind === 'series' ? (
-        <Row style={{ justifyContent: 'space-between', marginTop: spacing.sm }}>
-          <T variant="bodyMedium">{t('create.seriesGames')}</T>
-          <Stepper value={seriesLength} min={2} max={50} onChange={setSeriesLength} width={44} />
-        </Row>
+        <Card style={[styles.group, { marginTop: spacing.sm }]}>
+          <Row>
+            <View style={{ flex: 1 }}>
+              <T variant="h3">{t('create.limitGames')}</T>
+              <T variant="tiny" muted>
+                {limitGames ? t('create.limitGamesOn', { count: seriesLength }) : t('create.limitGamesOff')}
+              </T>
+            </View>
+            <Toggle value={limitGames} onValueChange={setLimitGames} />
+          </Row>
+          {limitGames ? (
+            <Row style={{ justifyContent: 'space-between', marginTop: spacing.md }}>
+              <T variant="bodyMedium">{t('create.seriesGames')}</T>
+              <Stepper value={seriesLength} min={2} max={50} onChange={setSeriesLength} width={44} />
+            </Row>
+          ) : null}
+        </Card>
       ) : null}
 
       <T variant="smallBold" muted style={styles.sectionLabel}>

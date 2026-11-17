@@ -16,11 +16,13 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `update_my_profile` | `p_display_name?, p_avatar_key?, p_language?` | `get_me` | `INVALID_DISPLAY_NAME`, `INVALID_AVATAR` |
 | `delete_my_account` | – | – | – |
 | `create_room` | `p_title, p_kind (normal/series), p_visibility (public/private), p_max_players, p_ticket_price, p_call_interval_seconds, p_series_length, p_prizes {prize: ₹}` | `{roomId, code}` | `INVALID_PRIZES`, `INVALID_TICKET_PRICE`, `INVALID_MAX_PLAYERS`, `INVALID_SERIES_LENGTH`, `TOO_MANY_OPEN_ROOMS` |
-| `join_room_by_code` | `p_code` | room id | `ROOM_NOT_FOUND`, `ROOM_FULL`, `ROOM_ENDED` |
-| `join_public_room` | `p_room` | room id | same |
+| `join_room_by_code` | `p_code` | `{roomId, status: member/pending}` (host must accept) | `ROOM_NOT_FOUND`, `ROOM_FULL`, `ROOM_ENDED` |
+| `join_public_room` | `p_room` | same | same |
+| `my_join_status` | `p_room` | `{status: member/pending/rejected/none, title, code, hostName}` | – |
+| `respond_join_request` | `p_room, p_user, p_accept` (host) | – | `NOT_HOST`, `REQUEST_NOT_FOUND`, `ROOM_FULL` |
 | `leave_room` / `end_room` / `play_again` | `p_room` | – | `NOT_HOST`, `ROOM_STILL_PLAYING` |
-| `set_my_tickets` | `p_game, p_count (0–4)` | my tickets | `INVALID_TICKET_COUNT`, `GAME_ALREADY_STARTED`, `NOT_IN_ROOM` |
-| `set_game_prizes` | `p_game, p_amounts {prize: ₹}` (host) | – | `PRIZES_MUST_EQUAL_POT`, `INVALID_PRIZES`, `NOT_HOST` |
+| `set_my_tickets` | `p_game, p_count (1–4)`, once per game | my tickets | `INVALID_TICKET_COUNT`, `TICKETS_ALREADY_CHOSEN`, `GAME_ALREADY_STARTED`, `NOT_IN_ROOM` |
+| `set_game_prizes` | `p_game, p_amounts {prize: ₹}` (host) — the keys ARE this game's prize set (Full Housie required); becomes the room default | – | `PRIZES_MUST_EQUAL_POT`, `INVALID_PRIZES`, `NOT_HOST` |
 | `start_game` | `p_game` (host) | – | `NEED_TWO_PLAYERS`, `NOT_HOST` |
 | `claim_prize` | `p_ticket, p_prize` | `{result: won/shared/already_claimed/already_yours/not_complete}` | `GAME_NOT_RUNNING`, `TOO_MANY_CLAIMS` |
 | `nudge_game` | `p_game` | – (advances only if a call is overdue) | – |

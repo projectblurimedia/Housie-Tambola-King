@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -11,7 +11,7 @@ import { Card, Pill, Row, T } from '@/components/ui';
 import { useAppSettings, useMe } from '@/hooks/useMe';
 import { roomService } from '@/services/roomService';
 import { APP_NAME } from '@/constants/config';
-import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
+import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { MyRoomSummary, PublicRoomSummary } from '@/types/api';
 import type { ScreenProps } from '@/navigation/types';
 
@@ -59,14 +59,16 @@ function BigAction({
               { transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] }) }] },
             ]}
           >
-            <Ionicons name={icon} size={34} color="#fff" />
+            <Ionicons name={icon} size={22} color="#fff" />
           </Animated.View>
-          <T variant="h2" color="#fff" style={{ marginTop: spacing.md }}>
-            {title}
-          </T>
-          <T variant="small" color="rgba(255,255,255,0.85)">
-            {desc}
-          </T>
+          <View style={{ flex: 1 }}>
+            <T variant="h3" color="#fff" numberOfLines={1}>
+              {title}
+            </T>
+            <T variant="tiny" color="rgba(255,255,255,0.85)" numberOfLines={1}>
+              {desc}
+            </T>
+          </View>
         </LinearGradient>
       </Pressable>
     </Animated.View>
@@ -118,7 +120,7 @@ function MyRoomRow({ room, onPress }: { room: MyRoomSummary; onPress: () => void
             {room.title}
           </T>
           <T variant="small" muted>
-            {room.code} · {room.kind === 'series' ? t('room.gameOfSeries', { n: Math.min(room.gamesPlayed + 1, room.totalGames), total: room.totalGames }) : t('kind.normal')}
+            {room.code} · {room.kind === 'series' ? (room.totalGames >= 500 ? t('room.game', { n: room.gamesPlayed + 1 }) : t('room.gameOfSeries', { n: Math.min(room.gamesPlayed + 1, room.totalGames), total: room.totalGames })) : t('kind.normal')}
           </T>
         </View>
         <View style={{ alignItems: 'flex-end', gap: 4 }}>
@@ -162,12 +164,12 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
         <SafeAreaView edges={['top']}>
           <Row style={{ justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
             <View style={{ flex: 1 }}>
-              <T variant="tiny" color="#FDE68A">
-                👑 {APP_NAME.toUpperCase()}
+              <T variant="h1" color="#FDE68A" numberOfLines={1}>
+                👑 {APP_NAME}
               </T>
-              <T variant="h2" color="#fff" numberOfLines={1}>
+              <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
                 {t('home.greeting', { name: me.data?.displayName ?? '' })}
-              </T>
+              </Text>
             </View>
             <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={46} ring="#FDE68A" />
@@ -271,11 +273,12 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 
 const styles = StyleSheet.create({
   hero: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
-  big: { borderRadius: radius.xl, padding: spacing.lg, minHeight: 170, elevation: 6 },
+  big: { borderRadius: radius.lg, paddingVertical: spacing.md, paddingHorizontal: spacing.md, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, elevation: 4 },
+  greeting: { fontFamily: fonts.medium, fontSize: 15, color: '#fff', includeFontPadding: false },
   bigIcon: {
-    width: 58,
-    height: 58,
-    borderRadius: 29,
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',

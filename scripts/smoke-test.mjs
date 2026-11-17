@@ -90,17 +90,20 @@ try {
 
   const pub = await friend.rpc('list_public_rooms');
   check(pub.some((r) => r.id === room.roomId), 'room listed as public');
-  check((await friend.rpc('join_room_by_code', { p_code: room.code.toLowerCase() })) === room.roomId, 'friend joined by code');
+  const jr = await friend.rpc('join_room_by_code', { p_code: room.code.toLowerCase() });
+  check(jr.status === 'pending', 'friend asked to join (waits for host)');
+  await host.rpc('respond_join_request', { p_room: room.roomId, p_user: (await friend.rpc('get_me')).id, p_accept: true });
+  check((await friend.rpc('my_join_status', { p_room: room.roomId })).status === 'member', 'host accepted the friend');
 
   let state = await host.rpc('get_room_state', { p_room: room.roomId });
   const game1 = state.game.id;
   check(state.game.status === 'lobby' && state.game.gameNo === 1, 'game 1 lobby open');
 
-  await host.rpc('set_my_tickets', { p_game: game1, p_count: 1 });
+  await host.rpc('set_my_tickets', { p_game: game1, p_count: 2 });
   check(await expectError(host.rpc('start_game', { p_game: game1 }), 'NEED_TWO_PLAYERS'), 'cannot start with one player');
+  check(await expectError(host.rpc('set_my_tickets', { p_game: game1, p_count: 3 }), 'TICKETS_ALREADY_CHOSEN'), 'tickets fixed once chosen');
   check(await expectError(friend.rpc('set_my_tickets', { p_game: game1, p_count: 5 }), 'INVALID_TICKET_COUNT'), 'max 4 tickets');
   await friend.rpc('set_my_tickets', { p_game: game1, p_count: 3 });
-  await host.rpc('set_my_tickets', { p_game: game1, p_count: 2 });
 
   state = await host.rpc('get_room_state', { p_room: room.roomId });
   check(Number(state.game.pot) === 50, `pot = 5 tickets × ₹10 = ${state.game.pot}`);

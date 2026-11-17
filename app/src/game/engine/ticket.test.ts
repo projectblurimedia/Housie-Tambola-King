@@ -14,17 +14,28 @@ import {
 // A fixed, hand-checked ticket.
 //   row0:  4 . 21 . 45 . 63 . 85   (cols 0,2,4,6,8)
 //   row1:  . 12 . 33 . 57 . 71 88  (cols 1,3,5,7,8)
-//   row2:  7 18 . 39 . . 66 79 .   (cols 0,1,3,6,7)
+//   row2:  7 18 . 39 48 . 66 . .   (cols 0,1,3,4,6)
+// Column groups (cols 1–3 / 4–6 / 7–9) hold 5 / 5 / 5 numbers.
 const T = [
   4, 0, 21, 0, 45, 0, 63, 0, 85,
   0, 12, 0, 33, 0, 57, 0, 71, 88,
-  7, 18, 0, 39, 0, 0, 66, 79, 0,
+  7, 18, 0, 39, 48, 0, 66, 0, 0,
 ];
 
 describe('generateTicket', () => {
   it('always produces valid tickets', () => {
     const rng = seededRng(42);
     for (let i = 0; i < 2000; i++) expect(isValidTicket(generateTicket(rng))).toBe(true);
+  });
+
+  it('every row and every column group has exactly 5 numbers', () => {
+    const rng = seededRng(9);
+    for (let i = 0; i < 500; i++) {
+      const t = generateTicket(rng);
+      for (const g of ['line_1', 'line_2', 'line_3', 'col_left', 'col_center', 'col_right'] as const) {
+        expect(prizeNumbers(t, g)).toHaveLength(5);
+      }
+    }
   });
 
   it('has 15 distinct numbers', () => {
@@ -39,6 +50,12 @@ describe('isValidTicket', () => {
     bad[0] = 0;
     expect(isValidTicket(bad)).toBe(false);
   });
+  it('rejects column groups that are not 5 / 5 / 5', () => {
+    const bad = T.slice();
+    bad[18 + 4] = 0; // drop 48 from center…
+    bad[18 + 7] = 79; // …add 79 on the right: rows still 5 each, groups 5 / 4 / 6
+    expect(isValidTicket(bad)).toBe(false);
+  });
   it('rejects a number in the wrong column', () => {
     const bad = T.slice();
     bad[2] = 31;
@@ -50,12 +67,12 @@ describe('prize numbers', () => {
   it('lines', () => {
     expect(prizeNumbers(T, 'line_1')).toEqual([4, 21, 45, 63, 85]);
     expect(prizeNumbers(T, 'line_2')).toEqual([12, 33, 57, 71, 88]);
-    expect(prizeNumbers(T, 'line_3')).toEqual([7, 18, 39, 66, 79]);
+    expect(prizeNumbers(T, 'line_3')).toEqual([7, 18, 39, 48, 66]);
   });
   it('column groups (left 1–3, center 4–6, right 7–9)', () => {
     expect(prizeNumbers(T, 'col_left')).toEqual([4, 7, 12, 18, 21]);
-    expect(prizeNumbers(T, 'col_center')).toEqual([33, 39, 45, 57]);
-    expect(prizeNumbers(T, 'col_right')).toEqual([63, 66, 71, 79, 85, 88]);
+    expect(prizeNumbers(T, 'col_center')).toEqual([33, 39, 45, 48, 57]);
+    expect(prizeNumbers(T, 'col_right')).toEqual([63, 66, 71, 85, 88]);
   });
   it('column groups together cover the full ticket', () => {
     const all = [...prizeNumbers(T, 'col_left'), ...prizeNumbers(T, 'col_center'), ...prizeNumbers(T, 'col_right')];
@@ -78,7 +95,7 @@ describe('completion', () => {
   });
 
   it('column groups', () => {
-    expect(prizeCompletedAt(T, [33, 39, 1, 45, 57], 'col_center')).toBe(5);
+    expect(prizeCompletedAt(T, [33, 39, 1, 45, 57, 48], 'col_center')).toBe(6);
   });
 
   it('full house completes on the last needed number', () => {

@@ -26,8 +26,9 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
     setError(undefined);
     setLoading(true);
     try {
-      const roomId = await roomService.joinByCode(code);
-      navigation.replace('Room', { roomId });
+      const res = await roomService.joinByCode(code);
+      if (res.status === 'pending') showToast({ variant: 'info', title: t('join.requestSent') });
+      navigation.replace('Room', { roomId: res.roomId });
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -38,7 +39,10 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
   const joinPublic = async (room: PublicRoomSummary) => {
     setJoining(room.id);
     try {
-      if (!room.isMember) await roomService.joinPublic(room.id);
+      if (!room.isMember) {
+        const res = await roomService.joinPublic(room.id);
+        if (res.status === 'pending') showToast({ variant: 'info', title: t('join.requestSent') });
+      }
       navigation.replace('Room', { roomId: room.id });
     } catch (err) {
       showToast({ variant: 'error', title: errorMessage(err) });

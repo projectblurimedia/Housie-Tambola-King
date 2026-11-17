@@ -12,10 +12,13 @@ interface SettingsState {
   /** Speak each called number aloud. */
   voice: boolean;
   haptics: boolean;
+  /** Chosen TTS voice identifier per language (null = phone default for that language). */
+  voiceByLanguage: Partial<Record<SupportedLanguage, string | null>>;
   isHydrated: boolean;
   setLanguage: (language: SupportedLanguage) => void;
   confirmLanguage: () => void;
   set: (patch: Partial<Pick<SettingsState, 'themeMode' | 'voice' | 'haptics'>>) => void;
+  setVoiceFor: (language: SupportedLanguage, voiceId: string | null) => void;
 }
 
 export const useSettingsStore = create<SettingsState>()(
@@ -26,6 +29,7 @@ export const useSettingsStore = create<SettingsState>()(
       themeMode: 'system',
       voice: true,
       haptics: true,
+      voiceByLanguage: {},
       isHydrated: false,
       setLanguage: (language) => {
         i18n.changeLanguage(language);
@@ -33,11 +37,12 @@ export const useSettingsStore = create<SettingsState>()(
       },
       confirmLanguage: () => set({ hasSelectedLanguage: true }),
       set: (patch) => set(patch),
+      setVoiceFor: (language, voiceId) => set((s) => ({ voiceByLanguage: { ...s.voiceByLanguage, [language]: voiceId } })),
     }),
     {
       name: 'settings-storage',
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ isHydrated: _h, setLanguage: _a, confirmLanguage: _b, set: _c, ...rest }) => rest,
+      partialize: ({ isHydrated: _h, setLanguage: _a, confirmLanguage: _b, set: _c, setVoiceFor: _d, ...rest }) => rest,
       onRehydrateStorage: () => (state) => {
         if (state) i18n.changeLanguage(state.language);
         useSettingsStore.setState({ isHydrated: true });

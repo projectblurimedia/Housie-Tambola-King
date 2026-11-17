@@ -102,7 +102,10 @@
     "create": "Create Room",
     "fastDesc": "First to strike 3, 5 or 7 numbers",
     "linesDesc": "First, second and third rows",
-    "columnsDesc": "Left (1–3), center (4–6) and right (7–9) columns"
+    "columnsDesc": "Left (1–3), center (4–6) and right (7–9) columns",
+    "limitGames": "Limit number of games",
+    "limitGamesOff": "No limit — the series runs until you end it",
+    "limitGamesOn": "Series ends after {{count}} games"
   },
   "join": {
     "title": "Join Room",
@@ -115,7 +118,18 @@
     "hostedBy": "by {{name}}",
     "playing": "Playing",
     "waiting": "Waiting",
-    "open": "Open"
+    "open": "Open",
+    "requestSent": "Request sent — waiting for the host to accept",
+    "waitingTitle": "Waiting for the host",
+    "waitingMessage": "{{name}} will let you in shortly. You'll enter the room automatically.",
+    "rejectedTitle": "Request declined",
+    "rejectedMessage": "The host didn't accept your request.",
+    "requestAgain": "Ask to join",
+    "requestsWaiting": "{{count}} waiting to join",
+    "requestsHint": "Open the Players tab to accept or decline.",
+    "requestsTitle": "Join requests ({{count}})",
+    "acceptMidGame": "Players accepted now watch this game and play from the next one.",
+    "requestToast": "{{name}} wants to join"
   },
   "room": {
     "code": "Room code",
@@ -134,7 +148,9 @@
     "tabStandings": "Standings",
     "ended": "This room has ended",
     "endedHost": "The host ended the room.",
-    "joined": "{{name}} joined the room"
+    "joined": "{{name}} joined the room",
+    "endSeries": "End series",
+    "watching": "Watching"
   },
   "lobby": {
     "howManyTickets": "How many tickets this game?",
@@ -143,23 +159,25 @@
     "pot": "Pot",
     "potFormula": "{{tickets}} tickets × {{price}}",
     "prizes": "Prizes this game",
-    "editAmounts": "Edit amounts",
     "autoSplit": "Auto split",
-    "amountsTitle": "Prize amounts",
     "amountsTotal": "Total {{total}} / pot {{pot}}",
     "amountsMustMatch": "Amounts must add up exactly to the pot ({{pot}}).",
-    "custom": "Custom",
     "start": "Start Game",
     "needTwo": "Needs at least 2 players with tickets.",
     "waitingHost": "Waiting for {{name}} to start…",
     "yourTickets": "Your tickets",
     "chooseTickets": "Choose tickets",
-    "changeTickets": "Change",
     "noTickets": "Pick your tickets to play this game",
     "noTicketsYet": "No tickets yet",
     "readyCount": "{{ready}} of {{total}} players ready",
     "saveAndStart": "Save & Start",
-    "setAmountsHint": "{{players}} players took {{tickets}} tickets. Set the prize amounts — they must add up to the pot."
+    "setAmountsHint": "{{players}} players took {{tickets}} tickets. Set the prize amounts — they must add up to the pot.",
+    "editPrizes": "Prizes",
+    "prizeSetupTitle": "Prizes for this game",
+    "later": "Later",
+    "confirmTicketsTitle": "Take {{count}} tickets?",
+    "confirmTicketsMessage": "{{count}} tickets ({{amount}}) for this game. You can't change this until the next game.",
+    "confirmTickets": "Confirm"
   },
   "game": {
     "getReady": "Get ready…",
@@ -277,8 +295,13 @@
     "historyTitle": "Called numbers ({{count}})",
     "historyHint": "In the order they were called. Auto calling is paused.",
     "historyEmpty": "No numbers called yet.",
-    "voice": "Caller voice",
-    "resetTitle": "Start a new game?"
+    "voice": "Voice",
+    "resetTitle": "Start a new game?",
+    "start": "Start",
+    "settings": "Caller settings",
+    "recent": "RECENT",
+    "statusLine": "Every {{speed}} · {{voice}} voice",
+    "voiceLanguage": "Voice language"
   },
   "profile": {
     "title": "Profile",
@@ -311,7 +334,8 @@
     "deleteConfirm": "Delete your account permanently? Your rooms and wins will be erased. This cannot be undone.",
     "version": "Version {{version}}",
     "saved": "Profile saved",
-    "more": "More"
+    "more": "More",
+    "callerVoice": "Caller voice"
   },
   "howToPlay": {
     "title": "How to play",
@@ -373,12 +397,25 @@
     "AUTH_SMS_SEND_FAILED": "Could not send the SMS. Please try again.",
     "AUTH_ANONYMOUS_PROVIDER_DISABLED": "Guest play is turned off. Please sign in with your mobile number.",
     "AUTH_PHONE_PROVIDER_DISABLED": "Mobile sign-in is not available right now.",
-    "AUTH_HOOK_TIMEOUT": "Could not send the SMS. Please try again."
+    "AUTH_HOOK_TIMEOUT": "Could not send the SMS. Please try again.",
+    "TICKETS_ALREADY_CHOSEN": "You've already chosen your tickets for this game.",
+    "REQUEST_NOT_FOUND": "This request is no longer pending."
   },
   "update": {
     "title": "Updating app…",
     "message": "Downloading the latest version. This only takes a moment.",
     "completeTitle": "Update complete",
     "completeMessage": "Restarting with the new version…"
+  },
+  "voice": {
+    "female": "Female",
+    "male": "Male",
+    "region": "{{region}}",
+    "hd": "HD",
+    "number": "Voice {{n}}",
+    "default": "Phone default",
+    "defaultDetail": "Your phone's default voice",
+    "noTelugu": "No Telugu voice found on this phone. Install Telugu in Google Text-to-speech (phone Settings → Language → Text-to-speech) to hear calls in Telugu.",
+    "none": "No voices found on this phone."
   }
 }

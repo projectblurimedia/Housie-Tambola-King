@@ -2,18 +2,19 @@
 
 ## Rooms
 - **Create** or **Join** (6-letter code). **Public** rooms are listed for anyone; **Private** need the code.
+- **Joining needs the host to accept.** The player waits on a "waiting for host" screen; the host sees requests in the Players tab. Accepted during a running game → watches it and plays from the next game.
 - **Normal**: one game; the host can tap *Play Again* for another round with the same people.
-- **Series**: N games (2–50) back to back. When a game ends, the next game's lobby opens automatically for everyone.
+- **Series**: games back to back; the next lobby opens automatically. Number of games is off by default (no limit — host taps **End series**); when switched on, 2–50 games.
 - Host sets max players (2–100). Numbers only start when **at least 2 players** (host + 1) have tickets.
 - If the host leaves, the room passes to the next member; the host can end the room any time.
 
 ## Tickets & pot (casual ₹ — no real money)
-- Before **every** game each player chooses **1–4 tickets** (changeable until the start).
+- Before **every** game each player chooses **1–4 tickets**, confirmed once — it can't be changed for that game (no re-rolling tickets).
 - Pot = tickets taken × ticket price.
-- Prize amounts: the host's template amounts at creation set the proportions. In each lobby the amounts are auto-split to equal the pot (paise rounded down, remainder to Full Housie). The host can edit them; they must add up exactly to the pot.
+- Prizes are chosen at room creation **without amounts**. Before every game the host opens the prize setup (also shown when tapping Start): turns prizes on/off for this game and sets amounts, which must add up exactly to the pot. Auto split suggests amounts.
 
 ## Ticket
-3 rows × 9 columns, 15 numbers, 5 per row. Column 1 = 1–9, column 2 = 10–19 … column 9 = 80–90.
+3 rows × 9 columns, 15 numbers: **5 per row and 5 per column group** (columns 1–3, 4–6, 7–9). Column 1 = 1–9, column 2 = 10–19 … column 9 = 80–90.
 
 ## Prizes (host turns each on/off; Full Housie always on)
 | Prize | Pattern |

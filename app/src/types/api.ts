@@ -95,6 +95,24 @@ export interface RoomState {
   previousGameId: string | null;
   myTickets: Ticket[];
   members: RoomMember[];
+  /** Pending join requests — only filled for the host. */
+  joinRequests: { userId: string; name: string; avatarKey: string; requestedAt: string }[];
+}
+
+export type JoinStatus = 'member' | 'pending' | 'rejected' | 'none';
+
+export interface JoinResult {
+  roomId: string;
+  status: 'member' | 'pending';
+}
+
+export interface MyJoinStatus {
+  status: JoinStatus;
+  roomStatus: RoomStatus;
+  title: string;
+  code: string;
+  hostName: string | null;
+  hostAvatar: string | null;
 }
 
 export interface GameResults {

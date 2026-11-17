@@ -66,7 +66,8 @@ export function generateTicket(rng: Rng = Math.random): Cells {
   const allCols = range(0, COLS - 1);
   let used: boolean[][];
   let colCount: number[];
-  // Pick 5 of 9 columns per row until every column is used (~2 tries on average).
+  // Pick 5 of 9 columns per row until every column is used AND each column group
+  // (left 0–2, center 3–5, right 6–8) holds exactly 5 numbers (owner's rule).
   do {
     used = [];
     colCount = new Array(COLS).fill(0);
@@ -75,7 +76,7 @@ export function generateTicket(rng: Rng = Math.random): Cells {
       used.push(allCols.map((c) => picked.has(c)));
       picked.forEach((c) => (colCount[c] += 1));
     }
-  } while (colCount.some((n) => n === 0));
+  } while (colCount.some((n) => n === 0) || groupCounts(colCount).some((n) => n !== 5));
 
   const cells: Cells = new Array(ROWS * COLS).fill(0);
   for (let c = 0; c < COLS; c++) {
@@ -89,6 +90,11 @@ export function generateTicket(rng: Rng = Math.random): Cells {
     }
   }
   return cells;
+}
+
+/** Numbers per column group (left, center, right) from per-column counts. */
+function groupCounts(colCount: number[]): number[] {
+  return [0, 3, 6].map((start) => colCount[start] + colCount[start + 1] + colCount[start + 2]);
 }
 
 export function ticketNumbers(cells: Cells): number[] {
@@ -171,7 +177,8 @@ export function isValidTicket(cells: Cells): boolean {
       seen.add(col[i]);
     }
   }
-  return seen.size === 15;
+  const perColumn = Array.from({ length: COLS }, (_, c) => [0, 1, 2].filter((r) => cells[r * COLS + c] > 0).length);
+  return seen.size === 15 && groupCounts(perColumn).every((n) => n === 5);
 }
 
 /** A new random draw order of 1–90. */

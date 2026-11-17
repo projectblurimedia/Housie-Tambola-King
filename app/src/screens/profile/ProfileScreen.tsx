@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
 import { ConfirmModal } from '@/components/ConfirmModal';
+import { VoicePicker } from '@/components/VoicePicker';
 import { formatRupees } from '@/components/Money';
 import { Card, Row, Screen, Segmented, Spacer, T, Toggle } from '@/components/ui';
 import { useMe } from '@/hooks/useMe';
@@ -61,6 +62,7 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
   const settings = useSettingsStore();
   const [confirm, setConfirm] = useState<'logout' | 'delete' | null>(null);
   const [busy, setBusy] = useState(false);
+  const [voicesOpen, setVoicesOpen] = useState(false);
 
   const changeLanguage = useMutation({
     mutationFn: (language: SupportedLanguage) => profileService.updateProfile({ language }),
@@ -155,6 +157,12 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
         <SettingRow icon="volume-high" label={t('profile.voice')}>
           <Toggle value={settings.voice} onValueChange={(voice) => settings.set({ voice })} />
         </SettingRow>
+        <Pressable onPress={() => setVoicesOpen((v) => !v)}>
+          <SettingRow icon="mic" label={t('profile.callerVoice')}>
+            <Ionicons name={voicesOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+          </SettingRow>
+        </Pressable>
+        {voicesOpen ? <VoicePicker language={settings.language} /> : null}
         <SettingRow icon="phone-portrait" label={t('profile.haptics')}>
           <Toggle value={settings.haptics} onValueChange={(haptics) => settings.set({ haptics })} />
         </SettingRow>

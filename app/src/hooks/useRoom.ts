@@ -12,7 +12,8 @@ export type RoomEvent =
   | { type: 'state'; gameId: string; gameNo: number; status: 'running' | 'finished' }
   | { type: 'game'; gameId: string; gameNo: number }
   | { type: 'members'; memberCount: number; joined?: string }
-  | { type: 'room_ended'; reason: string };
+  | { type: 'room_ended'; reason: string }
+  | { type: 'join_request'; userId: string; name: string };
 
 /** How late a number may be before this phone nudges the server clock itself. */
 const NUDGE_GRACE_MS = 2500;
@@ -115,6 +116,11 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
         refetch();
         emit({ type: 'game', ...(payload as { gameId: string; gameNo: number }) });
       })
+      .on('broadcast', { event: 'join_request' }, ({ payload }) => {
+        refetch();
+        emit({ type: 'join_request', ...(payload as { userId: string; name: string }) });
+      })
+      .on('broadcast', { event: 'join_decided' }, () => refetch())
       .on('broadcast', { event: 'room_ended' }, ({ payload }) => {
         refetch();
         refetchStandings();

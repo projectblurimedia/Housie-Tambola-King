@@ -2,6 +2,8 @@ import { supabase } from '@/lib/supabase';
 import type { PrizeType } from '@/game/engine/ticket';
 import type {
   GameResults,
+  JoinResult,
+  MyJoinStatus,
   MyRoomSummary,
   PublicRoomSummary,
   RoomKind,
@@ -42,12 +44,21 @@ export const roomService = {
     ) as { roomId: string; code: string };
   },
 
-  async joinByCode(code: string): Promise<string> {
-    return unwrap(await supabase.rpc('join_room_by_code', { p_code: code })) as string;
+  /** Asks to join; the host must accept (members get 'member' straight away). */
+  async joinByCode(code: string): Promise<JoinResult> {
+    return unwrap(await supabase.rpc('join_room_by_code', { p_code: code })) as JoinResult;
   },
 
-  async joinPublic(roomId: string): Promise<string> {
-    return unwrap(await supabase.rpc('join_public_room', { p_room: roomId })) as string;
+  async joinPublic(roomId: string): Promise<JoinResult> {
+    return unwrap(await supabase.rpc('join_public_room', { p_room: roomId })) as JoinResult;
+  },
+
+  async myJoinStatus(roomId: string): Promise<MyJoinStatus> {
+    return unwrap(await supabase.rpc('my_join_status', { p_room: roomId })) as MyJoinStatus;
+  },
+
+  async respondJoin(roomId: string, userId: string, accept: boolean): Promise<void> {
+    unwrap(await supabase.rpc('respond_join_request', { p_room: roomId, p_user: userId, p_accept: accept }));
   },
 
   async leave(roomId: string): Promise<void> {

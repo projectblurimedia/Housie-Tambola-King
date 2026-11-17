@@ -26,6 +26,7 @@ import { isPrizeComplete, prizeCompletedAt, remainingFor } from '@/game/engine/t
 import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { Me, RoomState, Ticket } from '@/types/api';
 import { StandingsList } from './StandingsList';
+import { gameLabel } from '@/utils/gameLabel';
 
 type Tab = 'tickets' | 'board' | 'prizes' | 'standings';
 const NO_STRIKES: number[] = [];
@@ -146,11 +147,7 @@ export function LiveView({
                 {room.title}
               </T>
               <T variant="tiny" color={connected ? 'rgba(255,255,255,0.8)' : '#FDE68A'}>
-                {connected
-                  ? room.kind === 'series'
-                    ? t('room.gameOfSeries', { n: game.gameNo, total: room.totalGames })
-                    : t('room.game', { n: game.gameNo })
-                  : t('game.reconnecting')}
+                {connected ? gameLabel(room, game.gameNo) : t('game.reconnecting')}
               </T>
             </View>
             <View style={{ minWidth: 40, alignItems: 'flex-end' }}>
