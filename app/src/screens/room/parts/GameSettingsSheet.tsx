@@ -34,7 +34,7 @@ export function GameSettingsSheet({ visible, state, onClose }: { visible: boolea
         <Pressable style={[styles.card, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation()}>
           <Row style={{ justifyContent: 'space-between' }}>
             <Row>
-              <Ionicons name="speedometer" size={22} color={colors.primary} />
+              <Ionicons name="timer-outline" size={22} color={colors.primary} />
               <T variant="h2">{t('game.speedTitle')}</T>
             </Row>
             <IconButton icon="close" onPress={onClose} />

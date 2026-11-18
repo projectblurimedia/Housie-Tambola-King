@@ -57,7 +57,12 @@ function Cell({
   const shake = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.spring(pop, { toValue: struck ? 1 : 0, friction: 4, tension: 160, useNativeDriver: true }).start();
+    Animated.spring(pop, {
+      toValue: struck ? 1 : 0,
+      friction: 4,
+      tension: 160,
+      useNativeDriver: true,
+    }).start();
   }, [struck, pop]);
 
   useEffect(() => {
@@ -68,8 +73,16 @@ function Cell({
     }
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 550, useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 550, useNativeDriver: true }),
+        Animated.timing(pulse, {
+          toValue: 1,
+          duration: 550,
+          useNativeDriver: true,
+        }),
+        Animated.timing(pulse, {
+          toValue: 0,
+          duration: 550,
+          useNativeDriver: true,
+        }),
       ]),
     );
     loop.start();
@@ -83,7 +96,13 @@ function Cell({
       Haptics.selectionAsync().catch(() => undefined);
       shake.setValue(0);
       Animated.sequence(
-        [5, -5, 3, -3, 0].map((x) => Animated.timing(shake, { toValue: x, duration: 45, useNativeDriver: true })),
+        [5, -5, 3, -3, 0].map((x) =>
+          Animated.timing(shake, {
+            toValue: x,
+            duration: 45,
+            useNativeDriver: true,
+          }),
+        ),
       ).start();
       return;
     }
@@ -91,11 +110,36 @@ function Cell({
   };
 
   const hinting = isHinted && !struck;
-  const scale = hinting || (isLast && !struck) ? hintPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.09] }) : 1;
+  const rippling = hinting || (isLast && !struck);
 
   return (
     <View style={styles.slot}>
-      <Animated.View style={[styles.circleWrap, { transform: [{ translateX: shake }, { scale }] }]}>
+      <Animated.View style={[styles.circleWrap, { transform: [{ translateX: shake }] }]}>
+        {/* The number stays still; a soft ring ripples around it. */}
+        {rippling ? (
+          <Animated.View
+            pointerEvents="none"
+            style={[
+              StyleSheet.absoluteFill,
+              styles.ripple,
+              {
+                borderColor: hint,
+                opacity: hintPulse.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.7, 0],
+                }),
+                transform: [
+                  {
+                    scale: hintPulse.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [1, 1.22],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          />
+        ) : null}
         <Pressable
           onPress={press}
           disabled={!onPress}
@@ -103,7 +147,11 @@ function Cell({
           style={[
             styles.circle,
             { backgroundColor: theme.cell, borderColor: theme.cellBorder },
-            hinting && { borderColor: hint, borderWidth: 2.5, backgroundColor: hint + '22' },
+            hinting && {
+              borderColor: hint,
+              borderWidth: 2.5,
+              backgroundColor: hint + '22',
+            },
           ]}
         >
           {isLast && !struck ? (
@@ -111,7 +159,13 @@ function Cell({
               style={[
                 StyleSheet.absoluteFill,
                 styles.lastGlow,
-                { borderColor: hint, opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }) },
+                {
+                  borderColor: hint,
+                  opacity: pulse.interpolate({
+                    inputRange: [0, 1],
+                    outputRange: [0.35, 1],
+                  }),
+                },
               ]}
             />
           ) : null}
@@ -120,7 +174,14 @@ function Cell({
           </Animated.View>
           <Text style={[styles.num, { fontSize, color: struck ? '#fff' : theme.ink }]}>{n}</Text>
           <Animated.View
-            style={[styles.strike, { backgroundColor: strike.line, opacity: pop, transform: [{ rotate: '-40deg' }, { scaleX: pop }] }]}
+            style={[
+              styles.strike,
+              {
+                backgroundColor: strike.line,
+                opacity: pop,
+                transform: [{ rotate: '-40deg' }, { scaleX: pop }],
+              },
+            ]}
           />
         </Pressable>
       </Animated.View>
@@ -129,10 +190,38 @@ function Cell({
 }
 
 /** A 3×9 housie ticket of round number chips, lines between rows and column groups. */
-export const TicketView = memo(function TicketView({ cells, marked, lastCalled, hinted, onPressNumber, canStrike, label, badge, compact }: Props) {
-  const theme = TICKET_THEMES[toPalette(useSettingsStore((s) => s.ticketTheme), 'purple')];
-  const strike = STRIKE_COLORS[toPalette(useSettingsStore((s) => s.strikeColor), 'purple')];
-  const hint = HINT_COLORS[toPalette(useSettingsStore((s) => s.hintColor), 'pink')];
+export const TicketView = memo(function TicketView({
+  cells,
+  marked,
+  lastCalled,
+  hinted,
+  onPressNumber,
+  canStrike,
+  label,
+  badge,
+  compact,
+}: Props) {
+  const theme =
+    TICKET_THEMES[
+      toPalette(
+        useSettingsStore((s) => s.ticketTheme),
+        'purple',
+      )
+    ];
+  const strike =
+    STRIKE_COLORS[
+      toPalette(
+        useSettingsStore((s) => s.strikeColor),
+        'purple',
+      )
+    ];
+  const hint =
+    HINT_COLORS[
+      toPalette(
+        useSettingsStore((s) => s.hintColor),
+        'pink',
+      )
+    ];
   const fontSize = compact ? 15 : 19;
 
   // One shared, gentle zoom for every hinted number on this ticket.
@@ -144,10 +233,12 @@ export const TicketView = memo(function TicketView({ cells, marked, lastCalled, 
       return;
     }
     const loop = Animated.loop(
-      Animated.sequence([
-        Animated.timing(hintPulse, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(hintPulse, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-      ]),
+      Animated.timing(hintPulse, {
+        toValue: 1,
+        duration: 1400,
+        easing: Easing.out(Easing.quad),
+        useNativeDriver: true,
+      }),
     );
     loop.start();
     return () => loop.stop();
@@ -181,27 +272,33 @@ export const TicketView = memo(function TicketView({ cells, marked, lastCalled, 
                     {[0, 1, 2].map((k) => {
                       const c = group * 3 + k;
                       const n = cells[r * COLS + c];
+                      const line = k > 0 ? <View style={[styles.fLine, { backgroundColor: theme.faint }]} /> : null;
                       return n === 0 ? (
-                        <View key={c} style={styles.slot}>
-                          <View style={[styles.circleWrap, styles.blankCircle, { backgroundColor: theme.blankCell }]}>
-                            <View style={[styles.blankDot, { backgroundColor: theme.blank }]} />
+                        <React.Fragment key={c}>
+                          {line}
+                          <View style={styles.slot}>
+                            <View style={[styles.circleWrap, styles.blankCircle, { backgroundColor: theme.blankCell }]}>
+                              <View style={[styles.blankDot, { backgroundColor: theme.blank }]} />
+                            </View>
                           </View>
-                        </View>
+                        </React.Fragment>
                       ) : (
-                        <Cell
-                          key={c}
-                          n={n}
-                          struck={marked.has(n)}
-                          isLast={lastCalled === n}
-                          isHinted={!!hinted?.has(n)}
-                          hintPulse={hintPulse}
-                          hint={hint}
-                          fontSize={fontSize}
-                          theme={theme}
-                          strike={strike}
-                          onPress={onPressNumber}
-                          canStrike={canStrike}
-                        />
+                        <React.Fragment key={c}>
+                          {line}
+                          <Cell
+                            n={n}
+                            struck={marked.has(n)}
+                            isLast={lastCalled === n}
+                            isHinted={!!hinted?.has(n)}
+                            hintPulse={hintPulse}
+                            hint={hint}
+                            fontSize={fontSize}
+                            theme={theme}
+                            strike={strike}
+                            onPress={onPressNumber}
+                            canStrike={canStrike}
+                          />
+                        </React.Fragment>
                       );
                     })}
                   </View>
@@ -225,18 +322,68 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 6,
   },
-  card: { borderRadius: radius.lg - 3, paddingHorizontal: 4, paddingTop: 6, paddingBottom: 6 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, gap: 8, paddingHorizontal: 4 },
+  card: {
+    borderRadius: radius.lg - 3,
+    paddingHorizontal: 4,
+    paddingTop: 6,
+    paddingBottom: 6,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 6,
+    gap: 8,
+    paddingHorizontal: 4,
+  },
   tag: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
-  tagText: { fontFamily: fonts.bold, fontSize: 12, color: '#3B1D00', includeFontPadding: false },
-  brand: { fontFamily: fonts.bold, fontSize: 9, letterSpacing: 1.5, includeFontPadding: false },
-  badge: { backgroundColor: '#16A34A', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3, flexShrink: 1 },
-  badgeText: { fontFamily: fonts.semibold, fontSize: 10, color: '#fff', includeFontPadding: false },
+  tagText: {
+    fontFamily: fonts.bold,
+    fontSize: 12,
+    color: '#3B1D00',
+    includeFontPadding: false,
+  },
+  brand: {
+    fontFamily: fonts.bold,
+    fontSize: 9,
+    letterSpacing: 1.5,
+    includeFontPadding: false,
+  },
+  badge: {
+    backgroundColor: '#16A34A',
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+    flexShrink: 1,
+  },
+  badgeText: {
+    fontFamily: fonts.semibold,
+    fontSize: 10,
+    color: '#fff',
+    includeFontPadding: false,
+  },
   row: { flexDirection: 'row', alignItems: 'center' },
   group: { flex: 3, flexDirection: 'row' },
-  hLine: { height: 1.5, marginVertical: 3, marginHorizontal: 2, borderRadius: 1 },
-  vLine: { width: 1.5, alignSelf: 'stretch', marginHorizontal: 2, borderRadius: 1 },
-  slot: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 1.5 },
+  hLine: {
+    height: 1.5,
+    marginVertical: 3,
+    marginHorizontal: 2,
+    borderRadius: 1,
+  },
+  vLine: {
+    width: 1.5,
+    alignSelf: 'stretch',
+    marginHorizontal: 2,
+    borderRadius: 1,
+  },
+  fLine: { width: 1, alignSelf: 'stretch', marginVertical: 4 },
+  ripple: { borderRadius: 999, borderWidth: 2.5 },
+  slot: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 1.5,
+  },
   circleWrap: { width: '100%', maxWidth: 54, aspectRatio: 1 },
   circle: {
     flex: 1,
@@ -252,7 +399,11 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   lastGlow: { borderRadius: 999, borderWidth: 3 },
-  blankCircle: { borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
+  blankCircle: {
+    borderRadius: 999,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   blankDot: { width: 6, height: 6, borderRadius: 3 },
   disc: { borderRadius: 999, overflow: 'hidden' },
   strike: { position: 'absolute', width: '80%', height: 2.5, borderRadius: 2 },

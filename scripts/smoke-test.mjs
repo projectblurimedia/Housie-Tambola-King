@@ -149,7 +149,11 @@ try {
   check(chats.includes('All the best!'), 'chat message reached the other player live');
   check((await friend.rpc('get_chat', { p_room: room.roomId })).some((m) => m.body === 'All the best!'), 'chat history saved');
 
-  await host.rpc('start_game', { p_game: game1 });
+  // Step 3: host sets prizes → everyone ready → the game starts by itself.
+  await host.rpc('open_ready', { p_game: game1 });
+  check((await friend.rpc('get_room_state', { p_room: room.roomId })).game.phase === 'ready', 'ready step open after the host sets prizes');
+  await friend.rpc('set_ready', { p_game: game1 });
+  check((await host.rpc('get_room_state', { p_room: room.roomId })).game.status === 'running', 'game started when everyone was ready');
   console.log('… game 1 started; players strike & claim as numbers arrive');
 
   const players = [host, friend];

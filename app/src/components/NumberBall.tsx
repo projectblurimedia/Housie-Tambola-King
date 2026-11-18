@@ -20,27 +20,45 @@ export function ballColors(n: number): [string, string] {
   return DECADE_COLORS[Math.min(8, Math.floor((n === 90 ? 89 : n) / 10))];
 }
 
-/** The big called-number ball. Pops in whenever `number` changes. */
+/**
+ * The big called-number ball. The ball itself stays still (no spinning or jumping): a new
+ * number fades in and soft rings ripple out from the ball.
+ */
 export function NumberBall({ number, size = 120, subtitle }: { number: number | null; size?: number; subtitle?: string | null }) {
-  const scale = useRef(new Animated.Value(0)).current;
-  const spin = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(1)).current;
+  const ring1 = useRef(new Animated.Value(1)).current;
+  const ring2 = useRef(new Animated.Value(1)).current;
 
   useEffect(() => {
     if (number === null) return;
-    scale.setValue(0.3);
-    spin.setValue(0);
+    fade.setValue(0.25);
+    ring1.setValue(0);
+    ring2.setValue(0);
     Animated.parallel([
-      Animated.spring(scale, { toValue: 1, friction: 4, tension: 120, useNativeDriver: true }),
-      Animated.timing(spin, { toValue: 1, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.timing(fade, { toValue: 1, duration: 320, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.timing(ring1, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      Animated.sequence([
+        Animated.delay(250),
+        Animated.timing(ring2, { toValue: 1, duration: 1100, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
+      ]),
     ]).start();
-  }, [number, scale, spin]);
+  }, [number, fade, ring1, ring2]);
 
-  const rotate = spin.interpolate({ inputRange: [0, 1], outputRange: ['-180deg', '0deg'] });
   const [light, dark] = number ? ballColors(number) : ['#E5E7EB', '#9CA3AF'];
+  const ring = (v: Animated.Value) => ({
+    width: size,
+    height: size,
+    borderRadius: size / 2,
+    borderColor: light,
+    opacity: v.interpolate({ inputRange: [0, 1], outputRange: [0.8, 0] }),
+    transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [1, 1.45] }) }],
+  });
 
   return (
     <View style={{ alignItems: 'center' }}>
-      <Animated.View style={{ transform: [{ scale }, { rotate }] }}>
+      <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
+        <Animated.View pointerEvents="none" style={[styles.ring, ring(ring1)]} />
+        <Animated.View pointerEvents="none" style={[styles.ring, ring(ring2)]} />
         <LinearGradient
           colors={[light, dark]}
           start={{ x: 0.2, y: 0.1 }}
@@ -48,10 +66,14 @@ export function NumberBall({ number, size = 120, subtitle }: { number: number | 
           style={[styles.ball, { width: size, height: size, borderRadius: size / 2 }]}
         >
           <View style={[styles.inner, { width: size * 0.66, height: size * 0.66, borderRadius: size * 0.33 }]}>
-            <Text style={[styles.text, { fontSize: size * 0.34, lineHeight: size * 0.5, includeFontPadding: false }]}>{number ?? '–'}</Text>
+            <Animated.Text
+              style={[styles.text, { opacity: fade, fontSize: size * 0.34, lineHeight: size * 0.5, includeFontPadding: false }]}
+            >
+              {number ?? '–'}
+            </Animated.Text>
           </View>
         </LinearGradient>
-      </Animated.View>
+      </View>
       {subtitle ? <Text style={styles.subtitle}>{subtitle}</Text> : null}
     </View>
   );
@@ -61,7 +83,10 @@ export function NumberBall({ number, size = 120, subtitle }: { number: number | 
 export function MiniBall({ n, size = 34 }: { n: number; size?: number }) {
   const [light, dark] = ballColors(n);
   return (
-    <LinearGradient colors={[light, dark]} style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center' }}>
+    <LinearGradient
+      colors={[light, dark]}
+      style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center' }}
+    >
       <Text style={{ fontFamily: fonts.bold, color: '#fff', fontSize: size * 0.42 }}>{n}</Text>
     </LinearGradient>
   );
@@ -77,6 +102,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 6 },
     elevation: 10,
   },
+  ring: { position: 'absolute', borderWidth: 3 },
   inner: { backgroundColor: '#fff', alignItems: 'center', justifyContent: 'center' },
   text: { fontFamily: fonts.display, color: '#1B1030' },
   subtitle: { marginTop: 8, fontFamily: fonts.medium, fontSize: 14, color: '#fff', opacity: 0.9, fontStyle: 'italic' },

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { CalledBoard } from '@/components/CalledBoard';
 import { Landscape } from '@/components/Landscape';
+import { VoicePicker } from '@/components/VoicePicker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MiniBall, NumberBall } from '@/components/NumberBall';
 import { Button, Chip, IconButton, Row, T } from '@/components/ui';
@@ -21,7 +22,17 @@ const STAGE = ['#1E0B4B', '#4C1D95', '#7C3AED'] as const;
 /**
  * In-tree overlay with a smooth fade (a <Modal> would not rotate with the landscape view).
  */
-function Overlay({ visible, onClose, children, maxHeight }: { visible: boolean; onClose: () => void; children: React.ReactNode; maxHeight: number }) {
+function Overlay({
+  visible,
+  onClose,
+  children,
+  maxHeight,
+}: {
+  visible: boolean;
+  onClose: () => void;
+  children: React.ReactNode;
+  maxHeight: number;
+}) {
   const { colors } = useThemeColors();
   const fade = useRef(new Animated.Value(0)).current;
   const [mounted, setMounted] = useState(visible);
@@ -38,7 +49,11 @@ function Overlay({ visible, onClose, children, maxHeight }: { visible: boolean; 
       <Animated.View
         style={[
           styles.overlayCard,
-          { backgroundColor: colors.surface, maxHeight, transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] },
+          {
+            backgroundColor: colors.surface,
+            maxHeight,
+            transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
+          },
         ]}
       >
         {children}
@@ -47,7 +62,19 @@ function Overlay({ visible, onClose, children, maxHeight }: { visible: boolean; 
   );
 }
 
-function RoundButton({ icon, label, onPress, disabled, tint = '#fff' }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; disabled?: boolean; tint?: string }) {
+function RoundButton({
+  icon,
+  label,
+  onPress,
+  disabled,
+  tint = '#fff',
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  onPress: () => void;
+  disabled?: boolean;
+  tint?: string;
+}) {
   return (
     <Pressable
       onPress={onPress}
@@ -72,6 +99,14 @@ export function CallerScreen(props: ScreenProps<'Caller'>) {
 }
 
 function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
+  useEffect(() => {
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (navigation.canGoBack()) navigation.goBack();
+      else navigation.navigate('Home');
+      return true;
+    });
+    return () => sub.remove();
+  }, [navigation]);
   useKeepAwake();
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -117,16 +152,20 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
   const main = notStarted
     ? { label: t('caller.start'), icon: 'play' as const, onPress: start }
     : mode === 'auto'
-      ? { label: auto ? t('caller.pause') : t('caller.play'), icon: auto ? ('pause' as const) : ('play' as const), onPress: () => setAuto((a) => !a) }
+      ? {
+          label: auto ? t('caller.pause') : t('caller.play'),
+          icon: auto ? ('pause' as const) : ('play' as const),
+          onPress: () => setAuto((a) => !a),
+        }
       : { label: t('caller.next'), icon: 'arrow-forward' as const, onPress: next };
 
   return (
     <Landscape>
       {({ width, height, padLeft, padRight }) => {
-        const pad = 12;
-        const boardWidth = Math.min(width * 0.56, 560);
-        const cell = Math.max(20, Math.floor((height - pad * 2 - 24 - 8 * 3) / 9));
-        const ball = Math.min(Math.floor(height * 0.4), 150);
+        const pad = 10;
+        const boardWidth = Math.min(width * 0.6, 640);
+        const cell = Math.max(22, Math.floor((height - pad * 2 - 16 - 8 * 3) / 9));
+        const ball = Math.min(Math.floor(height * 0.3), 118);
         return (
           <LinearGradient colors={STAGE} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width, height }}>
             <StatusBar hidden />
@@ -143,7 +182,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                   <IconButton icon="options" color="#fff" onPress={() => setSettingsOpen(true)} accessibilityLabel={t('caller.settings')} />
                 </Row>
 
-                <Row gap={spacing.lg} style={{ flex: 1 }}>
+                <Row gap={spacing.md} style={{ flex: 1 }}>
                   <View style={styles.ballHalo}>
                     <NumberBall number={last} size={ball} />
                   </View>
@@ -184,7 +223,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       {lastFive.length ? (
                         lastFive.map((n, i) => (
                           <View key={n} style={{ opacity: 1 - i * 0.12 }}>
-                            <MiniBall n={n} size={32} />
+                            <MiniBall n={n} size={26} />
                           </View>
                         ))
                       ) : (
@@ -200,7 +239,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                   <Pressable
                     onPress={main.onPress}
                     disabled={done && !notStarted}
-                    style={({ pressed }) => [{ flex: 1, opacity: done && !notStarted ? 0.4 : pressed ? 0.85 : 1 }]}
+                    style={({ pressed }) => [{ width: 150, opacity: done && !notStarted ? 0.4 : pressed ? 0.85 : 1 }]}
                   >
                     <LinearGradient
                       colors={auto ? ['#F87171', '#DC2626'] : goldGradient}
@@ -214,7 +253,6 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       </T>
                     </LinearGradient>
                   </Pressable>
-                  {mode === 'auto' && !notStarted ? <RoundButton icon="play-skip-forward" label={t('caller.next')} onPress={next} disabled={done} /> : null}
                   <RoundButton
                     icon="arrow-undo"
                     label={t('caller.undo')}
@@ -224,7 +262,13 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                     }}
                     disabled={notStarted}
                   />
-                  <RoundButton icon="refresh" label={t('caller.reset')} onPress={() => setConfirmReset(true)} disabled={notStarted} tint="#FCA5A5" />
+                  <RoundButton
+                    icon="refresh"
+                    label={t('caller.reset')}
+                    onPress={() => setConfirmReset(true)}
+                    disabled={notStarted}
+                    tint="#FCA5A5"
+                  />
                 </Row>
               </View>
 
@@ -254,7 +298,12 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                     </T>
                     <View style={styles.wrap}>
                       {CALLER_SPEEDS.map((s) => (
-                        <Chip key={s} label={t('common.seconds', { count: s })} active={intervalSeconds === s} onPress={() => setSpeed(s)} />
+                        <Chip
+                          key={s}
+                          label={t('common.seconds', { count: s })}
+                          active={intervalSeconds === s}
+                          onPress={() => setSpeed(s)}
+                        />
                       ))}
                     </View>
                   </>
@@ -266,6 +315,10 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                   <Chip label="English" active={voiceLanguage === 'en'} onPress={() => setVoiceLanguage('en')} />
                   <Chip label="తెలుగు" active={voiceLanguage === 'te'} onPress={() => setVoiceLanguage('te')} />
                 </Row>
+                <T variant="smallBold" muted style={styles.label}>
+                  {t('caller.voice')}
+                </T>
+                <VoicePicker language={voiceLanguage} />
               </ScrollView>
             </Overlay>
 
@@ -307,10 +360,35 @@ const styles = StyleSheet.create({
   left: { flex: 1, justifyContent: 'space-between', gap: 8 },
   ballHalo: { borderRadius: 999, padding: 6, backgroundColor: 'rgba(255,255,255,0.08)' },
   progress: { height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.18)' },
-  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 3 },
-  mainBtn: { height: 56, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
-  round: { width: 62, height: 56, borderRadius: radius.lg, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center', gap: 1 },
-  boardCard: { borderRadius: radius.lg, padding: 12, justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  tag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderRadius: radius.pill,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  mainBtn: { height: 50, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  round: {
+    width: 54,
+    height: 50,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(255,255,255,0.12)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 1,
+  },
+  boardCard: {
+    borderRadius: radius.lg,
+    padding: 8,
+    justifyContent: 'center',
+    elevation: 8,
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+  },
   overlay: { backgroundColor: 'rgba(10,4,24,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.md },
   overlayCard: { width: '100%', maxWidth: 440, borderRadius: radius.xl, padding: spacing.lg },
   label: { marginTop: spacing.md, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },

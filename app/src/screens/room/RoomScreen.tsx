@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -151,7 +151,13 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
           <React.Fragment key={label}>
             <Row gap={6} style={{ flexShrink: 1 }}>
               <View style={[styles.stepDot, { backgroundColor: done ? colors.success : active ? colors.primary : colors.border }]}>
-                {done ? <Ionicons name="checkmark" size={14} color="#fff" /> : <T variant="tiny" color="#fff">{n}</T>}
+                {done ? (
+                  <Ionicons name="checkmark" size={14} color="#fff" />
+                ) : (
+                  <T variant="tiny" color="#fff">
+                    {n}
+                  </T>
+                )}
               </View>
               <T variant="tiny" color={active ? colors.primary : colors.textMuted} numberOfLines={1} style={{ flexShrink: 1 }}>
                 {label}
@@ -165,7 +171,48 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
-function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState; me: Me; onOpenPicker: () => void; onEndSeries: () => void }) {
+/** A big gold button that gently pulses, for the one thing a player should do next. */
+function PulseButton({
+  title,
+  icon,
+  onPress,
+  loading,
+}: {
+  title: string;
+  icon: keyof typeof Ionicons.glyphMap;
+  onPress: () => void;
+  loading?: boolean;
+}) {
+  const pulse = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulse]);
+  return (
+    <Animated.View style={{ transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) }] }}>
+      <Animated.View style={[styles.pulseGlow, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.6] }) }]} />
+      <Button title={title} variant="gold" icon={icon} onPress={onPress} loading={loading} />
+    </Animated.View>
+  );
+}
+
+function LobbyPanel({
+  state,
+  me,
+  onOpenPicker,
+  onEndSeries,
+}: {
+  state: RoomState;
+  me: Me;
+  onOpenPicker: () => void;
+  onEndSeries: () => void;
+}) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const qc = useQueryClient();
@@ -173,30 +220,39 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
   const game = state.game!;
   const isHost = room.hostId === me.id;
   const host = state.members.find((m) => m.userId === room.hostId);
-  const [editing, setEditing] = useState(false);
-  /** 'edit' = save the prize setup; 'start' = Set & Play. */
-  const [mode, setMode] = useState<'edit' | 'start'>('edit');
+  const hostName = host?.name ?? t('room.host');
+  const [settingPrizes, setSettingPrizes] = useState(false);
   const refresh = () => qc.invalidateQueries({ queryKey: roomKey(room.id) });
   const onError = (err: unknown) => showToast({ variant: 'error', title: errorMessage(err) });
 
-  const saveAmounts = useMutation({
+  const phase = game.phase;
+  const step: 1 | 2 | 3 = phase === 'joining' ? 1 : phase === 'tickets' ? 2 : 3;
+  const readySet = new Set(state.readyUserIds);
+  const holders = state.members.filter((m) => m.tickets > 0);
+  /** Who is holding things up at this step. */
+  const notReady =
+    phase === 'tickets'
+      ? state.members.filter((m) => m.tickets === 0)
+      : phase === 'ready'
+        ? holders.filter((m) => !readySet.has(m.userId))
+        : [];
+  const allHaveTickets = phase === 'tickets' && notReady.length === 0 && holders.length >= 2;
+  const myTickets = state.myTickets.length;
+  const iAmReady = readySet.has(me.id);
+
+  const confirmPrizes = useMutation({
     mutationFn: async (amounts: Partial<Record<PrizeType, number>>) => {
       await roomService.setPrizeAmounts(game.id, amounts);
-      if (mode === 'start') await roomService.start(game.id);
+      await roomService.openReady(game.id);
     },
     onSuccess: () => {
-      setEditing(false);
+      setSettingPrizes(false);
       refresh();
     },
     onError,
   });
   const openTickets = useMutation({ mutationFn: () => roomService.openTickets(game.id), onSuccess: refresh, onError });
-
-  const ticketsStep = game.phase === 'tickets';
-  const playersReady = state.members.filter((m) => m.tickets > 0).length;
-  const waitingFor = state.members.length - playersReady;
-  const allReady = ticketsStep && waitingFor === 0 && playersReady >= 2;
-  const step: 1 | 2 | 3 = !ticketsStep ? 1 : allReady ? 3 : 2;
+  const ready = useMutation({ mutationFn: () => roomService.setReady(game.id), onSuccess: refresh, onError });
 
   const [removing, setRemoving] = useState<{ userId: string; name: string } | null>(null);
   const remove = useMutation({
@@ -207,9 +263,17 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
     },
     onError,
   });
-  const openSetup = (m: 'edit' | 'start') => {
-    setMode(m);
-    setEditing(true);
+
+  const statusOf = (m: RoomState['members'][number]) => {
+    if (phase === 'joining') return m.userId === room.hostId ? { label: `👑 ${t('room.host')}`, color: colors.goldDark } : null;
+    if (phase === 'tickets')
+      return m.tickets > 0
+        ? { label: `✓ ${t('lobby.readyWithTickets', { count: m.tickets })}`, color: colors.success }
+        : { label: t('lobby.notReady'), color: colors.warning };
+    if (m.tickets === 0) return { label: t('lobby.watching'), color: colors.textMuted };
+    return readySet.has(m.userId)
+      ? { label: `✓ ${t('lobby.ready')}`, color: colors.success }
+      : { label: t('lobby.notReadyYet'), color: colors.warning };
   };
 
   return (
@@ -219,8 +283,6 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
       <Card style={{ paddingVertical: spacing.md }}>
         <StepBar step={step} />
       </Card>
-
-      <RoomSettingsCard state={state} isHost={isHost} />
 
       {isHost && state.joinRequests.length ? (
         <Card style={{ borderColor: colors.pink, borderWidth: 2 }}>
@@ -236,25 +298,25 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
         </Card>
       ) : null}
 
-      {ticketsStep ? (
-        <Card style={{ gap: spacing.sm }}>
+      {/* Step 2: my tickets — the button pulses until I've chosen. */}
+      {phase === 'tickets' ? (
+        <Card style={[{ gap: spacing.sm }, myTickets === 0 && { borderColor: colors.gold, borderWidth: 2 }]}>
           <Row style={{ justifyContent: 'space-between' }}>
             <T variant="h3">{t('lobby.yourTickets')}</T>
-            {state.myTickets.length === 0 ? (
-              <Button title={t('lobby.chooseTickets')} small variant="gold" icon="ticket" onPress={onOpenPicker} />
-            ) : (
-              <Pill label={t('lobby.tickets', { count: state.myTickets.length })} color={colors.success} />
-            )}
+            {myTickets ? <Pill label={t('lobby.tickets', { count: myTickets })} color={colors.success} style={styles.rowPill} /> : null}
           </Row>
-          {state.myTickets.length === 0 ? (
-            <T muted>{t('lobby.noTickets')}</T>
+          {myTickets === 0 ? (
+            <>
+              <T muted>{t('lobby.noTickets')}</T>
+              <PulseButton title={t('lobby.chooseTickets')} icon="ticket" onPress={onOpenPicker} />
+            </>
           ) : (
             state.myTickets.map((tk) => <TicketView key={tk.id} cells={tk.cells} marked={NO_STRIKES} label={`#${tk.serial}`} compact />)
           )}
         </Card>
       ) : null}
 
-      {ticketsStep ? (
+      {phase !== 'joining' ? (
         <LinearGradient colors={['#FDE68A', '#F5B700']} style={styles.potCard}>
           <View>
             <T variant="smallBold" color="#7C2D12">
@@ -271,15 +333,57 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
         </LinearGradient>
       ) : null}
 
+      {/* Step 3: this game's prizes + "ready". */}
+      {phase === 'ready' ? (
+        <>
+          <Card style={{ gap: spacing.sm }}>
+            <T variant="h3">{t('lobby.prizesThisGame')}</T>
+            <PrizeList
+              compact
+              rows={state.prizes.map((p) => ({ prize: p.prize, amount: Number(p.amount), status: p.status, winners: [] }))}
+            />
+          </Card>
+          {myTickets > 0 ? (
+            iAmReady ? (
+              <Card style={[styles.readyCard, { borderColor: colors.success }]}>
+                <Ionicons name="checkmark-circle" size={26} color={colors.success} />
+                <T variant="bodyMedium" style={{ flex: 1 }}>
+                  {t('lobby.youAreReady')}
+                </T>
+              </Card>
+            ) : (
+              <PulseButton title={t('lobby.readyButton')} icon="checkmark-done" onPress={() => ready.mutate()} loading={ready.isPending} />
+            )
+          ) : (
+            <T muted center>
+              {t('lobby.watchingThisGame')}
+            </T>
+          )}
+        </>
+      ) : null}
+
+      <RoomSettingsCard state={state} isHost={isHost} />
+
       <Card style={{ gap: spacing.sm }}>
         <Row style={{ justifyContent: 'space-between' }}>
           <T variant="h3" style={{ flex: 1 }}>
-            {ticketsStep ? t('lobby.playersThisGame') : t('lobby.playersJoined', { count: state.members.length, max: room.maxPlayers })}
+            {phase === 'joining'
+              ? t('lobby.playersJoined', { count: state.members.length, max: room.maxPlayers })
+              : t('lobby.playersThisGame')}
           </T>
-          {ticketsStep ? <Pill label={t('lobby.readyCount', { ready: playersReady, total: state.members.length })} color={colors.primary} /> : null}
+          {phase !== 'joining' ? (
+            <Pill
+              label={t('lobby.readyCount', {
+                ready: (phase === 'tickets' ? state.members.length : holders.length) - notReady.length,
+                total: phase === 'tickets' ? state.members.length : holders.length,
+              })}
+              color={colors.primary}
+              style={styles.rowPill}
+            />
+          ) : null}
         </Row>
         {state.members.map((m) => {
-          const ready = m.tickets > 0;
+          const status = statusOf(m);
           return (
             <Row key={m.userId} style={styles.readyRow}>
               <Avatar avatarKey={m.avatarKey} size={34} ring={m.userId === room.hostId ? colors.gold : undefined} />
@@ -287,15 +391,7 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
                 {m.name}
                 {m.userId === me.id ? ` (${t('common.you')})` : ''}
               </T>
-              {ticketsStep ? (
-                <Pill
-                  label={ready ? `✓ ${t('lobby.readyWithTickets', { count: m.tickets })}` : t('lobby.notReady')}
-                  color={ready ? colors.success : colors.textMuted}
-                  style={styles.rowPill}
-                />
-              ) : m.userId === room.hostId ? (
-                <Pill label={`👑 ${t('room.host')}`} color={colors.goldDark} style={styles.rowPill} />
-              ) : null}
+              {status ? <Pill label={status.label} color={status.color} style={styles.rowPill} /> : null}
               {isHost && m.userId !== me.id ? (
                 <Pressable
                   onPress={() => setRemoving({ userId: m.userId, name: m.name })}
@@ -309,28 +405,25 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
             </Row>
           );
         })}
-      </Card>
-
-      {ticketsStep ? (
-        <Card style={{ gap: spacing.sm }}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <T variant="h3" style={{ flex: 1 }}>
-              {t('lobby.prizes')}
+        {notReady.length ? (
+          <Row style={[styles.waitingBox, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
+            <Ionicons name="hourglass-outline" size={16} color={colors.warning} />
+            <T variant="small" color={colors.warning} style={{ flex: 1 }}>
+              {t('lobby.stillNotReady', { names: notReady.map((m) => m.name.split(' ')[0]).join(', ') })}
+              {isHost ? ' ' + t('lobby.kickHint') : ''}
             </T>
-            {isHost ? <Button title={t('lobby.editPrizes')} small variant="secondary" icon="options" onPress={() => openSetup('edit')} /> : null}
           </Row>
-          <PrizeList compact rows={state.prizes.map((p) => ({ prize: p.prize, amount: Number(p.amount), status: p.status, winners: [] }))} />
-        </Card>
-      ) : null}
+        ) : null}
+      </Card>
 
       {isHost ? (
         <View style={{ gap: spacing.sm }}>
-          {!ticketsStep ? (
+          {phase === 'joining' ? (
             <>
               <Button
-                title={t('lobby.nextTakeTickets')}
+                title={t('lobby.startGame')}
                 variant="gold"
-                icon="arrow-forward-circle"
+                icon="play-circle"
                 loading={openTickets.isPending}
                 disabled={state.members.length < 2}
                 onPress={() => openTickets.mutate()}
@@ -339,15 +432,25 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
                 {state.members.length < 2 ? t('lobby.needTwoJoined') : t('lobby.nextTakeTicketsHint')}
               </T>
             </>
-          ) : (
+          ) : phase === 'tickets' ? (
             <>
-              <Button title={t('lobby.nextSetAndPlay')} variant="gold" icon="play" disabled={!allReady} onPress={() => openSetup('start')} />
-              {!allReady ? (
+              <Button
+                title={t('lobby.nextSetPrizes')}
+                variant="gold"
+                icon="trophy"
+                disabled={!allHaveTickets}
+                onPress={() => setSettingPrizes(true)}
+              />
+              {!allHaveTickets ? (
                 <T variant="small" muted center>
-                  {waitingFor > 0 ? t('lobby.waitingForTickets', { count: waitingFor }) : t('lobby.needTwo')}
+                  {notReady.length > 0 ? t('lobby.waitingForTickets', { count: notReady.length }) : t('lobby.needTwo')}
                 </T>
               ) : null}
             </>
+          ) : (
+            <T variant="small" muted center>
+              {t('lobby.startsWhenReady')}
+            </T>
           )}
           {room.kind === 'series' && game.gameNo > 1 ? (
             <Button title={t('room.endSeries')} variant="danger" icon="flag" onPress={onEndSeries} />
@@ -357,21 +460,25 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
         <Row style={{ justifyContent: 'center' }}>
           <Ionicons name="hourglass-outline" size={18} color={colors.textMuted} />
           <T muted style={{ flexShrink: 1 }}>
-            {ticketsStep ? t('lobby.waitingHost', { name: host?.name ?? t('room.host') }) : t('lobby.waitingHostTickets', { name: host?.name ?? t('room.host') })}
+            {phase === 'joining'
+              ? t('lobby.waitingHostTickets', { name: hostName })
+              : phase === 'tickets'
+                ? t('lobby.waitingHost', { name: hostName })
+                : t('lobby.startsWhenReady')}
           </T>
         </Row>
       )}
 
       <PrizeSetupModal
-        visible={editing}
+        visible={settingPrizes}
         pot={Number(game.pot)}
         prizes={state.prizes}
         template={room.prizes}
-        saving={saveAmounts.isPending}
-        saveLabel={mode === 'start' ? t('lobby.setAndPlay') : undefined}
+        saving={confirmPrizes.isPending}
+        saveLabel={t('lobby.setPrizesAskReady')}
         hint={t('lobby.setAmountsHint', { players: game.playerCount, tickets: game.ticketCount })}
-        onSave={(amounts) => saveAmounts.mutate(amounts)}
-        onClose={() => setEditing(false)}
+        onSave={(amounts) => confirmPrizes.mutate(amounts)}
+        onClose={() => setSettingPrizes(false)}
       />
       <ConfirmModal
         visible={removing !== null}
@@ -387,17 +494,7 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
   );
 }
 
-function PlayersPanel({
-  state,
-  me,
-  onLeave,
-  onEnd,
-}: {
-  state: RoomState;
-  me: Me;
-  onLeave: () => void;
-  onEnd: () => void;
-}) {
+function PlayersPanel({ state, me, onLeave, onEnd }: { state: RoomState; me: Me; onLeave: () => void; onEnd: () => void }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const qc = useQueryClient();
@@ -427,8 +524,18 @@ function PlayersPanel({
                 <T variant="h3" numberOfLines={1} style={{ flex: 1 }}>
                   {r.name}
                 </T>
-                <IconButton icon="close-circle" size={32} color={colors.error} onPress={() => respond.mutate({ userId: r.userId, accept: false })} />
-                <IconButton icon="checkmark-circle" size={32} color={colors.success} onPress={() => respond.mutate({ userId: r.userId, accept: true })} />
+                <IconButton
+                  icon="close-circle"
+                  size={32}
+                  color={colors.error}
+                  onPress={() => respond.mutate({ userId: r.userId, accept: false })}
+                />
+                <IconButton
+                  icon="checkmark-circle"
+                  size={32}
+                  color={colors.success}
+                  onPress={() => respond.mutate({ userId: r.userId, accept: true })}
+                />
               </Row>
             </Card>
           ))}
@@ -466,7 +573,12 @@ function PlayersPanel({
       ))}
       <Spacer />
       {room.status === 'open' && isHost ? (
-        <Button title={room.kind === 'series' ? t('room.endSeries') : t('room.endRoom')} variant="danger" icon="stop-circle" onPress={onEnd} />
+        <Button
+          title={room.gamesPlayed === 0 ? t('room.dismissRoom') : room.kind === 'series' ? t('room.endSeries') : t('room.endRoom')}
+          variant="danger"
+          icon={room.gamesPlayed === 0 ? 'close-circle' : 'stop-circle'}
+          onPress={onEnd}
+        />
       ) : null}
       <Button title={t('room.leave')} variant="ghost" icon="exit-outline" onPress={onLeave} />
     </View>
@@ -563,8 +675,13 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
           if (!isHostRef.current) showToast({ variant: 'info', title: t('lobby.settingsUpdated') });
           break;
         case 'phase':
-          showToast({ variant: 'info', title: t('lobby.ticketsOpenToast') });
+          showToast({ variant: 'info', title: e.phase === 'ready' ? t('lobby.readyOpenToast') : t('lobby.ticketsOpenToast') });
           break;
+        case 'final_check': {
+          const { sounds, haptics } = useSettingsStore.getState();
+          if (sounds) playPrizeSound('fullhouse', haptics);
+          break;
+        }
         case 'game':
           setTab('game');
           showToast({ variant: 'info', title: t('results.nextGame') });
@@ -604,7 +721,8 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
   );
 
   // Ask once per game, when the host opens the ticket step.
-  const lobbyGameId = state?.game?.status === 'lobby' && state.game.phase === 'tickets' && state.room.status === 'open' ? state.game.id : null;
+  const lobbyGameId =
+    state?.game?.status === 'lobby' && state.game.phase === 'tickets' && state.room.status === 'open' ? state.game.id : null;
   const hasTickets = (state?.myTickets.length ?? 0) > 0;
   useEffect(() => {
     if (lobbyGameId && !hasTickets && promptedGame.current !== lobbyGameId) {
@@ -679,7 +797,9 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
 
   const ended = state.room.status === 'ended';
   const requests = isHost ? state.joinRequests.length : 0;
-  const endLabel = state.room.kind === 'series' ? t('room.endSeries') : t('room.endRoom');
+  // Nothing played yet: the host just dismisses the room.
+  const notStarted = state.room.gamesPlayed === 0;
+  const endLabel = notStarted ? t('room.dismissRoom') : state.room.kind === 'series' ? t('room.endSeries') : t('room.endRoom');
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
@@ -690,12 +810,19 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
           onChange={setTab}
           options={[
             { value: 'game', label: t('room.tabPlay') },
-            { value: 'players', label: requests ? `${t('room.tabPlayers')} (${state.room.memberCount}) • ${requests}` : `${t('room.tabPlayers')} (${state.room.memberCount})` },
+            {
+              value: 'players',
+              label: requests
+                ? `${t('room.tabPlayers')} (${state.room.memberCount}) • ${requests}`
+                : `${t('room.tabPlayers')} (${state.room.memberCount})`,
+            },
             { value: 'standings', label: t('room.tabStandings') },
           ]}
         />
       </View>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl + insets.bottom + (state.room.chatEnabled ? 72 : 0) }}>
+      <ScrollView
+        contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl + insets.bottom + (state.room.chatEnabled ? 72 : 0) }}
+      >
         {tab === 'game' ? (
           ended || !state.game ? (
             <EndedPanel state={state} me={me.data} onPlayAgain={() => playAgain.mutate()} busy={playAgain.isPending} />
@@ -725,7 +852,7 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
         icon={confirm === 'end' ? 'flag' : 'exit-outline'}
         gradient={confirm === 'end' ? undefined : BRAND_GRADIENT}
         title={confirm === 'end' ? endLabel : t('room.leave')}
-        message={confirm === 'end' ? t('room.endRoomConfirm') : t('room.leaveConfirm')}
+        message={confirm === 'end' ? (notStarted ? t('room.dismissConfirm') : t('room.endRoomConfirm')) : t('room.leaveConfirm')}
         confirmLabel={confirm === 'end' ? endLabel : t('room.leave')}
         loading={confirmBusy}
         onConfirm={runConfirm}
@@ -751,6 +878,9 @@ const styles = StyleSheet.create({
   potCard: { borderRadius: radius.xl, padding: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   endedBanner: { borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center' },
   waitWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },
+  pulseGlow: { position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderRadius: 20, backgroundColor: '#F5B700' },
+  readyCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 2 },
+  waitingBox: { borderRadius: radius.md, padding: spacing.sm, marginTop: 4 },
   readyRow: { paddingVertical: 4, alignItems: 'center' },
   rowPill: { alignSelf: 'center', paddingVertical: 4 },
   kick: {

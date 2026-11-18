@@ -13,7 +13,8 @@ import { showToast } from '@/state/toastStore';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import { claimRule, ClaimRule, RoomState, RoomVisibility } from '@/types/api';
 
-const CHECK_TIMES = [5, 10, 15, 20, 30];
+/** 0 = no time limit: the game waits until everyone has checked (or the host continues). */
+const CHECK_TIMES = [5, 10, 15, 20, 30, 0];
 
 /** Normal rule: how long everyone gets to check their tickets after a claim. */
 export function CheckTimePicker({ value, onChange }: { value: number; onChange: (s: number) => void }) {
@@ -34,7 +35,7 @@ export function CheckTimePicker({ value, onChange }: { value: number; onChange: 
       </Row>
       <Row gap={spacing.sm} style={{ marginTop: spacing.md, flexWrap: 'wrap' }}>
         {CHECK_TIMES.map((s) => (
-          <Chip key={s} label={t('common.seconds', { count: s })} active={value === s} onPress={() => onChange(s)} />
+          <Chip key={s} label={s === 0 ? t('create.untilReady') : t('common.seconds', { count: s })} active={value === s} onPress={() => onChange(s)} />
         ))}
       </Row>
     </Card>
@@ -76,7 +77,7 @@ export function RoomSettingsCard({ state, isHost }: { state: RoomState; isHost: 
       </Row>
       <View style={styles.grid}>
         <SummaryItem icon={rule === 'normal' ? 'shield-checkmark' : 'flash'} label={t('create.claimRule')} value={t(`create.rule_${rule}`)} />
-        {rule === 'normal' ? <SummaryItem icon="hourglass" label={t('create.checkTime')} value={t('common.seconds', { count: room.checkSeconds })} /> : null}
+        {rule === 'normal' ? <SummaryItem icon="hourglass" label={t('create.checkTime')} value={room.checkSeconds === 0 ? t('create.untilReady') : t('common.seconds', { count: room.checkSeconds })} /> : null}
         <SummaryItem icon="pricetag" label={t('create.ticketPrice')} value={formatRupees(room.ticketPrice)} />
         <SummaryItem icon="people" label={t('create.maxPlayers')} value={String(room.maxPlayers)} />
         <SummaryItem icon={room.visibility === 'public' ? 'earth' : 'lock-closed'} label={t('create.visibility')} value={t(`visibility.${room.visibility}`)} />

@@ -89,6 +89,25 @@ export const roomService = {
     unwrap(await supabase.rpc('open_tickets', { p_game: gameId }));
   },
 
+  /** Host: prizes are set → everyone confirms they're ready (the game starts when all are). */
+  async openReady(gameId: string): Promise<void> {
+    unwrap(await supabase.rpc('open_ready', { p_game: gameId }));
+  },
+
+  async setReady(gameId: string): Promise<void> {
+    unwrap(await supabase.rpc('set_ready', { p_game: gameId }));
+  },
+
+  /** "I've checked my tickets" during a check round. */
+  async checkDone(gameId: string): Promise<void> {
+    unwrap(await supabase.rpc('check_done', { p_game: gameId }));
+  },
+
+  /** Host: stop waiting for the check round. */
+  async endCheck(gameId: string): Promise<void> {
+    unwrap(await supabase.rpc('end_check', { p_game: gameId }));
+  },
+
   async setPaused(gameId: string, paused: boolean): Promise<void> {
     unwrap(await supabase.rpc('set_game_paused', { p_game: gameId, p_paused: paused }));
   },

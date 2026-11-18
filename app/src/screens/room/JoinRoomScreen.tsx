@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '@/components/Avatar';
+import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { formatRupees } from '@/components/Money';
 import { Button, Card, EmptyState, Pill, Row, Screen, Spacer, T, TextField } from '@/components/ui';
 import { roomService } from '@/services/roomService';
@@ -20,6 +21,8 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
   const [error, setError] = useState<string>();
   const [loading, setLoading] = useState(false);
   const [joining, setJoining] = useState<string | null>(null);
+  /** Public room waiting for "Join this room?" confirmation. */
+  const [confirmRoom, setConfirmRoom] = useState<PublicRoomSummary | null>(null);
   const rooms = useQuery({ queryKey: ['publicRooms'], queryFn: roomService.listPublic, refetchInterval: 8000 });
 
   const joinCode = async () => {
@@ -49,6 +52,7 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
       rooms.refetch();
     } finally {
       setJoining(null);
+      setConfirmRoom(null);
     }
   };
 
@@ -126,11 +130,22 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
                 variant={item.isMember ? 'primary' : 'gold'}
                 small
                 loading={joining === item.id}
-                onPress={() => joinPublic(item)}
+                onPress={() => (item.isMember ? joinPublic(item) : setConfirmRoom(item))}
               />
             </Row>
           </Card>
         )}
+      />
+      <ConfirmModal
+        visible={confirmRoom !== null}
+        icon="enter-outline"
+        gradient={BRAND_GRADIENT}
+        title={t('join.confirmTitle', { title: confirmRoom?.title ?? '' })}
+        message={t('join.confirmMessage', { host: confirmRoom?.hostName ?? '—', price: formatRupees(confirmRoom?.ticketPrice ?? 0), count: confirmRoom?.memberCount ?? 0, max: confirmRoom?.maxPlayers ?? 0 })}
+        confirmLabel={t('join.join')}
+        loading={joining !== null}
+        onConfirm={() => confirmRoom && joinPublic(confirmRoom)}
+        onCancel={() => setConfirmRoom(null)}
       />
     </Screen>
   );

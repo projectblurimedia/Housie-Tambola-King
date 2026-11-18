@@ -11,7 +11,7 @@
 ## Lobby steps (every game)
 1. **Players** — people join; the host taps **Next: take tickets** once at least 2 players are in.
 2. **Tickets** — everyone picks their tickets; the host's **Next: set prizes & play** unlocks when every player has tickets.
-3. **Prizes & play** — the host sets this game's prizes and amounts, then the numbers start.
+3. **Prizes & ready** — the host sets this game's prizes and amounts; every player with tickets taps **I'm ready for this game**; the numbers start by themselves when everyone is ready. Anyone not ready is listed for the host, who can remove them.
 A series' next game starts again at step 1.
 
 ## Tickets & pot (casual ₹ — no real money)
@@ -32,8 +32,10 @@ A series' next game starts again at step 1.
 
 ## Room options
 - **Claim rule** — two options:
-  - **Normal** (default): when someone claims, the number header on every phone is replaced (with a sound) by "X claimed Fast 5 — check your tickets" and a countdown (the host's check time: 5/10/15/20/30 s, default 10). Players can strike numbers they missed meanwhile; **I have it too!** strikes the winning numbers and claims and an **I have it too!** button. Anyone whose ticket completed the same prize on the same number joins the win (split equally). Then the winner is announced (7 s pause).
+  - **Normal** (default): when someone claims, the number header on every phone is replaced (with a sound) by "X claimed Fast 5 — check your tickets" and a countdown (the host's check time: 5/10/15/20/30 s or **until everyone is ready**, default 10). Players can strike numbers they missed meanwhile; **I have it too!** strikes the winning numbers and claims and an **I have it too!** button. Anyone whose ticket completed the same prize on the same number joins the win (split equally). Then the winner is announced (7 s pause).
+  - During a check every player taps **I have it too!** (claims everything their tickets completed) or **Checked**; the check ends early once everyone has, and the host sees who hasn't (can remove them or continue).
   - **Fastest finger**: the first claim wins it alone — no sharing.
+- **Last check**: after number 90 the game doesn't end at once — everyone gets a final check to claim (≥15 s, or until all ready).
   (Fair play was removed on 2026-11-18; old fair rooms became Normal.)
 - **Room settings**: everyone sees them in the lobby; the host can edit them (name, rule, check time, price, max players, public/private, auto hint, chat) until the game starts — the ticket price only until tickets are taken.
 - **Auto hint**: called numbers glow and gently pulse on tickets (in the player's hint colour); players still tap to strike. Nothing is marked automatically.

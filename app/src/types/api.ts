@@ -102,7 +102,8 @@ export interface Game {
   gameNo: number;
   status: GameStatus;
   /** Lobby step: players joining, then everyone picks tickets. */
-  phase: 'joining' | 'tickets';
+  /** Lobby steps: players join → tickets → prizes set, everyone confirms ready. */
+  phase: 'joining' | 'tickets' | 'ready';
   ticketPrice: number;
   pot: number;
   prizesCustom: boolean;
@@ -112,6 +113,11 @@ export interface Game {
   lastCalledAt: string | null;
   nextCallAt: string | null;
   paused: boolean;
+  /** A check round is open (after a claim, or the last check after number 90). */
+  checkOpen: boolean;
+  checkRound: number;
+  /** All 90 numbers are out: the last check before the game ends. */
+  finalCheck: boolean;
   startedAt: string | null;
   finishedAt: string | null;
 }
@@ -126,6 +132,10 @@ export interface RoomState {
   members: RoomMember[];
   /** Pending join requests — only filled for the host. */
   joinRequests: { userId: string; name: string; avatarKey: string; requestedAt: string }[];
+  /** Ready step: players who confirmed. */
+  readyUserIds: string[];
+  /** Current check round: players who have checked (or claimed). */
+  checkedUserIds: string[];
 }
 
 export type JoinStatus = 'member' | 'pending' | 'rejected' | 'none';

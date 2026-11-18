@@ -9,7 +9,7 @@ import { pickSound, playPrizeSound, PrizeSound } from '@/services/sounds';
 import { fonts, goldGradient, radius, spacing } from '@/theme';
 import { Avatar } from './Avatar';
 import { Confetti } from './Confetti';
-import { MiniBall } from './NumberBall';
+import { PatternTicket } from './PatternTicket';
 import { formatRupees } from './Money';
 
 const SHOW_MS = 6500;
@@ -28,7 +28,10 @@ function PopIn({ delay, children }: { delay: number; children: React.ReactNode }
     <Animated.View
       style={{
         opacity: v,
-        transform: [{ scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }) }, { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
+        transform: [
+          { scale: v.interpolate({ inputRange: [0, 1], outputRange: [0.2, 1] }) },
+          { translateY: v.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) },
+        ],
       }}
     >
       {children}
@@ -36,50 +39,49 @@ function PopIn({ delay, children }: { delay: number; children: React.ReactNode }
   );
 }
 
-/** One prize inside the card: name, winners, the numbers that made it, amount. */
-function PrizeBlock({ item, meId, multi, baseDelay }: { item: PrizeWin; meId?: string; multi: boolean; baseDelay: number }) {
+/**
+ * Everyone who won on this number, one row per person with ALL their prizes together
+ * ("Mani — Centre Column & Fast 5"), and what they get in total.
+ */
+function WinnersList({ items, meId }: { items: PrizeWin[]; meId?: string }) {
   const { t } = useTranslation();
-  const count = item.winners.length;
-  const each = count > 0 ? Math.floor((item.amount / count) * 100) / 100 : item.amount;
-  const numbers = item.winners[0]?.numbers ?? [];
+  const people = new Map<string, { winner: PrizeWin['winners'][number]; prizes: string[]; total: number; shared: boolean }>();
+  items.forEach((item) => {
+    const count = item.winners.length || 1;
+    const each = Math.floor((item.amount / count) * 100) / 100;
+    item.winners.forEach((w) => {
+      const p = people.get(w.userId) ?? { winner: w, prizes: [], total: 0, shared: false };
+      p.prizes.push(t(`prizes.${item.prize}`));
+      p.total += each;
+      p.shared = p.shared || count > 1;
+      people.set(w.userId, p);
+    });
+  });
   return (
-    <View style={[{ width: '100%', alignItems: 'center' }, multi && styles.block]}>
-      <Text style={[styles.prize, multi && { fontSize: 22, marginTop: 0 }]}>{t(`prizes.${item.prize}`)}</Text>
-      <View style={{ gap: spacing.sm, marginTop: spacing.sm, width: '100%' }}>
-        {item.winners.map((w, i) => (
-          <PopIn key={w.userId + i} delay={baseDelay + 200 + i * 150}>
-            <View style={styles.winnerRow}>
-              <Avatar avatarKey={w.avatarKey} size={multi ? 36 : 46} ring="#FDE68A" />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.name, multi && { fontSize: 16 }]} numberOfLines={2}>
-                  {w.name}
-                </Text>
-                <Text style={styles.sub}>{w.userId === meId ? t('winner.you') : t('winner.ticket', { serial: w.ticketSerial })}</Text>
+    <View style={{ gap: spacing.sm, width: '100%' }}>
+      {[...people.values()].map(({ winner, prizes, total, shared }, i) => (
+        <PopIn key={winner.userId} delay={150 + i * 120}>
+          <View style={styles.winnerRow}>
+            <Avatar avatarKey={winner.avatarKey} size={46} ring="#FDE68A" />
+            <View style={{ flex: 1 }}>
+              <Text style={styles.name} numberOfLines={1}>
+                {winner.userId === meId ? t('winner.you') : winner.name}
+              </Text>
+              <View style={styles.prizeChips}>
+                {prizes.map((p) => (
+                  <View key={p} style={styles.chip}>
+                    <Text style={styles.chipText}>{p}</Text>
+                  </View>
+                ))}
               </View>
+              {shared ? <Text style={styles.sub}>{t('winner.sharedNote')}</Text> : null}
             </View>
-          </PopIn>
-        ))}
-      </View>
-      {numbers.length && !(multi && item.prize === 'full_house') ? (
-        <>
-          <Text style={styles.numbersLabel}>{t('winner.numbers')}</Text>
-          <View style={styles.numbers}>
-            {numbers.map((n, i) => (
-              <PopIn key={n} delay={baseDelay + 450 + i * 90}>
-                <MiniBall n={n} size={multi ? 28 : 34} />
-              </PopIn>
-            ))}
+            <LinearGradient colors={goldGradient} style={styles.totalPill}>
+              <Text style={styles.total}>{formatRupees(Math.round(total * 100) / 100)}</Text>
+            </LinearGradient>
           </View>
-        </>
-      ) : null}
-      <PopIn delay={baseDelay + 600 + numbers.length * 90}>
-        <LinearGradient colors={goldGradient} style={[styles.amountPill, multi && { paddingVertical: 4, marginTop: spacing.md }]}>
-          <Text style={[styles.amount, multi && { fontSize: 22 }]}>
-            {count > 1 ? t('winner.each', { amount: formatRupees(each) }) : formatRupees(item.amount)}
-          </Text>
-        </LinearGradient>
-      </PopIn>
-      {count > 1 ? <Text style={styles.split}>{t('winner.split', { count })}</Text> : null}
+        </PopIn>
+      ))}
     </View>
   );
 }
@@ -150,7 +152,10 @@ export function WinnerOverlay() {
             },
           ]}
         >
-          <LinearGradient colors={hasFullHouse ? ['#7C2D12', '#C2410C', '#F59E0B'] : ['#4C1D95', '#7C3AED', '#C026D3']} style={styles.gradient}>
+          <LinearGradient
+            colors={hasFullHouse ? ['#7C2D12', '#C2410C', '#F59E0B'] : ['#4C1D95', '#7C3AED', '#C026D3']}
+            style={styles.gradient}
+          >
             <Animated.Text
               style={[styles.trophy, { transform: [{ scale: shine.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.15, 1] }) }] }]}
             >
@@ -159,10 +164,19 @@ export function WinnerOverlay() {
             <LinearGradient colors={goldGradient} style={styles.titlePill}>
               <Text style={styles.title}>{t('winner.title')}</Text>
             </LinearGradient>
-            <ScrollView style={{ width: '100%', maxHeight: 460 }} contentContainerStyle={{ alignItems: 'center', gap: spacing.md, paddingTop: spacing.sm }}>
-              {current.items.map((item, i) => (
-                <PrizeBlock key={item.prize} item={item} meId={me.data?.id} multi={multi} baseDelay={i * 300} />
-              ))}
+            <ScrollView
+              style={{ width: '100%', maxHeight: 480 }}
+              contentContainerStyle={{ alignItems: 'center', gap: spacing.md, paddingTop: spacing.md }}
+            >
+              <WinnersList items={current.items} meId={me.data?.id} />
+              <View style={styles.patterns}>
+                {current.items.map((item) => (
+                  <View key={item.prize} style={{ alignItems: 'center', gap: 4 }}>
+                    <PatternTicket prize={item.prize} width={multi ? 120 : 170} />
+                    <Text style={styles.patternLabel}>{t(`prizes.${item.prize}`)}</Text>
+                  </View>
+                ))}
+              </View>
             </ScrollView>
             {iWon ? <Text style={styles.me}>{t('winner.you')}</Text> : null}
           </LinearGradient>
@@ -191,6 +205,13 @@ const styles = StyleSheet.create({
   },
   name: { fontFamily: fonts.bold, fontSize: 19, color: '#fff' },
   sub: { fontFamily: fonts.medium, fontSize: 12, color: 'rgba(255,255,255,0.8)' },
+  patterns: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: spacing.md },
+  patternLabel: { fontFamily: fonts.semibold, fontSize: 12, color: '#FDE68A' },
+  prizeChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 4, marginTop: 4 },
+  chip: { backgroundColor: 'rgba(253,230,138,0.22)', borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  chipText: { fontFamily: fonts.semibold, fontSize: 11, color: '#FDE68A' },
+  total: { fontFamily: fonts.display, fontSize: 18, color: '#3B1D00' },
+  totalPill: { borderRadius: 999, paddingHorizontal: 12, paddingVertical: 4 },
   numbersLabel: { fontFamily: fonts.semibold, fontSize: 12, color: 'rgba(255,255,255,0.8)', marginTop: spacing.md, letterSpacing: 1 },
   numbers: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 6, marginTop: spacing.sm },
   amountPill: { borderRadius: radius.pill, paddingHorizontal: 26, paddingVertical: 8, marginTop: spacing.lg },

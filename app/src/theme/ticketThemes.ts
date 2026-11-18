@@ -19,6 +19,8 @@ export interface TicketTheme {
   blankCell: string;
   /** Lines between the 3 rows and the 3 column groups. */
   divider: string;
+  /** Faint lines between every column. */
+  faint: string;
   /** Brand line text. */
   brand: string;
 }
@@ -26,13 +28,14 @@ export interface TicketTheme {
 export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
   purple: {
     frame: ['#4C1D95', '#7C3AED', '#C026D3'],
-    paper: '#FFF8E7',
+    paper: '#FAF5FF',
     cell: '#FFFFFF',
-    cellBorder: '#E8DCBF',
+    cellBorder: '#DDD6FE',
     ink: '#2E1065',
     blank: 'rgba(124,58,237,0.3)',
-    blankCell: '#F3E6C5',
+    blankCell: '#EDE9FE',
     divider: 'rgba(124,58,237,0.35)',
+    faint: 'rgba(124,58,237,0.12)',
     brand: 'rgba(76,29,149,0.45)',
   },
   green: {
@@ -44,6 +47,7 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(5,150,105,0.3)',
     blankCell: '#D1FAE5',
     divider: 'rgba(5,150,105,0.35)',
+    faint: 'rgba(5,150,105,0.12)',
     brand: 'rgba(6,95,70,0.45)',
   },
   blue: {
@@ -55,6 +59,7 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(37,99,235,0.3)',
     blankCell: '#DBEAFE',
     divider: 'rgba(37,99,235,0.35)',
+    faint: 'rgba(37,99,235,0.12)',
     brand: 'rgba(30,58,138,0.45)',
   },
   pink: {
@@ -66,17 +71,19 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(219,39,119,0.3)',
     blankCell: '#FFE4E6',
     divider: 'rgba(219,39,119,0.35)',
+    faint: 'rgba(219,39,119,0.12)',
     brand: 'rgba(157,23,77,0.45)',
   },
   orange: {
     frame: ['#9A3412', '#EA580C', '#FBBF24'],
     paper: '#FFFBEB',
     cell: '#FFFFFF',
-    cellBorder: '#FDE68A',
+    cellBorder: '#FED7AA',
     ink: '#7C2D12',
     blank: 'rgba(234,88,12,0.3)',
-    blankCell: '#FEF3C7',
+    blankCell: '#FFEDD5',
     divider: 'rgba(234,88,12,0.35)',
+    faint: 'rgba(234,88,12,0.12)',
     brand: 'rgba(154,52,18,0.45)',
   },
   red: {
@@ -88,6 +95,7 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(220,38,38,0.3)',
     blankCell: '#FEE2E2',
     divider: 'rgba(220,38,38,0.35)',
+    faint: 'rgba(220,38,38,0.12)',
     brand: 'rgba(127,29,29,0.45)',
   },
 };

@@ -12,7 +12,8 @@ export type RoomEvent =
   | { type: 'claim_check'; gameId: string; prize: PrizeType; callIndex: number; winners: Winner[]; deadline: string }
   | { type: 'speed'; seconds: number }
   | { type: 'paused'; paused: boolean }
-  | { type: 'phase'; phase: 'tickets' }
+  | { type: 'phase'; phase: 'tickets' | 'ready' }
+  | { type: 'final_check'; gameId: string; deadline: string }
   | { type: 'state'; gameId: string; gameNo: number; status: 'running' | 'finished' }
   | { type: 'game'; gameId: string; gameNo: number }
   | { type: 'members'; memberCount: number; joined?: string; removed?: string }
@@ -146,9 +147,19 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
         refetch();
         emit({ type: 'speed', seconds: (payload as { seconds: number }).seconds });
       })
-      .on('broadcast', { event: 'phase' }, () => {
+      .on('broadcast', { event: 'phase' }, ({ payload }) => {
         refetch();
-        emit({ type: 'phase', phase: 'tickets' });
+        emit({ type: 'phase', phase: (payload as { phase?: 'tickets' | 'ready' }).phase ?? 'tickets' });
+      })
+      .on('broadcast', { event: 'ready' }, () => refetch())
+      .on('broadcast', { event: 'check_ack' }, ({ payload }) => {
+        const p = payload as { gameId: string; userIds: string[] };
+        qc.setQueryData<RoomState>(roomKey(roomId), (old) => (old && old.game?.id === p.gameId ? { ...old, checkedUserIds: p.userIds } : old));
+        refetch();
+      })
+      .on('broadcast', { event: 'final_check' }, ({ payload }) => {
+        refetch();
+        emit({ type: 'final_check', ...(payload as { gameId: string; deadline: string }) });
       })
       .on('broadcast', { event: 'claim_check' }, ({ payload }) => {
         refetch();

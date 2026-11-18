@@ -106,7 +106,8 @@
     "chat": "Room chat",
     "chatDesc": "Players can chat with each other during the room",
     "checkTime": "Time to check",
-    "checkTimeDesc": "After a claim, how long everyone gets to check their tickets and claim too"
+    "checkTimeDesc": "After a claim, how long everyone gets to check their tickets and claim too",
+    "untilReady": "Until all ready"
   },
   "join": {
     "title": "Join Room",
@@ -130,7 +131,9 @@
     "requestsHint": "Open the Players tab to accept or decline.",
     "requestsTitle": "Join requests ({{count}})",
     "acceptMidGame": "Players accepted now watch this game and play from the next one.",
-    "requestToast": "{{name}} wants to join"
+    "requestToast": "{{name}} wants to join",
+    "confirmTitle": "Join “{{title}}”?",
+    "confirmMessage": "Host: {{host}} · Ticket {{price}} · {{count}}/{{max}} players. The host will accept your request."
   },
   "room": {
     "code": "Room code",
@@ -152,7 +155,9 @@
     "joined": "{{name}} joined the room",
     "endSeries": "End series",
     "watching": "Watching",
-    "removedYou": "The host removed you from this room."
+    "removedYou": "The host removed you from this room.",
+    "dismissRoom": "Dismiss room",
+    "dismissConfirm": "No game has been played. Dismiss this room for everyone?"
   },
   "lobby": {
     "howManyTickets": "How many tickets this game?",
@@ -188,7 +193,7 @@
     "remove": "Remove",
     "step1": "Players",
     "step2": "Tickets",
-    "step3": "Prizes & play",
+    "step3": "Prizes & ready",
     "playersJoined": "Players joined ({{count}}/{{max}})",
     "needTwoJoined": "Wait for at least 2 players to join.",
     "nextTakeTickets": "Next: take tickets",
@@ -203,7 +208,21 @@
     "editSettings": "Edit settings",
     "settingsSaved": "Room settings saved",
     "settingsUpdated": "The host updated the room settings",
-    "priceLocked": "Ticket price can’t change after tickets are taken."
+    "priceLocked": "Ticket price can’t change after tickets are taken.",
+    "watching": "Watching",
+    "ready": "Ready",
+    "notReadyYet": "Not ready yet",
+    "prizesThisGame": "Prizes this game",
+    "youAreReady": "You’re ready ✓ — the game starts when everyone is.",
+    "readyButton": "I’m ready for this game",
+    "watchingThisGame": "You have no tickets this game — you’ll watch it.",
+    "stillNotReady": "Still not ready: {{names}}.",
+    "kickHint": "You can remove them.",
+    "startGame": "Start the game",
+    "nextSetPrizes": "Next: set prizes",
+    "startsWhenReady": "The game starts by itself when everyone is ready.",
+    "setPrizesAskReady": "Set prizes & ask everyone ready",
+    "readyOpenToast": "Prizes are set — tap “I’m ready”!"
   },
   "game": {
     "getReady": "Get ready…",
@@ -241,7 +260,21 @@
     "autoHintOn": "Glowing numbers are called — tap them.",
     "claimedLabel": "Claimed!",
     "checkSecondsLeft_one": "{{count}} second left — strike any number you missed",
-    "checkSecondsLeft_other": "{{count}} seconds left — strike any number you missed"
+    "checkSecondsLeft_other": "{{count}} seconds left — strike any number you missed",
+    "claimedYours": "Claimed! You’re in on this number.",
+    "claimTooLateAny": "Too late — those prizes were already taken.",
+    "nothingToClaim": "Nothing on your tickets completes a prize on this number.",
+    "finalCheckLabel": "All numbers called",
+    "finalCheckTitle": "All 90 numbers are out — check your tickets and claim!",
+    "checkTitleGeneric": "A prize was claimed — check your tickets",
+    "playerClaimed": "{{name}} claimed {{prizes}}",
+    "waitingEveryone_one": "Waiting for {{count}} player to check…",
+    "waitingEveryone_other": "Waiting for {{count}} players to check…",
+    "checkedWaiting": "Checked ✓ — waiting for the others",
+    "claimMine": "Claim mine",
+    "checkedButton": "Checked",
+    "notCheckedYet": "Not checked yet (tap ✕ to remove):",
+    "continueGame": "Continue the game"
   },
   "winner": {
     "title": "WINNER!",
@@ -249,7 +282,8 @@
     "numbers": "Winning numbers",
     "ticket": "Ticket #{{serial}}",
     "each": "{{amount}} each",
-    "you": "That's you! 🎉"
+    "you": "That's you! 🎉",
+    "sharedNote": "Shared with others who finished on the same number"
   },
   "results": {
     "title": "Game {{n}} results",
@@ -516,5 +550,16 @@
     "muteHint": "Tap a player to mute or unmute their messages (only for you)",
     "empty": "No messages yet — say hello!",
     "placeholder": "Type a message…"
+  },
+  "prizeSetup": {
+    "fast": "Fast numbers",
+    "fastDesc": "First to strike 3, 5 or 7 numbers",
+    "lines": "Lines",
+    "linesDesc": "All numbers of a row",
+    "columns": "Columns",
+    "columnsDesc": "Left (1–3), Centre (4–6), Right (7–9) column groups",
+    "fullHouse": "Full Housie",
+    "fullHouseDesc": "All 15 numbers",
+    "alwaysOn": "Always on"
   }
 }

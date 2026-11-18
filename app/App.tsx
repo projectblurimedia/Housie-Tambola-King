@@ -145,20 +145,25 @@ export default function App() {
   // progress overlay, then the app restarts into it. expo-updates gives no byte progress,
   // so the bar is a simulated ramp (5% → 88%) snapped to 100% when the update is ready.
   // Game state lives on the server and strikes are persisted, so a restart mid-game is safe.
-  const { isUpdateAvailable, isUpdatePending, isDownloading } = Updates.useUpdates();
+  const { isUpdateAvailable, isUpdatePending, isDownloading, availableUpdate } = Updates.useUpdates();
   const [showUpdateOverlay, setShowUpdateOverlay] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
   const appStateRef = useRef(AppState.currentState);
 
+  // Each update is fetched once. After the restart the same update can still be reported as
+  // "available" by the next check — it's already running, so it must not show the overlay again.
+  const handledUpdateId = useRef<string | null>(null);
   useEffect(() => {
-    if (!isUpdateAvailable) return;
+    const id = availableUpdate?.updateId ?? null;
+    if (!isUpdateAvailable || !id || id === Updates.updateId || handledUpdateId.current === id) return;
+    handledUpdateId.current = id;
     setShowUpdateOverlay(true);
     setDownloadProgress(0);
     Updates.fetchUpdateAsync().catch(() => setShowUpdateOverlay(false));
-  }, [isUpdateAvailable]);
+  }, [isUpdateAvailable, availableUpdate?.updateId]);
 
   useEffect(() => {
-    if (!isDownloading) return;
+    if (!isDownloading || !showUpdateOverlay) return;
     let current = 0.05;
     setDownloadProgress(current);
     const id = setInterval(() => {
@@ -166,7 +171,7 @@ export default function App() {
       setDownloadProgress(current);
     }, 400);
     return () => clearInterval(id);
-  }, [isDownloading]);
+  }, [isDownloading, showUpdateOverlay]);
 
   useEffect(() => {
     if (!isUpdatePending || !showUpdateOverlay) return;

@@ -30,6 +30,10 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `remove_member` | `p_room, p_user` (host) | – | `NOT_HOST`, `CANNOT_REMOVE_SELF` |
 | `claim_prize` | `p_ticket, p_prize` | `{result: won/shared/already_claimed/already_yours/not_complete}` | `GAME_NOT_RUNNING`, `TOO_MANY_CLAIMS` |
 | `update_room_settings` | `p_room, p_title, p_visibility, p_max_players, p_ticket_price, p_check_claims, p_check_seconds, p_auto_mark, p_chat_enabled` (host, lobby only; broadcasts `room_settings`) | – | `NOT_HOST`, `GAME_ALREADY_STARTED`, `PRICE_LOCKED`, `INVALID_MAX_PLAYERS`, `INVALID_TICKET_PRICE` |
+| `open_ready` | `p_game` (host, tickets step; after `set_game_prizes`) — step 3 | – | `NOT_HOST`, `TICKETS_NOT_OPEN`, `NEED_TWO_PLAYERS` |
+| `set_ready` | `p_game` — game starts when every ticket holder is ready | – | `NOT_READY_STEP`, `NO_TICKETS` |
+| `check_done` | `p_game` — "checked" in the current check round | – | `NO_TICKETS` |
+| `end_check` | `p_game` (host) — stop waiting for the check | – | `NOT_HOST` |
 | `send_chat` | `p_room, p_body (1–200 chars)` | message `{id, userId, name, avatarKey, body, at}` (also broadcast `chat`) | `CHAT_OFF`, `CHAT_TOO_FAST` (5 per 10 s), `INVALID_MESSAGE`, `NOT_IN_ROOM` |
 | `get_chat` | `p_room` | last 50 messages, oldest first | `NOT_IN_ROOM` |
 | `nudge_game` | `p_game` | – (advances only if a call is overdue) | – |
@@ -40,7 +44,7 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `register_push_token` | `p_token, p_platform` | – | `INVALID_PUSH_TOKEN` |
 
 ## Realtime
-Private channel `room:<roomId>` (members only, receive-only). Events: `call {gameId, n, index, nextCallAt}`, `prize {gameId, prize, amount, callIndex, winners[{userId, name, avatarKey, ticketSerial, numbers}]}`, `prize_settled {gameId, prize, each, winners, amount, callIndex, winnerList[…, amount]}` (check rooms announce on this), `claim_check {gameId, prize, callIndex, winners, deadline}`, `speed {seconds}`, `paused {gameId, paused}`, `phase {gameId, phase}`, `chat {id, userId, name, avatarKey, body, at}`, `lobby {gameId, ticketCount, playerCount, pot}`, `members {memberCount, joined?}`, `state {gameId, gameNo, status}`, `game {gameId, gameNo}` (next lobby opened), `room_ended {reason}`.
+Private channel `room:<roomId>` (members only, receive-only). Events: `call {gameId, n, index, nextCallAt}`, `prize {gameId, prize, amount, callIndex, winners[{userId, name, avatarKey, ticketSerial, numbers}]}`, `prize_settled {gameId, prize, each, winners, amount, callIndex, winnerList[…, amount]}` (check rooms announce on this), `claim_check {gameId, prize, callIndex, winners, deadline}`, `speed {seconds}`, `paused {gameId, paused}`, `phase {gameId, phase}`, `chat {id, userId, name, avatarKey, body, at}`, `ready {gameId, userIds}`, `check_ack {gameId, round, userIds}`, `final_check {gameId, deadline, round}`, `room_settings`, `lobby {gameId, ticketCount, playerCount, pot}`, `members {memberCount, joined?}`, `state {gameId, gameNo, status}`, `game {gameId, gameNo}` (next lobby opened), `room_ended {reason}`.
 
 ## Admin RPCs (`role = admin`)
 `admin_dashboard`, `admin_list_players`, `admin_get_player`, `admin_set_ban`, `admin_set_role`, `admin_list_rooms`, `admin_end_room`. `app_settings` is edited directly under admin-only RLS (audit-logged).

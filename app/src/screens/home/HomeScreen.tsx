@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
+import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { formatRupees } from '@/components/Money';
 import { Card, Pill, Row, T } from '@/components/ui';
 import { useAppSettings, useMe } from '@/hooks/useMe';
@@ -151,9 +152,19 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
     myRooms.refetch();
   };
 
-  const openPublic = async (room: PublicRoomSummary) => {
-    if (!room.isMember) await roomService.joinPublic(room.id).catch(() => undefined);
+  const [confirmRoom, setConfirmRoom] = useState<PublicRoomSummary | null>(null);
+  const [joining, setJoining] = useState(false);
+  const joinPublic = async (room: PublicRoomSummary) => {
+    setJoining(true);
+    await roomService.joinPublic(room.id).catch(() => undefined);
+    setJoining(false);
+    setConfirmRoom(null);
     navigation.navigate('Room', { roomId: room.id });
+  };
+  // Members go straight in; anyone else confirms "Join this room?" first.
+  const openPublic = (room: PublicRoomSummary) => {
+    if (room.isMember) navigation.navigate('Room', { roomId: room.id });
+    else setConfirmRoom(room);
   };
 
   return (
@@ -264,6 +275,17 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
           ))}
         </Row>
       </ScrollView>
+      <ConfirmModal
+        visible={confirmRoom !== null}
+        icon="enter-outline"
+        gradient={BRAND_GRADIENT}
+        title={t('join.confirmTitle', { title: confirmRoom?.title ?? '' })}
+        message={t('join.confirmMessage', { host: confirmRoom?.hostName ?? '—', price: formatRupees(confirmRoom?.ticketPrice ?? 0), count: confirmRoom?.memberCount ?? 0, max: confirmRoom?.maxPlayers ?? 0 })}
+        confirmLabel={t('join.join')}
+        loading={joining}
+        onConfirm={() => confirmRoom && joinPublic(confirmRoom)}
+        onCancel={() => setConfirmRoom(null)}
+      />
     </View>
   );
 }
