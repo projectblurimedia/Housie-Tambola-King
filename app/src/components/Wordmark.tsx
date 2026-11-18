@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
-import Svg, { Circle, Defs, Ellipse, G, LinearGradient as SvgGradient, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, G, LinearGradient as SvgGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
 /** Clean, premium font for the title (loaded in App). */
 const BOLD = 'Montserrat_800ExtraBold';
@@ -61,10 +61,11 @@ export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string;
 
 /**
  * The app icon for headers, drawn in code: a purple tile with a gold edge, a glossy gold
- * crown on top and three little bingo balls (red, blue, green) — a tiny version of the logo.
+ * crown on top and three little numbered bingo balls (7 red, 31 blue, 65 green) — a tiny
+ * version of the logo.
  */
 export function AppIcon({ size = 46 }: { size?: number }) {
-  const ball = (cx: number, light: string, mid: string, dark: string, key: string) => (
+  const ball = (cx: number, n: number, light: string, mid: string, dark: string, key: string) => (
     <G key={key}>
       <Defs>
         <RadialGradient id={`ic-${key}`} cx="38%" cy="34%" r="72%">
@@ -74,7 +75,10 @@ export function AppIcon({ size = 46 }: { size?: number }) {
         </RadialGradient>
       </Defs>
       <Circle cx={cx} cy={74} r={11} fill={`url(#ic-${key})`} />
-      <Circle cx={cx} cy={74} r={5.5} fill="#FFFFFF" />
+      <Circle cx={cx} cy={74} r={6.8} fill="#FFFFFF" />
+      <SvgText x={cx} y={77.2} textAnchor="middle" fontSize={n > 9 ? 7.2 : 8.6} fontWeight="bold" fill="#111827">
+        {n}
+      </SvgText>
     </G>
   );
   return (
@@ -111,9 +115,9 @@ export function AppIcon({ size = 46 }: { size?: number }) {
       <Circle cx={80} cy={22} r={3.6} fill="url(#ic-gold)" />
       <Path d="M50 36 L54.5 42 L50 48 L45.5 42 Z" fill="#E11D48" />
       {/* Three balls */}
-      {ball(28, '#FF9A9A', '#E11D2E', '#7F0A14', 'r')}
-      {ball(50, '#9CCBFF', '#1D6BEB', '#0B2C7A', 'b')}
-      {ball(72, '#A8F5A8', '#16A34A', '#0B4D22', 'g')}
+      {ball(28, 7, '#FF9A9A', '#E11D2E', '#7F0A14', 'r')}
+      {ball(50, 31, '#9CCBFF', '#1D6BEB', '#0B2C7A', 'b')}
+      {ball(72, 65, '#A8F5A8', '#16A34A', '#0B4D22', 'g')}
     </Svg>
   );
 }
