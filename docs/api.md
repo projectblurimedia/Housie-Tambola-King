@@ -34,6 +34,7 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `set_ready` | `p_game` — the host can start once every ticket holder is ready | – | `NOT_READY_STEP`, `NO_TICKETS` |
 | `check_done` | `p_game` — "checked" in the current check round | – | `NO_TICKETS` |
 | `end_check` | `p_game` (host) — stop waiting for the check | – | `NOT_HOST` |
+| `set_hint_mode` | `p_room, p_mode ('next'/'struck')` (host) | – | `NOT_HOST`, `INVALID_HINT_MODE` |
 | `send_chat` | `p_room, p_body (1–200 chars)` | message `{id, userId, name, avatarKey, body, at}` (also broadcast `chat`) | `CHAT_OFF`, `CHAT_TOO_FAST` (5 per 10 s), `INVALID_MESSAGE`, `NOT_IN_ROOM` |
 | `get_chat` | `p_room` | last 50 messages, oldest first | `NOT_IN_ROOM` |
 | `nudge_game` | `p_game` | – (advances only if a call is overdue) | – |

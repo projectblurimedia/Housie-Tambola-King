@@ -80,12 +80,16 @@ export interface Room {
   chatEnabled: boolean;
   /** Normal rule: seconds everyone gets to check after a claim (5–60, default 10). */
   checkSeconds: number;
+  /** Auto hint kind: 'next' = newest number until the next call; 'struck' = every called number until struck. */
+  hintMode: HintMode;
 }
 
 /**
  * Normal (default): claims are checked for 10 s and same-number completions share.
  * Fastest finger: whoever claims first wins it alone.
  */
+export type HintMode = 'next' | 'struck';
+
 export type ClaimRule = 'normal' | 'fastest' | 'auto';
 /**
  * Normal: claims are checked, same-number completions share. Fastest finger: first claim wins.

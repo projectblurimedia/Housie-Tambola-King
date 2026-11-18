@@ -2,6 +2,7 @@ import { supabase } from '@/lib/supabase';
 import type { PrizeType } from '@/game/engine/ticket';
 import type {
   ChatMessage,
+  HintMode,
   ClaimRule,
   GameResults,
   JoinResult,
@@ -32,6 +33,7 @@ export interface CreateRoomInput {
   autoMark: boolean;
   chatEnabled: boolean;
   checkSeconds: number;
+  hintMode: HintMode;
 }
 
 export interface RoomSettingsInput {
@@ -43,13 +45,14 @@ export interface RoomSettingsInput {
   checkSeconds: number;
   autoMark: boolean;
   chatEnabled: boolean;
+  hintMode: HintMode;
 }
 
 export type ClaimResult = 'won' | 'shared' | 'already_claimed' | 'already_yours' | 'not_complete' | 'auto';
 
 export const roomService = {
   async create(input: CreateRoomInput): Promise<{ roomId: string; code: string }> {
-    return unwrap(
+    const created = unwrap(
       await supabase.rpc('create_room', {
         p_title: input.title,
         p_kind: input.kind,
@@ -66,6 +69,13 @@ export const roomService = {
         p_check_seconds: input.checkSeconds,
       }),
     ) as { roomId: string; code: string };
+    // 'struck' is the default on the server.
+    if (input.autoMark && input.hintMode === 'next') await this.setHintMode(created.roomId, 'next');
+    return created;
+  },
+
+  async setHintMode(roomId: string, mode: HintMode): Promise<void> {
+    unwrap(await supabase.rpc('set_hint_mode', { p_room: roomId, p_mode: mode }));
   },
 
   /** Asks to join; the host must accept (members get 'member' straight away). */
@@ -128,6 +138,7 @@ export const roomService = {
         p_claim_mode: input.rule === 'auto' ? 'fair' : 'fastest',
       }),
     );
+    await this.setHintMode(roomId, input.hintMode);
   },
 
   async getChat(roomId: string): Promise<ChatMessage[]> {

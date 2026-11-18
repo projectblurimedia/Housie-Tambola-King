@@ -76,8 +76,14 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
   );
   const hintSets = useMemo(
     () =>
-      autoHint ? state.myTickets.map((tk, i) => new Set(tk.cells.filter((n) => n > 0 && calledSet.has(n) && !struckSets[i].has(n)))) : null,
-    [autoHint, state.myTickets, calledSet, struckSets],
+      !autoHint
+        ? null
+        : room.hintMode === 'next'
+          ? // Only the newest number, until the next one is called.
+            state.myTickets.map((tk, i) => new Set(last !== null && tk.cells.includes(last) && !struckSets[i].has(last) ? [last] : []))
+          : // Every called number, until it's struck.
+            state.myTickets.map((tk, i) => new Set(tk.cells.filter((n) => n > 0 && calledSet.has(n) && !struckSets[i].has(n)))),
+    [autoHint, room.hintMode, last, state.myTickets, calledSet, struckSets],
   );
 
   const msToNext = game.nextCallAt ? new Date(game.nextCallAt).getTime() - serverNow() : 0;

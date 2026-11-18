@@ -105,35 +105,52 @@ function MyRoomRow({ room, onPress }: { room: MyRoomSummary; onPress: () => void
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const statusKey = room.status === 'ended' ? 'ended' : (room.gameStatus ?? 'open');
+  const live = statusKey === 'running';
+  const statusColor = live ? colors.error : statusKey === 'ended' ? colors.textMuted : colors.success;
+  const series = room.kind === 'series';
   return (
-    <Card onPress={onPress} style={{ paddingVertical: spacing.md }}>
-      <Row>
-        <View style={[styles.roomIcon, { backgroundColor: room.kind === 'series' ? colors.pink : colors.primary }]}>
-          <Ionicons name={room.kind === 'series' ? 'layers' : 'grid'} size={20} color="#fff" />
-        </View>
-        <View style={{ flex: 1 }}>
-          <T variant="h3" numberOfLines={1}>
-            {room.title}
-          </T>
-          <T variant="small" muted>
-            {room.code} ·{' '}
-            {room.kind === 'series'
-              ? room.totalGames >= 500
-                ? t('room.game', { n: room.gamesPlayed + 1 })
-                : t('room.gameOfSeries', { n: Math.min(room.gamesPlayed + 1, room.totalGames), total: room.totalGames })
-              : t('kind.normal')}
-          </T>
-        </View>
-        <View style={{ alignItems: 'flex-end', gap: 4 }}>
-          <Pill
-            label={t(`status.${statusKey}`)}
-            color={statusKey === 'running' ? colors.error : statusKey === 'ended' ? colors.textMuted : colors.success}
-          />
-          {room.myWon > 0 ? (
-            <T variant="smallBold" color={colors.goldDark}>
-              {formatRupees(room.myWon)}
+    <Card onPress={onPress} style={styles.roomCard}>
+      <Row gap={spacing.md}>
+        <LinearGradient
+          colors={series ? ['#F472B6', '#DB2777'] : ['#8B5CF6', '#6D28D9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.roomTile}
+        >
+          <Ionicons name={series ? 'layers' : 'grid'} size={22} color="#fff" />
+        </LinearGradient>
+        <View style={{ flex: 1, gap: 5 }}>
+          <Row gap={6}>
+            <T variant="h3" numberOfLines={1} style={{ flexShrink: 1 }}>
+              {room.title}
             </T>
-          ) : null}
+            {room.isHost ? <T style={{ fontSize: 14, lineHeight: 18 }}>👑</T> : null}
+          </Row>
+          <Row gap={6} style={{ flexWrap: 'wrap' }}>
+            <View style={[styles.chip, { backgroundColor: series ? 'rgba(219,39,119,0.12)' : 'rgba(109,40,217,0.12)' }]}>
+              <T variant="tiny" color={series ? '#DB2777' : colors.primary}>
+                {series ? t('kind.series') : t('kind.normal')}
+              </T>
+            </View>
+            <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
+              <Ionicons name="key" size={10} color={colors.textMuted} />
+              <T variant="tiny" muted>
+                {room.code}
+              </T>
+            </View>
+            <View style={[styles.chip, { backgroundColor: colors.surfaceAlt }]}>
+              <Ionicons name="people" size={11} color={colors.textMuted} />
+              <T variant="tiny" muted>
+                {room.memberCount}
+              </T>
+            </View>
+          </Row>
+        </View>
+        <View style={[styles.statusPill, { borderColor: statusColor }]}>
+          {live ? <View style={[styles.liveDot, { backgroundColor: statusColor }]} /> : null}
+          <T variant="tiny" color={statusColor}>
+            {t(`status.${statusKey}`)}
+          </T>
         </View>
       </Row>
     </Card>
@@ -217,7 +234,7 @@ function MyRoomsStack({ rooms, onOpen }: { rooms: MyRoomSummary[]; onOpen: (room
                 .reverse()
             : null}
           <View onLayout={(e) => setFrontHeight(e.nativeEvent.layout.height)}>
-            <MyRoomRow room={front} onPress={() => onOpen(front)} />
+            <MyRoomRow room={front} onPress={() => (rooms.length > 1 ? setListOpen(true) : onOpen(front))} />
           </View>
         </View>
       ) : (
@@ -415,6 +432,19 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
+  roomCard: { paddingVertical: spacing.md, paddingHorizontal: spacing.md },
+  roomTile: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  chip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  statusPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    borderWidth: 1.5,
+    borderRadius: 999,
+    paddingHorizontal: 9,
+    paddingVertical: 3,
+  },
+  liveDot: { width: 7, height: 7, borderRadius: 4 },
   headIcon: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   rule: { flex: 1, height: 1, minWidth: 8 },
   seeAll: {

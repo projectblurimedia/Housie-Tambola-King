@@ -112,7 +112,11 @@
     "untilReady": "Until all ready",
     "rule_auto": "Auto",
     "rule_auto_desc": "The app strikes every called number by itself — no hints, no tapping. Everyone who completes a prize on the same number shares it",
-    "untilReadyLower": "until all are ready"
+    "untilReadyLower": "until all are ready",
+    "hintNext": "Until the next number",
+    "hintStruck": "Until struck",
+    "hintNextDesc": "Only the newest number glows, until the next one is called.",
+    "hintStruckDesc": "Every called number on your ticket glows until you strike it."
   },
   "join": {
     "title": "Join Room",

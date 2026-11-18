@@ -9,8 +9,8 @@ import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import type { PrizeType } from '@/game/engine/ticket';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
-import type { ClaimRule, RoomKind, RoomVisibility } from '@/types/api';
-import { CheckTimePicker, RulePicker } from './parts/RoomSettingsModal';
+import type { ClaimRule, HintMode, RoomKind, RoomVisibility } from '@/types/api';
+import { CheckTimePicker, HintModePicker, RulePicker } from './parts/RoomSettingsModal';
 import type { ScreenProps } from '@/navigation/types';
 
 /**
@@ -76,6 +76,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [price, setPrice] = useState('10');
   const [rule, setRule] = useState<ClaimRule>('normal');
   const [autoHint, setAutoHint] = useState(false);
+  const [hintMode, setHintMode] = useState<HintMode>('struck');
   /** Normal rule: seconds everyone gets to check after a claim. */
   const [checkSeconds, setCheckSeconds] = useState(10);
   const [chatEnabled, setChatEnabled] = useState(true);
@@ -99,6 +100,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         prizes: DEFAULT_PRIZES,
         rule,
         autoMark: autoHint,
+        hintMode,
         chatEnabled,
         checkSeconds,
       });
@@ -227,7 +229,10 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
       {rule === 'normal' ? <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} /> : null}
       {/* Auto strikes everything itself — hints make no sense there. */}
       {rule === 'auto' ? null : (
-        <OptionToggle icon="bulb" title={t('create.autoHint')} desc={t('create.autoHintDesc')} value={autoHint} onChange={setAutoHint} />
+        <>
+          <OptionToggle icon="bulb" title={t('create.autoHint')} desc={t('create.autoHintDesc')} value={autoHint} onChange={setAutoHint} />
+          {autoHint ? <HintModePicker value={hintMode} onChange={setHintMode} /> : null}
+        </>
       )}
       <OptionToggle icon="chatbubbles" title={t('create.chat')} desc={t('create.chatDesc')} value={chatEnabled} onChange={setChatEnabled} />
 

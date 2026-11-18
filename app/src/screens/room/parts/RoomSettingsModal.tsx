@@ -11,7 +11,7 @@ import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
-import { claimRule, ClaimRule, RoomState, RoomVisibility } from '@/types/api';
+import { claimRule, ClaimRule, HintMode, RoomState, RoomVisibility } from '@/types/api';
 
 /** 0 = no time limit: the game waits until everyone has checked (or the host continues). */
 const CHECK_TIMES = [5, 10, 15, 20, 30, 0];
@@ -67,32 +67,51 @@ export function RulePicker({
   const { colors } = useThemeColors();
   const time = checkSeconds === 0 ? t('create.untilReadyLower') : t('common.seconds', { count: checkSeconds });
   return (
-    <View style={{ gap: spacing.sm }}>
+    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.md }}>
       {(['normal', 'fastest', 'auto'] as ClaimRule[]).map((m) => {
         const active = value === m;
         return (
-          <Card
+          <Pressable
             key={m}
             onPress={() => onChange(m)}
             style={[
               styles.ruleCard,
-              { borderColor: active ? colors.primary : colors.border },
-              active && { backgroundColor: colors.surfaceAlt },
+              { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.surfaceAlt : colors.surface },
             ]}
           >
-            <View style={[styles.optIcon, { backgroundColor: active ? colors.primary : colors.surfaceAlt }]}>
-              <Ionicons name={RULE_ICONS[m]} size={19} color={active ? '#fff' : colors.textMuted} />
-            </View>
-            <View style={{ flex: 1 }}>
-              <T variant="h3">{t(`create.rule_${m}`)}</T>
-              <T variant="tiny" muted>
-                {m === 'normal' ? t('create.rule_normal_desc', { time }) : t(`create.rule_${m}_desc`)}
-              </T>
-            </View>
-            <Ionicons name={active ? 'radio-button-on' : 'radio-button-off'} size={22} color={active ? colors.primary : colors.textMuted} />
-          </Card>
+            <Row style={{ justifyContent: 'space-between' }}>
+              <View style={[styles.optIcon, { backgroundColor: active ? colors.primary : colors.surfaceAlt }]}>
+                <Ionicons name={RULE_ICONS[m]} size={19} color={active ? '#fff' : colors.textMuted} />
+              </View>
+              <Ionicons
+                name={active ? 'checkmark-circle' : 'ellipse-outline'}
+                size={22}
+                color={active ? colors.primary : colors.textMuted}
+              />
+            </Row>
+            <T variant="h3">{t(`create.rule_${m}`)}</T>
+            <T variant="tiny" muted>
+              {m === 'normal' ? t('create.rule_normal_desc', { time }) : t(`create.rule_${m}_desc`)}
+            </T>
+          </Pressable>
         );
       })}
+    </ScrollView>
+  );
+}
+
+/** Auto hint kind: the newest number until the next call, or every called number until struck. */
+export function HintModePicker({ value, onChange }: { value: HintMode; onChange: (m: HintMode) => void }) {
+  const { t } = useTranslation();
+  return (
+    <View style={{ gap: 6, marginTop: spacing.sm }}>
+      <Row gap={spacing.sm} style={{ flexWrap: 'wrap' }}>
+        <Chip label={t('create.hintNext')} active={value === 'next'} onPress={() => onChange('next')} />
+        <Chip label={t('create.hintStruck')} active={value === 'struck'} onPress={() => onChange('struck')} />
+      </Row>
+      <T variant="tiny" muted>
+        {value === 'next' ? t('create.hintNextDesc') : t('create.hintStruckDesc')}
+      </T>
     </View>
   );
 }
@@ -149,7 +168,11 @@ export function RoomSettingsCard({ state, isHost }: { state: RoomState; isHost: 
           value={t(`visibility.${room.visibility}`)}
         />
         {rule === 'auto' ? null : (
-          <SummaryItem icon="bulb" label={t('create.autoHint')} value={room.autoMark ? t('common.on') : t('common.off')} />
+          <SummaryItem
+            icon="bulb"
+            label={t('create.autoHint')}
+            value={!room.autoMark ? t('common.off') : room.hintMode === 'next' ? t('create.hintNext') : t('create.hintStruck')}
+          />
         )}
         <SummaryItem icon="chatbubbles" label={t('create.chat')} value={room.chatEnabled ? t('common.on') : t('common.off')} />
         <SummaryItem icon="timer-outline" label={t('game.speedTitle')} value={t('common.seconds', { count: room.callIntervalSeconds })} />
@@ -175,6 +198,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
   const [rule, setRule] = useState<ClaimRule>(claimRule(room));
   const [checkSeconds, setCheckSeconds] = useState(room.checkSeconds);
   const [autoHint, setAutoHint] = useState(room.autoMark);
+  const [hintMode, setHintMode] = useState<HintMode>(room.hintMode ?? 'struck');
   const [chat, setChat] = useState(room.chatEnabled);
 
   // Fresh values every time it opens.
@@ -187,6 +211,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
     setRule(claimRule(room));
     setCheckSeconds(room.checkSeconds);
     setAutoHint(room.autoMark);
+    setHintMode(room.hintMode ?? 'struck');
     setChat(room.chatEnabled);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -200,6 +225,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
         rule,
         checkSeconds,
         autoMark: autoHint,
+        hintMode,
         chatEnabled: chat,
       }),
     onSuccess: () => {
@@ -264,10 +290,13 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
             </Row>
 
             {rule === 'auto' ? null : (
-              <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
-                <T variant="bodyMedium">{t('create.autoHint')}</T>
-                <Toggle value={autoHint} onValueChange={setAutoHint} />
-              </Row>
+              <>
+                <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
+                  <T variant="bodyMedium">{t('create.autoHint')}</T>
+                  <Toggle value={autoHint} onValueChange={setAutoHint} />
+                </Row>
+                {autoHint ? <HintModePicker value={hintMode} onChange={setHintMode} /> : null}
+              </>
             )}
             <Row style={{ justifyContent: 'space-between', marginTop: spacing.md }}>
               <T variant="bodyMedium">{t('create.chat')}</T>
@@ -290,7 +319,8 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
 
 const styles = StyleSheet.create({
   group: { padding: spacing.md, borderWidth: 2 },
-  ruleCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderWidth: 2 },
+  // Every rule card the same size, side by side.
+  ruleCard: { width: 200, height: 172, gap: 6, padding: spacing.md, borderWidth: 2, borderRadius: radius.lg },
   optIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   item: {

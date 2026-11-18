@@ -40,6 +40,10 @@ export const CalledBoard = memo(function CalledBoard({
                   style={{
                     fontFamily: on ? fonts.bold : fonts.medium,
                     fontSize: cellSize * 0.46,
+                    lineHeight: Math.round(cellSize * 0.46 * 1.15),
+                    includeFontPadding: false,
+                    textAlignVertical: 'center',
+                    textAlign: 'center',
                     color: on ? colors.white : colors.textMuted,
                   }}
                 >

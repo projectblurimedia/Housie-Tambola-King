@@ -39,7 +39,7 @@ A series' next game starts again at step 1.
 - **Last check**: after number 90 the game doesn't end at once — everyone gets a final check to claim (≥15 s, or until all ready).
   (Fair play was removed on 2026-11-18; old fair rooms became Normal.)
 - **Room settings**: everyone sees them in the lobby; the host can edit them (name, rule, check time, price, max players, public/private, auto hint, chat) until the game starts — the ticket price only until tickets are taken.
-- **Auto hint** (off by default; not used with Auto): called numbers glow until struck — with it off there are no rings at all (in the player's hint colour); players still tap to strike. Nothing is marked automatically.
+- **Auto hint** (off by default; not used with Auto) has two kinds: *Until the next number* (only the newest number glows) or *Until struck* (every called number glows until struck). Off = no rings at all. (in the player's hint colour); players still tap to strike. Nothing is marked automatically.
 - **Room chat** (host's choice, on by default): floating chat button; each player can mute anyone for themselves. Voice chat is planned (needs a voice provider + a new app build).
 - Default calling speed 3 s (set in game, 1–10 s). During a game the host has an on-screen **pause/play** button and can change the speed in settings; every phone gets a message when the speed changes or the game is paused/resumed. Voice, sounds and ticket style (ready-made looks, ticket / strike / hint colours) are set only in Profile.
 - Numbers pause for 8 s after a prize is won (7 s after a checked claim) so everyone sees the winner announcement.

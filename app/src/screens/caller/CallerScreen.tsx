@@ -175,7 +175,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
         const pad = 6;
         const boardPad = 6;
         // Board: about two-thirds of the screen; each box as wide as that allows, as tall as the height allows.
-        const boardWidth = Math.floor(Math.min(width * 0.66, 820));
+        const boardWidth = Math.floor(Math.min(width * 0.58, 720));
         const cell = Math.max(24, Math.floor((height - pad * 2 - boardPad * 2 - 8 * BOARD_GAP) / 9));
         const cellWidth = Math.max(cell, Math.floor((boardWidth - boardPad * 2 - 9 * BOARD_GAP) / 10));
         const ball = Math.min(Math.floor(height * 0.3), 118);
@@ -194,6 +194,17 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                   </Row>
                   <IconButton icon="options" color="#fff" onPress={() => setSettingsOpen(true)} accessibilityLabel={t('caller.settings')} />
                 </Row>
+                {notStarted ? null : (
+                  <Pressable
+                    onPress={() => setConfirmReset(true)}
+                    style={({ pressed }) => [styles.newGame, { opacity: pressed ? 0.75 : 1 }]}
+                  >
+                    <Ionicons name="refresh" size={14} color="#FCA5A5" />
+                    <T variant="tiny" color="#fff">
+                      {t('caller.newGame')}
+                    </T>
+                  </Pressable>
+                )}
 
                 <Row gap={spacing.md} style={{ flex: 1 }}>
                   <View style={styles.ballHalo}>
@@ -281,13 +292,6 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       onPress={() => setHistoryOpen(true)}
                       disabled={notStarted}
                     />
-                    <RoundButton
-                      icon="refresh"
-                      label={t('caller.reset')}
-                      onPress={() => setConfirmReset(true)}
-                      disabled={notStarted}
-                      tint="#FCA5A5"
-                    />
                   </Row>
                 )}
               </View>
@@ -307,7 +311,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                 style={{ flex: 1 }}
                 nestedScrollEnabled
                 keyboardShouldPersistTaps="handled"
-                showsVerticalScrollIndicator
+                showsVerticalScrollIndicator={false}
                 contentContainerStyle={{ paddingBottom: spacing.xl }}
               >
                 <T variant="smallBold" muted style={styles.label}>
@@ -388,7 +392,12 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                 {t('caller.historyOrderHint')}
               </T>
               {/* Every called number in the order it was called: #1, #2, … */}
-              <ScrollView style={{ flex: 1, marginTop: spacing.sm }} nestedScrollEnabled contentContainerStyle={styles.historyGrid}>
+              <ScrollView
+                style={{ flex: 1, marginTop: spacing.sm }}
+                nestedScrollEnabled
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={styles.historyGrid}
+              >
                 {called.map((n, i) => (
                   <View key={n} style={styles.historyItem}>
                     <MiniBall n={n} size={36} />
@@ -472,6 +481,19 @@ const styles = StyleSheet.create({
   historyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: spacing.lg },
   historyItem: { alignItems: 'center', gap: 2, width: 44 },
   overlayFill: { alignItems: 'flex-end', justifyContent: 'flex-start', padding: 0 },
+  newGame: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    gap: 5,
+    marginLeft: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(255,255,255,0.14)',
+    borderWidth: 1,
+    borderColor: 'rgba(252,165,165,0.5)',
+  },
   sideSheet: {
     height: '100%',
     width: '46%',
