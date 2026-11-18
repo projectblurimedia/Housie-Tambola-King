@@ -12,6 +12,7 @@ import type {
   RoomState,
   RoomVisibility,
   StandingRow,
+  LedgerGame,
   Ticket,
 } from '@/types/api';
 import { unwrap } from './errors';
@@ -162,6 +163,10 @@ export const roomService = {
 
   async getResults(gameId: string): Promise<GameResults> {
     return unwrap(await supabase.rpc('get_game_results', { p_game: gameId })) as GameResults;
+  },
+
+  async getLedger(roomId: string): Promise<LedgerGame[]> {
+    return (unwrap(await supabase.rpc('get_room_ledger', { p_room: roomId })) as LedgerGame[] | null) ?? [];
   },
 
   async getStandings(roomId: string): Promise<StandingRow[]> {

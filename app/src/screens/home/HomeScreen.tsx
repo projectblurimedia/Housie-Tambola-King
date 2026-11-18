@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -141,6 +141,8 @@ function MyRoomRow({ room, onPress }: { room: MyRoomSummary; onPress: () => void
 export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
+  // Keeps the last cards above the phone's Back / Home / Recents bar.
+  const insets = useSafeAreaInsets();
   const me = useMe();
   const settings = useAppSettings();
   const publicRooms = useQuery({ queryKey: ['publicRooms'], queryFn: roomService.listPublic, refetchInterval: 15000 });
@@ -188,7 +190,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
       </LinearGradient>
 
       <ScrollView
-        contentContainerStyle={{ paddingBottom: spacing.xxl }}
+        contentContainerStyle={{ paddingBottom: spacing.xxl + insets.bottom }}
         refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} tintColor={colors.primary} />}
         showsVerticalScrollIndicator={false}
       >

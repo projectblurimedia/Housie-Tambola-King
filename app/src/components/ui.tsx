@@ -293,15 +293,26 @@ export const centeredInput: TextStyle = {
 };
 
 /** Brand-coloured on/off switch (purple track, gold thumb when on) — never the default green. */
-export function Toggle({ value, onValueChange, disabled }: { value: boolean; onValueChange: (v: boolean) => void; disabled?: boolean }) {
+export function Toggle({
+  value,
+  onValueChange,
+  disabled,
+  onDark,
+}: {
+  value: boolean;
+  onValueChange: (v: boolean) => void;
+  disabled?: boolean;
+  /** On a coloured (primary) background: gold thumb on a light track so it stays visible. */
+  onDark?: boolean;
+}) {
   const { colors } = useThemeColors();
   return (
     <Switch
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
-      trackColor={{ false: colors.border, true: colors.primaryLight }}
-      thumbColor={value ? colors.primary : '#f4f3f4'}
+      trackColor={{ false: colors.border, true: onDark ? 'rgba(255,255,255,0.55)' : colors.primaryLight }}
+      thumbColor={value ? (onDark ? '#FBBF24' : colors.primary) : '#f4f3f4'}
       ios_backgroundColor={colors.border}
     />
   );
@@ -336,6 +347,9 @@ export function TextField({ label, error, style, ...props }: TextInputProps & { 
       ) : null}
       <TextInput
         placeholderTextColor={colors.textMuted}
+        // Android autofill tints the field when text is pasted/filled — keep inputs as designed.
+        importantForAutofill="no"
+        autoComplete="off"
         style={[
           typography.bodyMedium,
           styles.input,
@@ -359,7 +373,8 @@ export function Segmented<V extends string | number>({
   value,
   onChange,
 }: {
-  options: { value: V; label: string }[];
+  /** dot: a small red dot after the label (something new in that tab). */
+  options: { value: V; label: string; dot?: boolean }[];
   value: V;
   onChange: (v: V) => void;
 }) {
@@ -374,9 +389,12 @@ export function Segmented<V extends string | number>({
             onPress={() => onChange(o.value)}
             style={[styles.segment, active && { backgroundColor: colors.primary }]}
           >
-            <Text style={[typography.smallBold, { color: active ? colors.white : colors.text }]} numberOfLines={1}>
-              {o.label}
-            </Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Text style={[typography.smallBold, { color: active ? colors.white : colors.text }]} numberOfLines={1}>
+                {o.label}
+              </Text>
+              {o.dot ? <View style={styles.segDot} /> : null}
+            </View>
           </Pressable>
         );
       })}
@@ -491,5 +509,6 @@ const styles = StyleSheet.create({
   segmented: { flexDirection: 'row', borderRadius: radius.md, padding: 4 },
   segment: { flex: 1, paddingVertical: 10, borderRadius: radius.sm, alignItems: 'center', paddingHorizontal: 4 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  segDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
   pill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, alignSelf: 'flex-start' },
 });

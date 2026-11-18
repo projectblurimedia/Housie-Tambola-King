@@ -167,6 +167,9 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
         <SettingRow icon="musical-notes" label={t('profile.sounds')}>
           <Toggle value={settings.sounds} onValueChange={(sounds) => settings.set({ sounds })} />
         </SettingRow>
+        <SettingRow icon="radio-button-on" label={t('profile.strikeSound')}>
+          <Toggle value={settings.strikeSound} onValueChange={(strikeSound) => settings.set({ strikeSound })} />
+        </SettingRow>
         <SettingRow icon="phone-portrait" label={t('profile.haptics')}>
           <Toggle value={settings.haptics} onValueChange={(haptics) => settings.set({ haptics })} />
         </SettingRow>

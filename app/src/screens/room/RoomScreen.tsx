@@ -202,16 +202,42 @@ function PulseButton({
   );
 }
 
+/** The pot as a small round gold coin with the amount, and how it's made up. */
+function PotBadge({ pot, tickets, price }: { pot: number; tickets: number; price: number }) {
+  const { t } = useTranslation();
+  const { colors } = useThemeColors();
+  return (
+    <Row gap={spacing.md} style={{ justifyContent: 'center' }}>
+      <LinearGradient colors={['#FEF3C7', '#FBBF24', '#D97706']} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={styles.potCoin}>
+        <T style={{ fontSize: 22, lineHeight: 28 }}>💰</T>
+        <T variant="h3" color="#3B1D00" numberOfLines={1}>
+          {formatRupees(pot)}
+        </T>
+      </LinearGradient>
+      <View>
+        <T variant="smallBold" color={colors.goldDark}>
+          {t('lobby.pot')}
+        </T>
+        <T variant="tiny" muted>
+          {t('lobby.potFormula', { tickets, price: formatRupees(price) })}
+        </T>
+      </View>
+    </Row>
+  );
+}
+
 function LobbyPanel({
   state,
   me,
   onOpenPicker,
   onEndSeries,
+  onLeave,
 }: {
   state: RoomState;
   me: Me;
   onOpenPicker: () => void;
   onEndSeries: () => void;
+  onLeave: () => void;
 }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -221,7 +247,8 @@ function LobbyPanel({
   const isHost = room.hostId === me.id;
   const host = state.members.find((m) => m.userId === room.hostId);
   const hostName = host?.name ?? t('room.host');
-  const [settingPrizes, setSettingPrizes] = useState(false);
+  /** 'set' = first time (then everyone is asked to be ready); 'edit' = change before starting. */
+  const [prizeMode, setPrizeMode] = useState<'set' | 'edit' | null>(null);
   const refresh = () => qc.invalidateQueries({ queryKey: roomKey(room.id) });
   const onError = (err: unknown) => showToast({ variant: 'error', title: errorMessage(err) });
 
@@ -237,22 +264,25 @@ function LobbyPanel({
         ? holders.filter((m) => !readySet.has(m.userId))
         : [];
   const allHaveTickets = phase === 'tickets' && notReady.length === 0 && holders.length >= 2;
+  const allReady = phase === 'ready' && notReady.length === 0 && holders.length >= 2;
   const myTickets = state.myTickets.length;
   const iAmReady = readySet.has(me.id);
+  const nameOf = (m: { userId: string; name: string }) => (m.userId === me.id ? t('common.you') : m.name.split(' ')[0]);
 
-  const confirmPrizes = useMutation({
+  const savePrizes = useMutation({
     mutationFn: async (amounts: Partial<Record<PrizeType, number>>) => {
       await roomService.setPrizeAmounts(game.id, amounts);
-      await roomService.openReady(game.id);
+      if (prizeMode === 'set') await roomService.openReady(game.id);
     },
     onSuccess: () => {
-      setSettingPrizes(false);
+      setPrizeMode(null);
       refresh();
     },
     onError,
   });
   const openTickets = useMutation({ mutationFn: () => roomService.openTickets(game.id), onSuccess: refresh, onError });
   const ready = useMutation({ mutationFn: () => roomService.setReady(game.id), onSuccess: refresh, onError });
+  const start = useMutation({ mutationFn: () => roomService.start(game.id), onSuccess: refresh, onError });
 
   const [removing, setRemoving] = useState<{ userId: string; name: string } | null>(null);
   const remove = useMutation({
@@ -278,7 +308,12 @@ function LobbyPanel({
 
   return (
     <View style={{ gap: spacing.md }}>
-      {state.previousGameId ? <ResultsCard gameId={state.previousGameId} meId={me.id} highlight={t('results.nextGame')} /> : null}
+      {state.previousGameId ? (
+        <>
+          <ResultsCard gameId={state.previousGameId} meId={me.id} highlight={t('results.nextGame')} />
+          <Button title={t('room.exitRoom')} variant="secondary" icon="exit-outline" onPress={onLeave} />
+        </>
+      ) : null}
 
       <Card style={{ paddingVertical: spacing.md }}>
         <StepBar step={step} />
@@ -298,68 +333,27 @@ function LobbyPanel({
         </Card>
       ) : null}
 
-      {/* Step 2: my tickets — the button pulses until I've chosen. */}
-      {phase === 'tickets' ? (
-        <Card style={[{ gap: spacing.sm }, myTickets === 0 && { borderColor: colors.gold, borderWidth: 2 }]}>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <T variant="h3">{t('lobby.yourTickets')}</T>
-            {myTickets ? <Pill label={t('lobby.tickets', { count: myTickets })} color={colors.success} style={styles.rowPill} /> : null}
-          </Row>
-          {myTickets === 0 ? (
-            <>
-              <T muted>{t('lobby.noTickets')}</T>
-              <PulseButton title={t('lobby.chooseTickets')} icon="ticket" onPress={onOpenPicker} />
-            </>
-          ) : (
-            state.myTickets.map((tk) => <TicketView key={tk.id} cells={tk.cells} marked={NO_STRIKES} label={`#${tk.serial}`} compact />)
-          )}
+      {phase !== 'joining' ? (
+        <Card>
+          <PotBadge pot={Number(game.pot)} tickets={game.ticketCount} price={Number(game.ticketPrice)} />
         </Card>
       ) : null}
 
-      {phase !== 'joining' ? (
-        <LinearGradient colors={['#FDE68A', '#F5B700']} style={styles.potCard}>
-          <View>
-            <T variant="smallBold" color="#7C2D12">
-              {t('lobby.pot')}
-            </T>
-            <T variant="hero" color="#3B1D00">
-              {formatRupees(game.pot)}
-            </T>
-            <T variant="tiny" color="#7C2D12">
-              {t('lobby.potFormula', { tickets: game.ticketCount, price: formatRupees(game.ticketPrice) })}
-            </T>
-          </View>
-          <T style={{ fontSize: 40, lineHeight: 50 }}>💰</T>
-        </LinearGradient>
-      ) : null}
-
-      {/* Step 3: this game's prizes + "ready". */}
       {phase === 'ready' ? (
-        <>
-          <Card style={{ gap: spacing.sm }}>
-            <T variant="h3">{t('lobby.prizesThisGame')}</T>
-            <PrizeList
-              compact
-              rows={state.prizes.map((p) => ({ prize: p.prize, amount: Number(p.amount), status: p.status, winners: [] }))}
-            />
-          </Card>
-          {myTickets > 0 ? (
-            iAmReady ? (
-              <Card style={[styles.readyCard, { borderColor: colors.success }]}>
-                <Ionicons name="checkmark-circle" size={26} color={colors.success} />
-                <T variant="bodyMedium" style={{ flex: 1 }}>
-                  {t('lobby.youAreReady')}
-                </T>
-              </Card>
-            ) : (
-              <PulseButton title={t('lobby.readyButton')} icon="checkmark-done" onPress={() => ready.mutate()} loading={ready.isPending} />
-            )
-          ) : (
-            <T muted center>
-              {t('lobby.watchingThisGame')}
+        <Card style={{ gap: spacing.sm }}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <T variant="h3" style={{ flex: 1 }}>
+              {t('lobby.prizesThisGame')}
             </T>
-          )}
-        </>
+            {isHost ? (
+              <Button title={t('lobby.editPrizes')} small variant="secondary" icon="create-outline" onPress={() => setPrizeMode('edit')} />
+            ) : null}
+          </Row>
+          <PrizeList
+            compact
+            rows={state.prizes.map((p) => ({ prize: p.prize, amount: Number(p.amount), status: p.status, winners: [] }))}
+          />
+        </Card>
       ) : null}
 
       <RoomSettingsCard state={state} isHost={isHost} />
@@ -399,7 +393,7 @@ function LobbyPanel({
                   hitSlop={6}
                   style={({ pressed }) => [styles.kick, { backgroundColor: colors.error, opacity: pressed ? 0.75 : 1 }]}
                 >
-                  <Ionicons name="person-remove" size={15} color="#fff" />
+                  <Ionicons name="close" size={18} color="#fff" />
                 </Pressable>
               ) : null}
             </Row>
@@ -409,12 +403,48 @@ function LobbyPanel({
           <Row style={[styles.waitingBox, { backgroundColor: 'rgba(245,158,11,0.12)' }]}>
             <Ionicons name="hourglass-outline" size={16} color={colors.warning} />
             <T variant="small" color={colors.warning} style={{ flex: 1 }}>
-              {t('lobby.stillNotReady', { names: notReady.map((m) => m.name.split(' ')[0]).join(', ') })}
-              {isHost ? ' ' + t('lobby.kickHint') : ''}
+              {t('lobby.stillNotReady', { names: notReady.map(nameOf).join(', ') })}
+              {isHost && notReady.some((m) => m.userId !== me.id) ? ' ' + t('lobby.kickHint') : ''}
             </T>
           </Row>
         ) : null}
       </Card>
+
+      {/* What I do now — right above the main button. */}
+      {phase === 'tickets' ? (
+        <Card style={[{ gap: spacing.sm }, myTickets === 0 && { borderColor: colors.gold, borderWidth: 2 }]}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <T variant="h3">{t('lobby.yourTickets')}</T>
+            {myTickets ? <Pill label={t('lobby.tickets', { count: myTickets })} color={colors.success} style={styles.rowPill} /> : null}
+          </Row>
+          {myTickets === 0 ? (
+            <>
+              <T muted>{t('lobby.noTickets')}</T>
+              <PulseButton title={t('lobby.chooseTickets')} icon="ticket" onPress={onOpenPicker} />
+            </>
+          ) : (
+            state.myTickets.map((tk) => <TicketView key={tk.id} cells={tk.cells} marked={NO_STRIKES} label={`#${tk.serial}`} compact />)
+          )}
+        </Card>
+      ) : null}
+      {phase === 'ready' ? (
+        myTickets > 0 ? (
+          iAmReady ? (
+            <Card style={[styles.readyCard, { borderColor: colors.success }]}>
+              <Ionicons name="checkmark-circle" size={26} color={colors.success} />
+              <T variant="bodyMedium" style={{ flex: 1 }}>
+                {isHost ? t('lobby.hostReady') : t('lobby.youAreReady')}
+              </T>
+            </Card>
+          ) : (
+            <PulseButton title={t('lobby.readyButton')} icon="checkmark-done" onPress={() => ready.mutate()} loading={ready.isPending} />
+          )
+        ) : (
+          <T muted center>
+            {t('lobby.watchingThisGame')}
+          </T>
+        )
+      ) : null}
 
       {isHost ? (
         <View style={{ gap: spacing.sm }}>
@@ -439,7 +469,7 @@ function LobbyPanel({
                 variant="gold"
                 icon="trophy"
                 disabled={!allHaveTickets}
-                onPress={() => setSettingPrizes(true)}
+                onPress={() => setPrizeMode('set')}
               />
               {!allHaveTickets ? (
                 <T variant="small" muted center>
@@ -447,10 +477,15 @@ function LobbyPanel({
                 </T>
               ) : null}
             </>
+          ) : allReady ? (
+            <PulseButton title={t('lobby.startNow')} icon="play" onPress={() => start.mutate()} loading={start.isPending} />
           ) : (
-            <T variant="small" muted center>
-              {t('lobby.startsWhenReady')}
-            </T>
+            <>
+              <Button title={t('lobby.startNow')} variant="gold" icon="play" disabled onPress={() => undefined} />
+              <T variant="small" muted center>
+                {t('lobby.hostStartsWhenReady')}
+              </T>
+            </>
           )}
           {room.kind === 'series' && game.gameNo > 1 ? (
             <Button title={t('room.endSeries')} variant="danger" icon="flag" onPress={onEndSeries} />
@@ -464,25 +499,27 @@ function LobbyPanel({
               ? t('lobby.waitingHostTickets', { name: hostName })
               : phase === 'tickets'
                 ? t('lobby.waitingHost', { name: hostName })
-                : t('lobby.startsWhenReady')}
+                : allReady
+                  ? t('lobby.waitingHostStart', { name: hostName })
+                  : t('lobby.hostStartsWhenReady')}
           </T>
         </Row>
       )}
 
       <PrizeSetupModal
-        visible={settingPrizes}
+        visible={prizeMode !== null}
         pot={Number(game.pot)}
         prizes={state.prizes}
         template={room.prizes}
-        saving={confirmPrizes.isPending}
-        saveLabel={t('lobby.setPrizesAskReady')}
+        saving={savePrizes.isPending}
+        saveLabel={prizeMode === 'set' ? t('lobby.setPrizesAskReady') : t('common.save')}
         hint={t('lobby.setAmountsHint', { players: game.playerCount, tickets: game.ticketCount })}
-        onSave={(amounts) => confirmPrizes.mutate(amounts)}
-        onClose={() => setSettingPrizes(false)}
+        onSave={(amounts) => savePrizes.mutate(amounts)}
+        onClose={() => setPrizeMode(null)}
       />
       <ConfirmModal
         visible={removing !== null}
-        icon="person-remove"
+        icon="close-circle"
         title={t('lobby.removeTitle', { name: removing?.name ?? '' })}
         message={t('lobby.removeMessage')}
         confirmLabel={t('lobby.remove')}
@@ -812,9 +849,8 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
             { value: 'game', label: t('room.tabPlay') },
             {
               value: 'players',
-              label: requests
-                ? `${t('room.tabPlayers')} (${state.room.memberCount}) • ${requests}`
-                : `${t('room.tabPlayers')} (${state.room.memberCount})`,
+              label: `${t('room.tabPlayers')} (${state.room.memberCount})`,
+              dot: requests > 0,
             },
             { value: 'standings', label: t('room.tabStandings') },
           ]}
@@ -827,7 +863,13 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
           ended || !state.game ? (
             <EndedPanel state={state} me={me.data} onPlayAgain={() => playAgain.mutate()} busy={playAgain.isPending} />
           ) : (
-            <LobbyPanel state={state} me={me.data} onOpenPicker={() => setPickerOpen(true)} onEndSeries={() => setConfirm('end')} />
+            <LobbyPanel
+              state={state}
+              me={me.data}
+              onOpenPicker={() => setPickerOpen(true)}
+              onEndSeries={() => setConfirm('end')}
+              onLeave={() => setConfirm('leave')}
+            />
           )
         ) : null}
         {tab === 'players' ? (
@@ -881,6 +923,20 @@ const styles = StyleSheet.create({
   pulseGlow: { position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderRadius: 20, backgroundColor: '#F5B700' },
   readyCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 2 },
   waitingBox: { borderRadius: radius.md, padding: spacing.sm, marginTop: 4 },
+  potCoin: {
+    width: 96,
+    height: 96,
+    borderRadius: 48,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 3,
+    borderColor: '#FDE68A',
+    elevation: 6,
+    shadowColor: '#B45309',
+    shadowOpacity: 0.35,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 3 },
+  },
   readyRow: { paddingVertical: 4, alignItems: 'center' },
   rowPill: { alignSelf: 'center', paddingVertical: 4 },
   kick: {

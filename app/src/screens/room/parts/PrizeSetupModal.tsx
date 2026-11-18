@@ -224,7 +224,7 @@ export function PrizeSetupModal({
                         {t('prizeSetup.alwaysOn')}
                       </T>
                     ) : (
-                      <Toggle value={groupOn} onValueChange={(v) => toggleGroup(g, v)} />
+                      <Toggle value={groupOn} onDark={groupOn} onValueChange={(v) => toggleGroup(g, v)} />
                     )}
                   </Row>
                   {groupOn ? (

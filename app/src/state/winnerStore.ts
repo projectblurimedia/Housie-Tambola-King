@@ -11,8 +11,13 @@ export interface PrizeWin {
 export interface WinnerAnnouncement {
   /** gameId:callIndex — everything won on the same called number is one card. */
   id: string;
+  gameId: string;
+  /** When the card was created: wins arriving moments later join it instead of a new card. */
+  at: number;
   items: PrizeWin[];
 }
+
+const MERGE_WINDOW_MS = 4000;
 
 /**
  * Queue of winner announcements shown on every phone in the room. Prizes completed on the
@@ -31,12 +36,15 @@ export const useWinnerStore = create<WinnerState>((set) => ({
   announce: ({ gameId, callIndex, ...win }) =>
     set((s) => {
       const id = `${gameId}:${callIndex}`;
-      const at = s.queue.findIndex((q) => q.id === id);
-      if (at < 0) return { queue: [...s.queue, { id, items: [win] }] };
+      const now = Date.now();
+      // Same number, or the same game within a few seconds (numbers pause after a win, so
+      // nothing else can have been called) — e.g. Last Line + Full Housie on one card.
+      const at = s.queue.findIndex((q) => q.id === id || (q.gameId === gameId && now - q.at < MERGE_WINDOW_MS));
+      if (at < 0) return { queue: [...s.queue, { id, gameId, at: now, items: [win] }] };
       const entry = s.queue[at];
       const items = [...entry.items.filter((i) => i.prize !== win.prize), win].sort((a, b) => prizeOrder(a.prize) - prizeOrder(b.prize));
       const queue = s.queue.slice();
-      queue[at] = { id, items };
+      queue[at] = { ...entry, items };
       return { queue };
     }),
   dismiss: () => set((s) => ({ queue: s.queue.slice(1) })),

@@ -106,7 +106,7 @@ try {
   check((await friend.rpc('get_room_state', { p_room: room.roomId })).game.phase === 'tickets', 'host moved everyone to the ticket step');
 
   await host.rpc('set_my_tickets', { p_game: game1, p_count: 2 });
-  check(await expectError(host.rpc('start_game', { p_game: game1 }), 'NEED_TWO_PLAYERS'), 'cannot start with one player');
+  check(await expectError(host.rpc('start_game', { p_game: game1 }), 'NOT_ALL_READY'), 'cannot start before everyone is ready');
   check(await expectError(host.rpc('set_my_tickets', { p_game: game1, p_count: 3 }), 'TICKETS_ALREADY_CHOSEN'), 'tickets fixed once chosen');
   check(await expectError(friend.rpc('set_my_tickets', { p_game: game1, p_count: 5 }), 'INVALID_TICKET_COUNT'), 'max 4 tickets');
   await friend.rpc('set_my_tickets', { p_game: game1, p_count: 3 });
@@ -153,7 +153,9 @@ try {
   await host.rpc('open_ready', { p_game: game1 });
   check((await friend.rpc('get_room_state', { p_room: room.roomId })).game.phase === 'ready', 'ready step open after the host sets prizes');
   await friend.rpc('set_ready', { p_game: game1 });
-  check((await host.rpc('get_room_state', { p_room: room.roomId })).game.status === 'running', 'game started when everyone was ready');
+  check((await host.rpc('get_room_state', { p_room: room.roomId })).game.status === 'lobby', 'everyone ready — waiting for the host to start');
+  await host.rpc('start_game', { p_game: game1 });
+  check((await host.rpc('get_room_state', { p_room: room.roomId })).game.status === 'running', 'host started the game');
   console.log('… game 1 started; players strike & claim as numbers arrive');
 
   const players = [host, friend];
@@ -196,7 +198,9 @@ try {
   check(state.previousGameId === game1, 'game 1 results linked from game 2 lobby');
 
   const standings = await friend.rpc('get_room_standings', { p_room: room.roomId });
-  check(standings.length === 2 && standings.every((s) => s.games === 1), 'standings list both players');
+  check(standings.length === 2 && standings.every((s) => s.games === 1 && s.isMember), 'standings list both players');
+  const ledger = await host.rpc('get_room_ledger', { p_room: room.roomId });
+  check(ledger.length === 1 && ledger[0].rows.length === 2, 'game-by-game ledger has game 1 for both players');
   const won = standings.reduce((s, r) => s + Number(r.won), 0);
   check(Math.abs(won - paid) < 0.01, `standings total won = payouts (₹${won})`);
   for (const s of standings) console.log(`  ${s.name}: won ₹${s.won}, tickets ₹${s.spent}, net ₹${s.net}, ${s.wins} wins`);

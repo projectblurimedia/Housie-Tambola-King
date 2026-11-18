@@ -23,6 +23,7 @@ import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { useMarksStore } from '@/state/marksStore';
 import { useSettingsStore } from '@/state/settingsStore';
+import { playStrikeSound } from '@/services/sounds';
 import { ClaimCheck, useClaimCheckStore } from '@/state/claimCheckStore';
 import { Button } from '@/components/ui';
 import { isPrizeComplete, prizeCompletedAt, prizeNumbers, remainingFor } from '@/game/engine/ticket';
@@ -83,8 +84,12 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
         if (attempted.current.has(key) || p.winners.some((w) => w.userId === me.id)) continue;
         if (!isPrizeComplete(ticket.cells, struck, p.prize)) continue;
         if (p.status !== 'open') {
-          // Already won: only worth claiming if I completed it on the very same number (split).
-          if (p.status !== 'won' || prizeCompletedAt(ticket.cells, called, p.prize) !== p.wonAtCall) continue;
+          // Already won: worth claiming for a share — on the same number, or (Normal rule, during
+          // the check) on an earlier number I was late to claim.
+          if (p.status !== 'won') continue;
+          const at = prizeCompletedAt(ticket.cells, called, p.prize);
+          const late = room.checkClaims && game.checkOpen && at !== null && at <= (p.wonAtCall ?? 0);
+          if (at !== p.wonAtCall && !late) continue;
         }
         attempted.current.add(key);
         try {
@@ -117,6 +122,7 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
   const onPressNumber = (ticket: Ticket, index: number) => (n: number) => {
     if (struckSets[index].has(n)) return;
     strike(ticket.id, n);
+    if (useSettingsStore.getState().strikeSound) playStrikeSound();
     if (haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
     const next = new Set(struckSets[index]);
     next.add(n);
@@ -374,6 +380,7 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(253,230,138,0.6)',
   },
   bell: { fontSize: 34 },
+  checkedBtn: { height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   pendingBox: { marginTop: spacing.sm, borderRadius: radius.md, padding: spacing.sm, gap: 6 },
   pendingChip: {
     flexDirection: 'row',
@@ -473,7 +480,7 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
         for (const p of state.prizes) {
           const at = prizeCompletedAt(tk.cells, called, p.prize);
           if (at === null) continue;
-          if (p.status === 'won' ? at !== p.wonAtCall : p.status !== 'open') continue;
+          if (p.status === 'won' ? at > (p.wonAtCall ?? 0) : p.status !== 'open') continue;
           const upTo = new Set(called.slice(0, at));
           prizeNumbers(tk.cells, p.prize).forEach((n) => upTo.has(n) && strike(tk.id, n));
           const r = await roomService.claim(tk.id, p.prize);
@@ -492,7 +499,14 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
     onError,
   });
   const done = useMutation({ mutationFn: () => roomService.checkDone(game.id), onSuccess: refresh, onError });
-  const endCheck = useMutation({ mutationFn: () => roomService.endCheck(game.id), onSuccess: refresh, onError });
+  const endCheck = useMutation({
+    mutationFn: async () => {
+      if (state.myTickets.length && !iChecked) await roomService.checkDone(game.id);
+      await roomService.endCheck(game.id);
+    },
+    onSuccess: refresh,
+    onError,
+  });
   const kick = useMutation({ mutationFn: (userId: string) => roomService.removeMember(room.id, userId), onSuccess: refresh, onError });
 
   return (
@@ -546,50 +560,54 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
         )}
       </View>
 
-      {state.myTickets.length ? (
-        iChecked ? (
-          <Row style={{ marginTop: spacing.sm }}>
-            <Ionicons name="checkmark-circle" size={18} color="#86EFAC" />
-            <T variant="small" color="#fff">
-              {t('game.checkedWaiting')}
-            </T>
-          </Row>
-        ) : (
-          <Row gap={spacing.sm} style={{ marginTop: spacing.sm }}>
-            <Button
-              title={final ? t('game.claimMine') : t('game.checkHaveIt')}
-              variant="gold"
-              icon="hand-left"
-              small
-              style={{ flex: 1 }}
-              loading={claimMine.isPending}
-              onPress={() => claimMine.mutate()}
-            />
-            <Button
-              title={t('game.checkedButton')}
-              variant="secondary"
-              icon="checkmark"
-              small
-              style={{ flex: 1 }}
-              loading={done.isPending}
+      {state.myTickets.length && !iChecked ? (
+        <Row gap={spacing.sm} style={{ marginTop: spacing.sm }}>
+          <Button
+            title={final ? t('game.claimMine') : t('game.checkHaveIt')}
+            variant="gold"
+            icon="hand-left"
+            small
+            style={{ flex: 1 }}
+            loading={claimMine.isPending}
+            onPress={() => claimMine.mutate()}
+          />
+          {isHost ? null : (
+            <Pressable
               onPress={() => done.mutate()}
-            />
-          </Row>
-        )
+              disabled={done.isPending}
+              style={({ pressed }) => [{ flex: 1, opacity: pressed || done.isPending ? 0.8 : 1 }]}
+            >
+              <LinearGradient colors={['#34D399', '#059669']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.checkedBtn}>
+                <Ionicons name="checkmark-done" size={18} color="#fff" />
+                <T variant="smallBold" color="#fff">
+                  {t('game.checkedButton')}
+                </T>
+              </LinearGradient>
+            </Pressable>
+          )}
+        </Row>
+      ) : state.myTickets.length ? (
+        <Row style={{ marginTop: spacing.sm }}>
+          <Ionicons name="checkmark-circle" size={18} color="#86EFAC" />
+          <T variant="small" color="#fff">
+            {t('game.checkedWaiting')}
+          </T>
+        </Row>
       ) : null}
 
-      {isHost && pending.length ? (
+      {/* Everyone sees who hasn't checked yet ("You" for me); only the host can remove them. */}
+      {pending.length ? (
         <View style={[styles.pendingBox, { backgroundColor: 'rgba(0,0,0,0.18)' }]}>
           <T variant="tiny" color="#FDE68A">
-            {t('game.notCheckedYet')}
+            {isHost ? t('game.notCheckedYet') : t('game.notCheckedYetPlain')}
           </T>
           <Row gap={6} style={{ flexWrap: 'wrap' }}>
             {pending.map((m) => (
               <View key={m.userId} style={styles.pendingChip}>
                 <T variant="tiny" color="#fff">
-                  {m.name.split(' ')[0]}
+                  {m.userId === me.id ? t('common.you') : m.name.split(' ')[0]}
                 </T>
-                {m.userId !== me.id ? (
+                {isHost && m.userId !== me.id ? (
                   <Pressable
                     hitSlop={6}
                     onPress={() => kick.mutate(m.userId)}
@@ -601,15 +619,22 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
               </View>
             ))}
           </Row>
-          <Button
-            title={t('game.continueGame')}
-            variant="secondary"
-            icon="play-forward"
-            small
-            loading={endCheck.isPending}
-            onPress={() => endCheck.mutate()}
-          />
         </View>
+      ) : null}
+
+      {isHost ? (
+        <Pressable
+          onPress={() => endCheck.mutate()}
+          disabled={endCheck.isPending}
+          style={({ pressed }) => [{ marginTop: spacing.sm, opacity: pressed || endCheck.isPending ? 0.8 : 1 }]}
+        >
+          <LinearGradient colors={['#34D399', '#059669']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.checkedBtn}>
+            <Ionicons name="play-forward" size={18} color="#fff" />
+            <T variant="smallBold" color="#fff">
+              {t('game.continueGame')}
+            </T>
+          </LinearGradient>
+        </Pressable>
       ) : null}
     </Animated.View>
   );

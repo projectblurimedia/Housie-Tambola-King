@@ -5,8 +5,16 @@ import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
 import * as Updates from 'expo-updates';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import { useFonts, Poppins_400Regular, Poppins_500Medium, Poppins_600SemiBold, Poppins_700Bold, Poppins_800ExtraBold } from '@expo-google-fonts/poppins';
+import {
+  useFonts,
+  Poppins_400Regular,
+  Poppins_500Medium,
+  Poppins_600SemiBold,
+  Poppins_700Bold,
+  Poppins_800ExtraBold,
+} from '@expo-google-fonts/poppins';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
@@ -38,6 +46,7 @@ Notifications.setNotificationHandler({
 });
 
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
+const APPLIED_UPDATE_KEY = 'ota-applied-update-id';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -153,22 +162,33 @@ export default function App() {
   // Each update is fetched once. After the restart the same update can still be reported as
   // "available" by the next check — it's already running, so it must not show the overlay again.
   const handledUpdateId = useRef<string | null>(null);
+  const overlayRef = useRef(false);
+  overlayRef.current = showUpdateOverlay;
   useEffect(() => {
-    const id = availableUpdate?.updateId ?? null;
-    if (!isUpdateAvailable || !id || id === Updates.updateId || handledUpdateId.current === id) return;
+    const id = availableUpdate?.updateId?.toLowerCase() ?? null;
+    if (!isUpdateAvailable || !id || overlayRef.current) return;
+    if (id === Updates.updateId?.toLowerCase() || handledUpdateId.current === id) return;
     handledUpdateId.current = id;
-    setShowUpdateOverlay(true);
-    setDownloadProgress(0);
-    Updates.fetchUpdateAsync().catch(() => setShowUpdateOverlay(false));
+    let cancelled = false;
+    // The id applied last time is kept on the phone: never offer the same update twice.
+    AsyncStorage.getItem(APPLIED_UPDATE_KEY)
+      .catch(() => null)
+      .then((applied) => {
+        if (cancelled || applied === id) return;
+        setShowUpdateOverlay(true);
+        setDownloadProgress(0.05);
+        Updates.fetchUpdateAsync().catch(() => setShowUpdateOverlay(false));
+      });
+    return () => {
+      cancelled = true;
+    };
   }, [isUpdateAvailable, availableUpdate?.updateId]);
 
+  // Simulated ramp; it only ever moves forward (a second download event can't reset it to 5%).
   useEffect(() => {
     if (!isDownloading || !showUpdateOverlay) return;
-    let current = 0.05;
-    setDownloadProgress(current);
     const id = setInterval(() => {
-      current = Math.min(current + Math.random() * 0.1 + 0.04, 0.88);
-      setDownloadProgress(current);
+      setDownloadProgress((p) => Math.max(p, Math.min(Math.max(p, 0.05) + Math.random() * 0.1 + 0.04, 0.88)));
     }, 400);
     return () => clearInterval(id);
   }, [isDownloading, showUpdateOverlay]);
@@ -176,12 +196,17 @@ export default function App() {
   useEffect(() => {
     if (!isUpdatePending || !showUpdateOverlay) return;
     setDownloadProgress(1);
-    const timeout = setTimeout(() => Updates.reloadAsync().catch(() => undefined), 1800);
+    const applied = handledUpdateId.current;
+    const timeout = setTimeout(async () => {
+      if (applied) await AsyncStorage.setItem(APPLIED_UPDATE_KEY, applied).catch(() => undefined);
+      Updates.reloadAsync().catch(() => setShowUpdateOverlay(false));
+    }, 1800);
     return () => clearTimeout(timeout);
   }, [isUpdatePending, showUpdateOverlay]);
 
   const checkForUpdate = useCallback(async () => {
-    if (__DEV__ || !Updates.isEnabled) return;
+    // Never while an update is already downloading / about to restart.
+    if (__DEV__ || !Updates.isEnabled || overlayRef.current) return;
     try {
       await Updates.checkForUpdateAsync();
     } catch {

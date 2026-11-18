@@ -34,6 +34,7 @@ function Cell({
   isHinted,
   hintPulse,
   hint,
+  corner,
   fontSize,
   theme,
   strike,
@@ -46,6 +47,8 @@ function Cell({
   isHinted: boolean;
   hintPulse: Animated.Value;
   hint: string;
+  /** Corner radius from the player's ticket shape. */
+  corner: number;
   fontSize: number;
   theme: TicketTheme;
   strike: Strike;
@@ -122,6 +125,7 @@ function Cell({
             style={[
               StyleSheet.absoluteFill,
               styles.ripple,
+              { borderRadius: corner },
               {
                 borderColor: hint,
                 opacity: hintPulse.interpolate({
@@ -146,6 +150,7 @@ function Cell({
           accessibilityLabel={`${n}${struck ? ' struck' : ''}`}
           style={[
             styles.circle,
+            { borderRadius: corner },
             { backgroundColor: theme.cell, borderColor: theme.cellBorder },
             hinting && {
               borderColor: hint,
@@ -159,6 +164,7 @@ function Cell({
               style={[
                 StyleSheet.absoluteFill,
                 styles.lastGlow,
+                { borderRadius: corner },
                 {
                   borderColor: hint,
                   opacity: pulse.interpolate({
@@ -169,7 +175,9 @@ function Cell({
               ]}
             />
           ) : null}
-          <Animated.View style={[StyleSheet.absoluteFill, styles.disc, { opacity: pop, transform: [{ scale: pop }] }]}>
+          <Animated.View
+            style={[StyleSheet.absoluteFill, styles.disc, { borderRadius: corner, opacity: pop, transform: [{ scale: pop }] }]}
+          >
             <LinearGradient colors={strike.disc} style={StyleSheet.absoluteFill} />
           </Animated.View>
           <Text style={[styles.num, { fontSize, color: struck ? '#fff' : theme.ink }]}>{n}</Text>
@@ -222,6 +230,8 @@ export const TicketView = memo(function TicketView({
         'pink',
       )
     ];
+  const shape = useSettingsStore((s) => s.ticketShape) ?? 'round';
+  const corner = shape === 'box' ? 4 : shape === 'soft' ? 11 : 999;
   const fontSize = compact ? 15 : 19;
 
   // One shared, gentle zoom for every hinted number on this ticket.
@@ -277,7 +287,9 @@ export const TicketView = memo(function TicketView({
                         <React.Fragment key={c}>
                           {line}
                           <View style={styles.slot}>
-                            <View style={[styles.circleWrap, styles.blankCircle, { backgroundColor: theme.blankCell }]}>
+                            <View
+                              style={[styles.circleWrap, styles.blankCircle, { borderRadius: corner, backgroundColor: theme.blankCell }]}
+                            >
                               <View style={[styles.blankDot, { backgroundColor: theme.blank }]} />
                             </View>
                           </View>
@@ -292,6 +304,7 @@ export const TicketView = memo(function TicketView({
                             isHinted={!!hinted?.has(n)}
                             hintPulse={hintPulse}
                             hint={hint}
+                            corner={corner}
                             fontSize={fontSize}
                             theme={theme}
                             strike={strike}

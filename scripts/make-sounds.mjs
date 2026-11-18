@@ -74,3 +74,9 @@ write('fullhouse', 2.6, (b) => {
   [60, 64, 67, 72].forEach((m) => tone(b, 0.45, 2.1, m + 12, brass));
   [84, 88, 91, 96].forEach((m, i) => tone(b, 0.5 + i * 0.07, 1.2, m, { vol: 0.12, decay: 3, harmonics: [1] }));
 });
+
+// Strike: a soft, short "pop" for every number a player strikes.
+write('strike', 0.18, (b) => {
+  tone(b, 0, 0.18, 84, { vol: 0.5, decay: 28, harmonics: [1, 0.25], attack: 0.002 });
+  tone(b, 0.01, 0.15, 91, { vol: 0.2, decay: 35, harmonics: [1], attack: 0.002 });
+});

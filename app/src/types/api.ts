@@ -166,7 +166,18 @@ export interface GameResults {
   players: { userId: string; name: string; avatarKey: string; tickets: number; spent: number; won: number; net: number }[];
 }
 
+/** One finished game: what each player spent / won / net. */
+export interface LedgerGame {
+  gameId: string;
+  gameNo: number;
+  finishedAt: string;
+  pot: number;
+  rows: { userId: string; tickets: number; spent: number; won: number; net: number }[];
+}
+
 export interface StandingRow {
+  /** Still in the room (false = left; their history stays and continues if they rejoin). */
+  isMember?: boolean;
   userId: string;
   name: string;
   avatarKey: string;

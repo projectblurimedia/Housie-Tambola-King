@@ -157,7 +157,8 @@
     "watching": "Watching",
     "removedYou": "The host removed you from this room.",
     "dismissRoom": "Dismiss room",
-    "dismissConfirm": "No game has been played. Dismiss this room for everyone?"
+    "dismissConfirm": "No game has been played. Dismiss this room for everyone?",
+    "exitRoom": "Exit room"
   },
   "lobby": {
     "howManyTickets": "How many tickets this game?",
@@ -179,7 +180,7 @@
     "readyCount": "{{ready}} of {{total}} players ready",
     "saveAndStart": "Save & Start",
     "setAmountsHint": "{{players}} players took {{tickets}} tickets. Set the prize amounts — they must add up to the pot.",
-    "editPrizes": "Prizes",
+    "editPrizes": "Edit prizes",
     "prizeSetupTitle": "Prizes for this game",
     "later": "Later",
     "confirmTicketsTitle": "Take {{count}} tickets?",
@@ -222,7 +223,11 @@
     "nextSetPrizes": "Next: set prizes",
     "startsWhenReady": "The game starts by itself when everyone is ready.",
     "setPrizesAskReady": "Set prizes & ask everyone ready",
-    "readyOpenToast": "Prizes are set — tap “I’m ready”!"
+    "readyOpenToast": "Prizes are set — tap “I’m ready”!",
+    "hostReady": "Prizes set ✓ — start the game when everyone is ready.",
+    "startNow": "Start the game",
+    "hostStartsWhenReady": "The host starts the game once everyone is ready.",
+    "waitingHostStart": "Everyone is ready — waiting for {{name}} to start."
   },
   "game": {
     "getReady": "Get ready…",
@@ -274,7 +279,8 @@
     "claimMine": "Claim mine",
     "checkedButton": "Checked",
     "notCheckedYet": "Not checked yet (tap ✕ to remove):",
-    "continueGame": "Continue the game"
+    "continueGame": "Continue the game",
+    "notCheckedYetPlain": "Not checked yet:"
   },
   "winner": {
     "title": "WINNER!",
@@ -303,7 +309,11 @@
     "net": "Net",
     "wins": "{{count}} wins",
     "gameShort": "G{{n}}",
-    "spentTickets": "Tickets ({{count}})"
+    "spentTickets": "Tickets ({{count}})",
+    "left": "left the room",
+    "gameByGame": "Game by game",
+    "game": "Game",
+    "total": "Total"
   },
   "prizes": {
     "fast_3": "Fast 3",
@@ -365,7 +375,10 @@
     "mode": "Calling mode",
     "modeAuto": "Auto",
     "modeManual": "Manual",
-    "historyLast5": "Last 5 numbers"
+    "historyLast5": "Last 5 numbers",
+    "newGame": "New game",
+    "both": "Both",
+    "bothHint": "Each number is said in English, then in Telugu — so the speed is at least 4 s."
   },
   "profile": {
     "title": "Profile",
@@ -401,7 +414,8 @@
     "more": "More",
     "callerVoice": "Caller voice",
     "sounds": "Prize sounds",
-    "soundsDesc": "Play a sound when a prize is won"
+    "soundsDesc": "Play a sound when a prize is won",
+    "strikeSound": "Strike sound"
   },
   "howToPlay": {
     "title": "How to play",
@@ -475,7 +489,8 @@
     "INVALID_MESSAGE": "Type a message (up to 200 characters).",
     "screenCrashed": "Something went wrong",
     "screenCrashedHint": "Tap Try again — your game continues on the server.",
-    "PRICE_LOCKED": "Ticket price can’t change after tickets are taken."
+    "PRICE_LOCKED": "Ticket price can’t change after tickets are taken.",
+    "NOT_ALL_READY": "Not everyone is ready yet."
   },
   "update": {
     "title": "Updating app…",
@@ -539,6 +554,12 @@
       "pink": "Pink",
       "orange": "Orange",
       "red": "Red"
+    },
+    "shape": "Number shape",
+    "shapes": {
+      "round": "Round",
+      "soft": "Semi box",
+      "box": "Box"
     }
   },
   "chat": {

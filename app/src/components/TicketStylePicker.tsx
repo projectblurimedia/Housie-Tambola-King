@@ -4,7 +4,17 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '@/state/settingsStore';
-import { HINT_COLORS, PALETTE, PaletteKey, STRIKE_COLORS, TICKET_COMBOS, TICKET_THEMES, TicketCombo, toPalette } from '@/theme/ticketThemes';
+import {
+  HINT_COLORS,
+  TICKET_SHAPES,
+  PALETTE,
+  PaletteKey,
+  STRIKE_COLORS,
+  TICKET_COMBOS,
+  TICKET_THEMES,
+  TicketCombo,
+  toPalette,
+} from '@/theme/ticketThemes';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import { TicketView } from './TicketView';
 import { T } from './ui';
@@ -48,7 +58,12 @@ function ComboCard({ combo, selected, onPress }: { combo: TicketCombo; selected:
           </View>
         ) : null}
       </View>
-      <T variant="tiny" center style={{ fontFamily: selected ? fonts.bold : fonts.medium, marginTop: 4 }} color={selected ? colors.text : colors.textMuted}>
+      <T
+        variant="tiny"
+        center
+        style={{ fontFamily: selected ? fonts.bold : fonts.medium, marginTop: 4 }}
+        color={selected ? colors.text : colors.textMuted}
+      >
         {t(`ticketStyle.combos.${combo.key}`)}
       </T>
     </Pressable>
@@ -93,10 +108,20 @@ function Swatches<K extends string>({
 export function TicketStylePicker() {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
-  const ticketTheme = toPalette(useSettingsStore((s) => s.ticketTheme), 'purple');
-  const strikeColor = toPalette(useSettingsStore((s) => s.strikeColor), 'purple');
-  const hintColor = toPalette(useSettingsStore((s) => s.hintColor), 'pink');
+  const ticketTheme = toPalette(
+    useSettingsStore((s) => s.ticketTheme),
+    'purple',
+  );
+  const strikeColor = toPalette(
+    useSettingsStore((s) => s.strikeColor),
+    'purple',
+  );
+  const hintColor = toPalette(
+    useSettingsStore((s) => s.hintColor),
+    'pink',
+  );
   const set = useSettingsStore((s) => s.set);
+  const shape = useSettingsStore((s) => s.ticketShape);
   const activeCombo = TICKET_COMBOS.find((c) => c.theme === ticketTheme && c.strike === strikeColor && c.hint === hintColor)?.key;
 
   return (
@@ -105,7 +130,11 @@ export function TicketStylePicker() {
         <T variant="smallBold" muted style={styles.label}>
           {t('ticketStyle.looks')}
         </T>
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.md, paddingVertical: 4, paddingRight: spacing.md }}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={{ gap: spacing.md, paddingVertical: 4, paddingRight: spacing.md }}
+        >
           {TICKET_COMBOS.map((c) => (
             <ComboCard
               key={c.key}
@@ -124,6 +153,50 @@ export function TicketStylePicker() {
         </T>
       </View>
 
+      <View style={{ gap: 8 }}>
+        <T variant="smallBold" muted style={styles.label}>
+          {t('ticketStyle.shape')}
+        </T>
+        <View style={{ flexDirection: 'row', gap: spacing.sm }}>
+          {TICKET_SHAPES.map((k) => {
+            const selected = (shape ?? 'round') === k;
+            const corner = k === 'box' ? 4 : k === 'soft' ? 9 : 999;
+            return (
+              <Pressable
+                key={k}
+                onPress={() => set({ ticketShape: k })}
+                style={[
+                  styles.shapeOption,
+                  {
+                    borderColor: selected ? colors.primary : colors.border,
+                    backgroundColor: selected ? colors.surfaceAlt : colors.surface,
+                  },
+                ]}
+              >
+                <View style={{ flexDirection: 'row', gap: 4 }}>
+                  {[0, 1, 2].map((i) => (
+                    <View
+                      key={i}
+                      style={[
+                        styles.shapeCell,
+                        {
+                          borderRadius: corner,
+                          borderColor: selected ? colors.primary : colors.border,
+                          backgroundColor: i === 1 ? colors.primary : 'transparent',
+                        },
+                      ]}
+                    />
+                  ))}
+                </View>
+                <T variant="tiny" color={selected ? colors.primary : colors.textMuted}>
+                  {t(`ticketStyle.shapes.${k}`)}
+                </T>
+              </Pressable>
+            );
+          })}
+        </View>
+      </View>
+
       <Swatches<PaletteKey>
         label={t('ticketStyle.background')}
         keys={[...PALETTE]}
@@ -131,7 +204,10 @@ export function TicketStylePicker() {
         onPick={(k) => set({ ticketTheme: k })}
         render={(k, selected) => (
           <View style={{ alignItems: 'center' }}>
-            <LinearGradient colors={TICKET_THEMES[k].frame} style={[styles.themeSwatch, { borderColor: selected ? colors.gold : 'transparent' }]}>
+            <LinearGradient
+              colors={TICKET_THEMES[k].frame}
+              style={[styles.themeSwatch, { borderColor: selected ? colors.gold : 'transparent' }]}
+            >
               <View style={[styles.themeInner, { backgroundColor: TICKET_THEMES[k].paper }]}>
                 {selected ? <Ionicons name="checkmark" size={16} color={TICKET_THEMES[k].ink} /> : null}
               </View>
@@ -146,7 +222,11 @@ export function TicketStylePicker() {
         onPick={(k) => set({ strikeColor: k })}
         render={(k, selected) => (
           <LinearGradient colors={STRIKE_COLORS[k].disc} style={[styles.dot, selected && { borderColor: colors.text }]}>
-            {selected ? <Ionicons name="checkmark" size={18} color={STRIKE_COLORS[k].line} /> : <View style={[styles.dotLine, { backgroundColor: STRIKE_COLORS[k].line }]} />}
+            {selected ? (
+              <Ionicons name="checkmark" size={18} color={STRIKE_COLORS[k].line} />
+            ) : (
+              <View style={[styles.dotLine, { backgroundColor: STRIKE_COLORS[k].line }]} />
+            )}
           </LinearGradient>
         )}
       />
@@ -156,7 +236,12 @@ export function TicketStylePicker() {
         value={hintColor}
         onPick={(k) => set({ hintColor: k })}
         render={(k, selected) => (
-          <View style={[styles.dot, { borderColor: HINT_COLORS[k], borderWidth: 4, backgroundColor: selected ? HINT_COLORS[k] : colors.surface }]}>
+          <View
+            style={[
+              styles.dot,
+              { borderColor: HINT_COLORS[k], borderWidth: 4, backgroundColor: selected ? HINT_COLORS[k] : colors.surface },
+            ]}
+          >
             {selected ? <Ionicons name="checkmark" size={16} color="#fff" /> : null}
           </View>
         )}
@@ -166,6 +251,8 @@ export function TicketStylePicker() {
 }
 
 const styles = StyleSheet.create({
+  shapeOption: { flex: 1, alignItems: 'center', gap: 6, borderWidth: 2, borderRadius: radius.md, paddingVertical: 10 },
+  shapeCell: { width: 18, height: 18, borderWidth: 1.5 },
   label: { textTransform: 'uppercase', letterSpacing: 0.6 },
   comboWrap: { alignItems: 'center', width: 88 },
   comboRing: { borderRadius: radius.md + 3, borderWidth: 2.5, padding: 2 },
@@ -174,11 +261,28 @@ const styles = StyleSheet.create({
   comboRow: { flexDirection: 'row', justifyContent: 'space-between' },
   comboDot: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
   comboStrike: { width: 12, height: 2, borderRadius: 1, transform: [{ rotate: '-40deg' }] },
-  comboCheck: { position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  comboCheck: {
+    position: 'absolute',
+    top: -6,
+    right: -6,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   previewBox: { borderRadius: radius.lg, padding: spacing.md },
   swatches: { flexDirection: 'row', justifyContent: 'space-between' },
   themeSwatch: { width: 40, height: 40, borderRadius: 12, padding: 4, borderWidth: 2.5 },
   themeInner: { flex: 1, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 40, height: 40, borderRadius: 20, borderWidth: 2.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  dot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 2.5,
+    borderColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   dotLine: { width: 18, height: 2.5, borderRadius: 2, transform: [{ rotate: '-40deg' }] },
 });

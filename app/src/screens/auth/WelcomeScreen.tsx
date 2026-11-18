@@ -31,6 +31,15 @@ function FloatingBall({ n, index }: { n: number; index: number }) {
   );
 }
 
+/**
+ * Any pasted/typed form → the 10-digit mobile: "+91 70930 54784", "917093054784",
+ * "07093054784" and "7093054784" all become 7093054784.
+ */
+function toMobile10(input: string): string {
+  const digits = input.replace(/[^0-9]/g, '');
+  return digits.length > 10 ? digits.slice(-10) : digits;
+}
+
 /** First screen: name + mobile number → straight in (no OTP during testing). */
 export function WelcomeScreen() {
   const { t } = useTranslation();
@@ -88,6 +97,8 @@ export function WelcomeScreen() {
                 placeholderTextColor="rgba(255,255,255,0.55)"
                 maxLength={30}
                 autoCapitalize="words"
+                importantForAutofill="no"
+                autoComplete="off"
                 returnKeyType="next"
                 onSubmitEditing={() => mobileRef.current?.focus()}
                 style={styles.input}
@@ -104,13 +115,13 @@ export function WelcomeScreen() {
                 <TextInput
                   ref={mobileRef}
                   value={mobile}
-                  onChangeText={(v) => setMobile(v.replace(/\D/g, '').slice(0, 10))}
+                  onChangeText={(v) => setMobile(toMobile10(v))}
                   placeholder={t('auth.phonePlaceholder')}
                   placeholderTextColor="rgba(255,255,255,0.55)"
                   keyboardType="phone-pad"
-                  maxLength={10}
-                  textContentType="telephoneNumber"
-                  autoComplete="tel"
+                  // No maxLength: it would cut a pasted "+91 70930 54784" before toMobile10 sees it.
+                  importantForAutofill="no"
+                  autoComplete="off"
                   returnKeyType="go"
                   onSubmitEditing={play}
                   style={[styles.input, { flex: 1 }]}

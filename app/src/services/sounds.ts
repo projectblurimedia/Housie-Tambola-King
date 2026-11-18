@@ -83,3 +83,20 @@ export function playPrizeSound(kind: PrizeSound, withHaptics = true) {
     );
   }
 }
+
+const STRIKE_SOURCE: number = require('../../assets/sounds/strike.wav');
+let strikePlayer: Player | null = null;
+
+/** Short "pop" when a player strikes a number (sound only; the strike already gives a haptic). */
+export function playStrikeSound() {
+  const mod = loadAudio();
+  if (!mod) return;
+  try {
+    strikePlayer = strikePlayer ?? mod.createAudioPlayer(STRIKE_SOURCE);
+    strikePlayer.volume = 0.7;
+    Promise.resolve(strikePlayer.seekTo(0)).catch(() => undefined);
+    strikePlayer.play();
+  } catch {
+    // No audio in this build.
+  }
+}

@@ -35,7 +35,7 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(124,58,237,0.3)',
     blankCell: '#EDE9FE',
     divider: 'rgba(124,58,237,0.35)',
-    faint: 'rgba(124,58,237,0.12)',
+    faint: 'rgba(124,58,237,0.22)',
     brand: 'rgba(76,29,149,0.45)',
   },
   green: {
@@ -47,7 +47,7 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(5,150,105,0.3)',
     blankCell: '#D1FAE5',
     divider: 'rgba(5,150,105,0.35)',
-    faint: 'rgba(5,150,105,0.12)',
+    faint: 'rgba(5,150,105,0.22)',
     brand: 'rgba(6,95,70,0.45)',
   },
   blue: {
@@ -59,7 +59,7 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(37,99,235,0.3)',
     blankCell: '#DBEAFE',
     divider: 'rgba(37,99,235,0.35)',
-    faint: 'rgba(37,99,235,0.12)',
+    faint: 'rgba(37,99,235,0.22)',
     brand: 'rgba(30,58,138,0.45)',
   },
   pink: {
@@ -71,7 +71,7 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(219,39,119,0.3)',
     blankCell: '#FFE4E6',
     divider: 'rgba(219,39,119,0.35)',
-    faint: 'rgba(219,39,119,0.12)',
+    faint: 'rgba(219,39,119,0.22)',
     brand: 'rgba(157,23,77,0.45)',
   },
   orange: {
@@ -83,7 +83,7 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(234,88,12,0.3)',
     blankCell: '#FFEDD5',
     divider: 'rgba(234,88,12,0.35)',
-    faint: 'rgba(234,88,12,0.12)',
+    faint: 'rgba(234,88,12,0.22)',
     brand: 'rgba(154,52,18,0.45)',
   },
   red: {
@@ -95,7 +95,7 @@ export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
     blank: 'rgba(220,38,38,0.3)',
     blankCell: '#FEE2E2',
     divider: 'rgba(220,38,38,0.35)',
-    faint: 'rgba(220,38,38,0.12)',
+    faint: 'rgba(220,38,38,0.22)',
     brand: 'rgba(127,29,29,0.45)',
   },
 };
@@ -168,3 +168,9 @@ export function toPalette(value: string | undefined, fallback: PaletteKey): Pale
   if (value && (PALETTE as readonly string[]).includes(value)) return value as PaletteKey;
   return (value && LEGACY[value]) || fallback;
 }
+
+/** Number cell shape: round chips, rounded squares ("semi box") or square boxes. */
+export const TICKET_SHAPES = ['round', 'soft', 'box'] as const;
+export type TicketShape = (typeof TICKET_SHAPES)[number];
+/** Corner radius as a share of the cell size. */
+export const SHAPE_RADIUS: Record<TicketShape, number> = { round: 0.5, soft: 0.28, box: 0.1 };

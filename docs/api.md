@@ -24,14 +24,14 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `open_tickets` | `p_game` (host) — lobby step 1 → 2 | – | `NOT_HOST`, `NEED_TWO_PLAYERS`, `GAME_ALREADY_STARTED` |
 | `set_my_tickets` | `p_game, p_count (1–4)`, once per game, only after `open_tickets` | my tickets | `INVALID_TICKET_COUNT`, `TICKETS_ALREADY_CHOSEN`, `TICKETS_NOT_OPEN`, `GAME_ALREADY_STARTED`, `NOT_IN_ROOM` |
 | `set_game_prizes` | `p_game, p_amounts {prize: ₹}` (host) — the keys ARE this game's prize set (Full Housie required); becomes the room default | – | `PRIZES_MUST_EQUAL_POT`, `INVALID_PRIZES`, `NOT_HOST` |
-| `start_game` | `p_game` (host) | – | `NEED_TWO_PLAYERS`, `NOT_HOST` |
+| `start_game` | `p_game` (host; ready step, everyone ready) | – | `NOT_ALL_READY`, `NOT_HOST`, `GAME_ALREADY_STARTED` |
 | `set_game_paused` | `p_game, p_paused` (host) | – | `NOT_HOST`, `GAME_NOT_RUNNING` |
 | `set_call_speed` | `p_room, p_seconds (1–20)` (host) | – | `NOT_HOST`, `INVALID_SPEED` |
 | `remove_member` | `p_room, p_user` (host) | – | `NOT_HOST`, `CANNOT_REMOVE_SELF` |
 | `claim_prize` | `p_ticket, p_prize` | `{result: won/shared/already_claimed/already_yours/not_complete}` | `GAME_NOT_RUNNING`, `TOO_MANY_CLAIMS` |
 | `update_room_settings` | `p_room, p_title, p_visibility, p_max_players, p_ticket_price, p_check_claims, p_check_seconds, p_auto_mark, p_chat_enabled` (host, lobby only; broadcasts `room_settings`) | – | `NOT_HOST`, `GAME_ALREADY_STARTED`, `PRICE_LOCKED`, `INVALID_MAX_PLAYERS`, `INVALID_TICKET_PRICE` |
 | `open_ready` | `p_game` (host, tickets step; after `set_game_prizes`) — step 3 | – | `NOT_HOST`, `TICKETS_NOT_OPEN`, `NEED_TWO_PLAYERS` |
-| `set_ready` | `p_game` — game starts when every ticket holder is ready | – | `NOT_READY_STEP`, `NO_TICKETS` |
+| `set_ready` | `p_game` — the host can start once every ticket holder is ready | – | `NOT_READY_STEP`, `NO_TICKETS` |
 | `check_done` | `p_game` — "checked" in the current check round | – | `NO_TICKETS` |
 | `end_check` | `p_game` (host) — stop waiting for the check | – | `NOT_HOST` |
 | `send_chat` | `p_room, p_body (1–200 chars)` | message `{id, userId, name, avatarKey, body, at}` (also broadcast `chat`) | `CHAT_OFF`, `CHAT_TOO_FAST` (5 per 10 s), `INVALID_MESSAGE`, `NOT_IN_ROOM` |
@@ -40,6 +40,7 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `get_room_state` | `p_room` | room + current game + prizes + my tickets + members + previousGameId + serverTime | `NOT_IN_ROOM` |
 | `get_game_results` | `p_game` | prizes with winners, numbers, amounts + per-player tickets/spent/won/net | `NOT_IN_ROOM` |
 | `get_room_standings` | `p_room` | per player: games, tickets, spent, wins, won, net, list | `NOT_IN_ROOM` |
+| `get_room_ledger` | `p_room` | finished games: `{gameNo, pot, rows[{userId, tickets, spent, won, net}]}` | `NOT_IN_ROOM` |
 | `list_public_rooms` / `get_my_rooms` | – | summaries | – |
 | `register_push_token` | `p_token, p_platform` | – | `INVALID_PUSH_TOKEN` |
 

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n, { deviceLanguage, SupportedLanguage } from '@/localization/i18n';
-import { toPalette, type HintColorKey, type StrikeColorKey, type TicketThemeKey } from '@/theme/ticketThemes';
+import { toPalette, type HintColorKey, type StrikeColorKey, type TicketShape, type TicketThemeKey } from '@/theme/ticketThemes';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -28,13 +28,17 @@ interface SettingsState {
   voiceStyle: VoiceStyle;
   /** Prize sound effects in the winner announcement. */
   sounds: boolean;
+  /** A short pop for every number struck. */
+  strikeSound: boolean;
+  /** Number cell shape on tickets. */
+  ticketShape: TicketShape;
   ticketTheme: TicketThemeKey;
   strikeColor: StrikeColorKey;
   hintColor: HintColorKey;
   isHydrated: boolean;
   setLanguage: (language: SupportedLanguage) => void;
   confirmLanguage: () => void;
-  set: (patch: Partial<Pick<SettingsState, 'themeMode' | 'voice' | 'haptics' | 'voiceStyle' | 'sounds' | 'ticketTheme' | 'strikeColor' | 'hintColor'>>) => void;
+  set: (patch: Partial<Pick<SettingsState, 'themeMode' | 'voice' | 'haptics' | 'voiceStyle' | 'sounds' | 'strikeSound' | 'ticketShape' | 'ticketTheme' | 'strikeColor' | 'hintColor'>>) => void;
   setVoiceFor: (language: SupportedLanguage, voiceId: string | null) => void;
 }
 
@@ -49,6 +53,8 @@ export const useSettingsStore = create<SettingsState>()(
       voiceByLanguage: {},
       voiceStyle: 'normal',
       sounds: true,
+      strikeSound: true,
+      ticketShape: 'round',
       ticketTheme: 'purple',
       strikeColor: 'purple',
       hintColor: 'pink',

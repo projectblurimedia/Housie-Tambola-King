@@ -11,8 +11,9 @@ import { VoicePicker } from '@/components/VoicePicker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MiniBall, NumberBall } from '@/components/NumberBall';
 import { Button, Chip, IconButton, Row, T } from '@/components/ui';
-import { useCaller } from '@/hooks/useCaller';
-import { CALLER_SPEEDS, useCallerStore } from '@/state/callerStore';
+import { speakNumber, useCaller } from '@/hooks/useCaller';
+import { useSettingsStore } from '@/state/settingsStore';
+import { CALLER_SPEEDS, minSpeedFor, useCallerStore } from '@/state/callerStore';
 import { showToast } from '@/state/toastStore';
 import { fonts, goldGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
@@ -212,7 +213,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       <View style={styles.tag}>
                         <Ionicons name="volume-high" size={12} color="#FDE68A" />
                         <T variant="tiny" color="#fff">
-                          {voiceLanguage === 'te' ? 'తెలుగు' : 'English'}
+                          {voiceLanguage === 'both' ? 'English + తెలుగు' : voiceLanguage === 'te' ? 'తెలుగు' : 'English'}
                         </T>
                       </View>
                     </Row>
@@ -235,41 +236,44 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                   </View>
                 </Row>
 
-                <Row gap={spacing.sm}>
-                  <Pressable
-                    onPress={main.onPress}
-                    disabled={done && !notStarted}
-                    style={({ pressed }) => [{ width: 150, opacity: done && !notStarted ? 0.4 : pressed ? 0.85 : 1 }]}
-                  >
-                    <LinearGradient
-                      colors={auto ? ['#F87171', '#DC2626'] : goldGradient}
-                      start={{ x: 0, y: 0 }}
-                      end={{ x: 1, y: 0 }}
-                      style={styles.mainBtn}
-                    >
-                      <Ionicons name={main.icon} size={24} color={auto ? '#fff' : '#3B1D00'} />
-                      <T variant="h3" color={auto ? '#fff' : '#3B1D00'}>
-                        {main.label}
-                      </T>
-                    </LinearGradient>
-                  </Pressable>
-                  <RoundButton
-                    icon="arrow-undo"
-                    label={t('caller.undo')}
-                    onPress={() => {
-                      setAuto(false);
-                      undo();
-                    }}
-                    disabled={notStarted}
-                  />
-                  <RoundButton
+                {done ? (
+                  <Button
+                    title={t('caller.newGame')}
+                    variant="gold"
                     icon="refresh"
-                    label={t('caller.reset')}
+                    style={{ alignSelf: 'flex-start', minWidth: 200 }}
                     onPress={() => setConfirmReset(true)}
-                    disabled={notStarted}
-                    tint="#FCA5A5"
                   />
-                </Row>
+                ) : (
+                  <Row gap={spacing.sm}>
+                    <Pressable
+                      onPress={main.onPress}
+                      disabled={done && !notStarted}
+                      style={({ pressed }) => [{ width: 150, opacity: done && !notStarted ? 0.4 : pressed ? 0.85 : 1 }]}
+                    >
+                      <LinearGradient
+                        colors={auto ? ['#F87171', '#DC2626'] : goldGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={styles.mainBtn}
+                      >
+                        <Ionicons name={main.icon} size={24} color={auto ? '#fff' : '#3B1D00'} />
+                        <T variant="h3" color={auto ? '#fff' : '#3B1D00'}>
+                          {main.label}
+                        </T>
+                      </LinearGradient>
+                    </Pressable>
+                    <RoundButton
+                      icon="arrow-undo"
+                      label={t('caller.undo')}
+                      onPress={() => {
+                        setAuto(false);
+                        undo();
+                      }}
+                      disabled={notStarted}
+                    />
+                  </Row>
+                )}
               </View>
 
               {/* Right: the board */}
@@ -283,7 +287,11 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                 <T variant="h2">{t('caller.settings')}</T>
                 <IconButton icon="close" onPress={() => setSettingsOpen(false)} />
               </Row>
-              <ScrollView showsVerticalScrollIndicator={false}>
+              <ScrollView
+                style={{ flexGrow: 0, flexShrink: 1 }}
+                showsVerticalScrollIndicator={false}
+                contentContainerStyle={{ paddingBottom: spacing.md }}
+              >
                 <T variant="smallBold" muted style={styles.label}>
                   {t('caller.mode')}
                 </T>
@@ -297,7 +305,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       {t('caller.speed')}
                     </T>
                     <View style={styles.wrap}>
-                      {CALLER_SPEEDS.map((s) => (
+                      {CALLER_SPEEDS.filter((s) => s >= minSpeedFor(voiceLanguage)).map((s) => (
                         <Chip
                           key={s}
                           label={t('common.seconds', { count: s })}
@@ -314,11 +322,42 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                 <Row gap={spacing.sm}>
                   <Chip label="English" active={voiceLanguage === 'en'} onPress={() => setVoiceLanguage('en')} />
                   <Chip label="తెలుగు" active={voiceLanguage === 'te'} onPress={() => setVoiceLanguage('te')} />
+                  <Chip
+                    label={t('caller.both')}
+                    active={voiceLanguage === 'both'}
+                    onPress={() => {
+                      setVoiceLanguage('both');
+                      // A sample: 35 in English, then in Telugu.
+                      const { voiceByLanguage, voiceStyle } = useSettingsStore.getState();
+                      speakNumber(35, 'en', voiceByLanguage.en, voiceStyle);
+                      speakNumber(35, 'te', voiceByLanguage.te, voiceStyle, true);
+                    }}
+                  />
                 </Row>
-                <T variant="smallBold" muted style={styles.label}>
-                  {t('caller.voice')}
-                </T>
-                <VoicePicker language={voiceLanguage} />
+                {voiceLanguage === 'both' ? (
+                  <T variant="tiny" muted style={{ marginTop: 6 }}>
+                    {t('caller.bothHint')}
+                  </T>
+                ) : null}
+                {(voiceLanguage === 'both' ? (['en', 'te'] as const) : ([voiceLanguage] as const)).map((l) => (
+                  <View key={l}>
+                    <T variant="smallBold" muted style={styles.label}>
+                      {t('caller.voice')} · {l === 'te' ? 'తెలుగు' : 'English'}
+                    </T>
+                    <VoicePicker language={l} />
+                  </View>
+                ))}
+                <Button
+                  title={t('caller.newGame')}
+                  variant="danger"
+                  icon="refresh"
+                  style={{ marginTop: spacing.lg }}
+                  disabled={notStarted}
+                  onPress={() => {
+                    setSettingsOpen(false);
+                    setConfirmReset(true);
+                  }}
+                />
               </ScrollView>
             </Overlay>
 
@@ -390,7 +429,7 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   overlay: { backgroundColor: 'rgba(10,4,24,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.md },
-  overlayCard: { width: '100%', maxWidth: 440, borderRadius: radius.xl, padding: spacing.lg },
+  overlayCard: { width: '100%', maxWidth: 460, borderRadius: radius.xl, padding: spacing.lg, flexDirection: 'column' },
   label: { marginTop: spacing.md, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   confirmIcon: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },

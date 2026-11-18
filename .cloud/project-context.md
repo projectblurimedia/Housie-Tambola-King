@@ -24,7 +24,7 @@ _Last updated: 2026-11-18_
 - Lobby steps every game: players join → host "Next" → everyone takes tickets → host "Next" (all have tickets) → set prizes & play.
 - Claim rules: **Normal** (default; 10 s "check your tickets", same-number wins shared, then the announcement) or **Fastest finger** (first claim wins alone). Fair play removed.
 - Auto hint (called numbers glow; never auto-marked). Prizes per game only (no prize choice at creation).
-- Step 3 = prizes set → everyone "ready" → auto start. Check rounds end early when all checked; check time can be "until all ready" (0). Final check after number 90.
+- Step 3 = prizes set → everyone "ready" → host starts (no auto start). Late claimers share during a check. Check rounds end early when all checked; check time can be "until all ready" (0). Final check after number 90.
 - Host can edit room settings in the lobby (visible to all). Normal rule has a check time (default 10 s); the claim replaces the number header with a sound.
 - Native modules added after the last APK (expo-audio, expo-screen-orientation, expo-navigation-bar) are loaded only if requireOptionalNativeModule finds them — a plain require crashes the app.
 - Room chat (host option, default on; per-player mute). **Voice chat pending**: needs a provider (LiveKit/Agora, owner's account) + a native build.
@@ -40,7 +40,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (12 migrations, latest 20261123000001_ready_step_check_rounds) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (13 migrations, latest 20261124000001_host_start_late_share_ledger) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |
