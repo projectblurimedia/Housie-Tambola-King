@@ -24,8 +24,8 @@ export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string;
     <View style={{ width: size, height: size }}>
       <Svg width={size} height={size} viewBox="0 0 100 100">
         <Defs>
-          <RadialGradient id={id} cx="35%" cy="30%" r="75%">
-            <Stop offset="0" stopColor={light} />
+          <RadialGradient id={id} cx="38%" cy="34%" r="72%">
+            <Stop offset="0" stopColor={light} stopOpacity={0.75} />
             <Stop offset="0.45" stopColor={mid} />
             <Stop offset="1" stopColor={dark} />
           </RadialGradient>
@@ -36,7 +36,7 @@ export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string;
         </Defs>
         <Circle cx={50} cy={50} r={48} fill={`url(#${id})`} />
         <Circle cx={50} cy={52} r={29} fill={`url(#${id}-face)`} />
-        <Ellipse cx={34} cy={24} rx={16} ry={8} fill="#FFFFFF" opacity={0.55} transform="rotate(-30 34 24)" />
+        <Ellipse cx={33} cy={23} rx={11} ry={5} fill="#FFFFFF" opacity={0.28} transform="rotate(-30 33 23)" />
       </Svg>
       <View style={[StyleSheet.absoluteFill, styles.center, { paddingTop: size * 0.04 }]}>
         <Text
@@ -46,6 +46,26 @@ export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string;
         </Text>
       </View>
     </View>
+  );
+}
+
+/** Soft light rays fanning out from the centre, drawn in vector. */
+function Rays({ size }: { size: number }) {
+  const c = size / 2;
+  const count = 18;
+  const rays = Array.from({ length: count }, (_, i) => {
+    const a = (i / count) * Math.PI * 2;
+    const b = a + Math.PI / count;
+    return `M${c} ${c} L${c + Math.cos(a) * size} ${c + Math.sin(a) * size} L${c + Math.cos(b) * size} ${c + Math.sin(b) * size} Z`;
+  });
+  return (
+    <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+      <G opacity={0.1}>
+        {rays.map((d, i) => (
+          <Path key={i} d={d} fill="#FFFFFF" />
+        ))}
+      </G>
+    </Svg>
   );
 }
 
@@ -122,20 +142,28 @@ function ShinyCrown({ width }: { width: number }) {
  * The header title: a glossy bingo ball icon (drawn, not a picture) and "Housie Tambola King"
  * on one line in Montserrat ExtraBold — King in gold. Shrinks to fit narrow phones.
  */
-export function Wordmark({ size = 'large' }: { size?: 'large' | 'small' }) {
+export function Wordmark({ size = 'large', subtitle }: { size?: 'large' | 'small'; subtitle?: string }) {
   const large = size === 'large';
   const font = large ? 26 : 21;
   return (
     <View style={[styles.row, large && { justifyContent: 'center' }]}>
-      <BingoBall n={90} size={large ? 46 : 36} color="gold" />
-      <Text
-        style={[styles.line, { fontSize: font, lineHeight: font * 1.25 }]}
-        numberOfLines={1}
-        adjustsFontSizeToFit
-        minimumFontScale={0.7}
-      >
-        Housie Tambola <Text style={styles.king}>King</Text>
-      </Text>
+      <BingoBall n={90} size={large ? 46 : subtitle ? 46 : 36} color="gold" />
+      <View style={{ flexShrink: 1 }}>
+        <Text
+          style={[styles.line, { fontSize: font, lineHeight: font * 1.25 }]}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.7}
+        >
+          Housie Tambola <Text style={styles.king}>King</Text>
+        </Text>
+        {/* e.g. "Hi, Manikanta 👋" — right under the title, beside the icon. */}
+        {subtitle ? (
+          <Text style={styles.subtitle} numberOfLines={1}>
+            {subtitle}
+          </Text>
+        ) : null}
+      </View>
     </View>
   );
 }
@@ -151,8 +179,11 @@ export function LaunchIntro({ onDone }: { onDone: () => void }) {
   const title = useRef(new Animated.Value(0)).current;
   const balls = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
   const fade = useRef(new Animated.Value(1)).current;
+  const spin = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    const turning = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 14000, easing: Easing.linear, useNativeDriver: true }));
+    turning.start();
     Animated.sequence([
       Animated.parallel([
         Animated.spring(crown, { toValue: 1, friction: 5, tension: 70, useNativeDriver: true }),
@@ -165,7 +196,8 @@ export function LaunchIntro({ onDone }: { onDone: () => void }) {
       Animated.delay(700),
       Animated.timing(fade, { toValue: 0, duration: 380, easing: Easing.out(Easing.quad), useNativeDriver: true }),
     ]).start(() => onDone());
-  }, [crown, title, balls, fade, onDone]);
+    return () => turning.stop();
+  }, [crown, title, balls, fade, spin, onDone]);
 
   return (
     <Animated.View
@@ -184,6 +216,14 @@ export function LaunchIntro({ onDone }: { onDone: () => void }) {
         </Defs>
         <Rect x={0} y={0} width={width} height={height} fill="url(#glow)" />
       </Svg>
+
+      <View style={[StyleSheet.absoluteFill, styles.center]}>
+        <Animated.View
+          style={[styles.rays, { transform: [{ rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) }] }]}
+        >
+          <Rays size={1000} />
+        </Animated.View>
+      </View>
 
       <View style={[StyleSheet.absoluteFill, styles.center]}>
         <Animated.View
@@ -233,6 +273,8 @@ const styles = StyleSheet.create({
     textShadowRadius: 3,
   },
   king: { color: '#FFD43B' },
+  subtitle: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: 'rgba(255,255,255,0.9)', includeFontPadding: false, marginTop: 2 },
+  rays: { position: 'absolute', width: 1000, height: 1000 },
   introTop: { fontFamily: BOLD, fontSize: 24, letterSpacing: 4, color: '#FFFFFF', includeFontPadding: false },
   introKing: {
     fontFamily: BLACK,
