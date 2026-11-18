@@ -160,7 +160,8 @@ export function TicketStylePicker() {
         <View style={{ flexDirection: 'row', gap: spacing.sm }}>
           {TICKET_SHAPES.map((k) => {
             const selected = (shape ?? 'round') === k;
-            const corner = k === 'box' ? 4 : k === 'soft' ? 9 : 999;
+            // Same proportions as on the ticket (cells ~36px: semi box 11, box 4) at this 18px size.
+            const corner = k === 'box' ? 2 : k === 'soft' ? 5 : 999;
             return (
               <Pressable
                 key={k}

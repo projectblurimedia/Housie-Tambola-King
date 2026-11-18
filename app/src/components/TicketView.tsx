@@ -152,10 +152,13 @@ function Cell({
             styles.circle,
             { borderRadius: corner },
             { backgroundColor: theme.cell, borderColor: theme.cellBorder },
+            // Solid fill and no elevation: a see-through fill over Android's elevation shadow
+            // showed as a dark smudge inside the hinted circle.
             hinting && {
               borderColor: hint,
               borderWidth: 2.5,
-              backgroundColor: hint + '22',
+              elevation: 0,
+              shadowOpacity: 0,
             },
           ]}
         >

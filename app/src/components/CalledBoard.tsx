@@ -7,10 +7,13 @@ export const CalledBoard = memo(function CalledBoard({
   called,
   last,
   cellSize = 30,
+  square,
 }: {
   called: ReadonlySet<number>;
   last?: number | null;
   cellSize?: number;
+  /** Fixed square cells (cellSize × cellSize) instead of stretching to the width. */
+  square?: boolean;
 }) {
   const { colors } = useThemeColors();
   return (
@@ -26,6 +29,7 @@ export const CalledBoard = memo(function CalledBoard({
                 key={n}
                 style={[
                   styles.cell,
+                  square && { flex: 0, width: cellSize },
                   {
                     height: cellSize,
                     backgroundColor: isLast ? colors.pink : on ? colors.primary : colors.surfaceAlt,
@@ -50,8 +54,11 @@ export const CalledBoard = memo(function CalledBoard({
   );
 });
 
+export const BOARD_CELL_RADIUS = 6;
+export const BOARD_GAP = 3;
+
 const styles = StyleSheet.create({
-  board: { gap: 3 },
-  row: { flexDirection: 'row', gap: 3 },
-  cell: { flex: 1, borderRadius: 6, alignItems: 'center', justifyContent: 'center' },
+  board: { gap: BOARD_GAP },
+  row: { flexDirection: 'row', gap: BOARD_GAP },
+  cell: { flex: 1, borderRadius: BOARD_CELL_RADIUS, alignItems: 'center', justifyContent: 'center' },
 });

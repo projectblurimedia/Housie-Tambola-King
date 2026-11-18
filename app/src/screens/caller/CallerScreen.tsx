@@ -5,7 +5,7 @@ import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { CalledBoard } from '@/components/CalledBoard';
+import { BOARD_CELL_RADIUS, BOARD_GAP, CalledBoard } from '@/components/CalledBoard';
 import { Landscape } from '@/components/Landscape';
 import { VoicePicker } from '@/components/VoicePicker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -28,11 +28,14 @@ function Overlay({
   onClose,
   children,
   maxHeight,
+  fill,
 }: {
   visible: boolean;
   onClose: () => void;
   children: React.ReactNode;
   maxHeight: number;
+  /** Take the full height (for a scrolling list) instead of shrinking to the content. */
+  fill?: boolean;
 }) {
   const { colors } = useThemeColors();
   const fade = useRef(new Animated.Value(0)).current;
@@ -52,7 +55,7 @@ function Overlay({
           styles.overlayCard,
           {
             backgroundColor: colors.surface,
-            maxHeight,
+            ...(fill ? { height: maxHeight } : { maxHeight }),
             transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
           },
         ]}
@@ -111,11 +114,12 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
   useKeepAwake();
   const { t } = useTranslation();
   const { colors } = useThemeColors();
-  const { called, intervalSeconds, voiceLanguage, mode, undo, reset, setInterval: setSpeed, setVoiceLanguage, setMode } = useCallerStore();
+  const { called, intervalSeconds, voiceLanguage, mode, reset, setInterval: setSpeed, setVoiceLanguage, setMode } = useCallerStore();
   const caller = useCaller(voiceLanguage);
   const [auto, setAuto] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
   const calledSet = useMemo(() => new Set(called), [called]);
   const last = called.length ? called[called.length - 1] : null;
   /** The last five calls, newest first (the current one is the big ball). */
@@ -164,8 +168,11 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
     <Landscape>
       {({ width, height, padLeft, padRight }) => {
         const pad = 10;
-        const boardWidth = Math.min(width * 0.6, 640);
-        const cell = Math.max(22, Math.floor((height - pad * 2 - 16 - 8 * 3) / 9));
+        const boardPad = 8;
+        const byHeight = (height - pad * 2 - boardPad * 2 - 8 * BOARD_GAP) / 9;
+        const byWidth = (Math.min(width * 0.6, 640) - boardPad * 2 - 9 * BOARD_GAP) / 10;
+        const cell = Math.max(22, Math.floor(Math.min(byHeight, byWidth)));
+        const boardWidth = cell * 10 + 9 * BOARD_GAP + boardPad * 2;
         const ball = Math.min(Math.floor(height * 0.3), 118);
         return (
           <LinearGradient colors={STAGE} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width, height }}>
@@ -249,7 +256,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                     <Pressable
                       onPress={main.onPress}
                       disabled={done && !notStarted}
-                      style={({ pressed }) => [{ width: 150, opacity: done && !notStarted ? 0.4 : pressed ? 0.85 : 1 }]}
+                      style={({ pressed }) => [{ flex: 1, opacity: done && !notStarted ? 0.4 : pressed ? 0.85 : 1 }]}
                     >
                       <LinearGradient
                         colors={auto ? ['#F87171', '#DC2626'] : goldGradient}
@@ -264,12 +271,9 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       </LinearGradient>
                     </Pressable>
                     <RoundButton
-                      icon="arrow-undo"
-                      label={t('caller.undo')}
-                      onPress={() => {
-                        setAuto(false);
-                        undo();
-                      }}
+                      icon="time-outline"
+                      label={t('caller.history')}
+                      onPress={() => setHistoryOpen(true)}
                       disabled={notStarted}
                     />
                   </Row>
@@ -278,20 +282,16 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
 
               {/* Right: the board */}
               <View style={[styles.boardCard, { width: boardWidth, backgroundColor: colors.surface }]}>
-                <CalledBoard called={calledSet} last={last} cellSize={cell} />
+                <CalledBoard called={calledSet} last={last} cellSize={cell} square />
               </View>
             </View>
 
-            <Overlay visible={settingsOpen} onClose={() => setSettingsOpen(false)} maxHeight={height - 24}>
+            <Overlay visible={settingsOpen} onClose={() => setSettingsOpen(false)} maxHeight={height - 24} fill>
               <Row style={{ justifyContent: 'space-between' }}>
                 <T variant="h2">{t('caller.settings')}</T>
                 <IconButton icon="close" onPress={() => setSettingsOpen(false)} />
               </Row>
-              <ScrollView
-                style={{ flexGrow: 0, flexShrink: 1 }}
-                showsVerticalScrollIndicator={false}
-                contentContainerStyle={{ paddingBottom: spacing.md }}
-              >
+              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.md }}>
                 <T variant="smallBold" muted style={styles.label}>
                   {t('caller.mode')}
                 </T>
@@ -361,6 +361,27 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
               </ScrollView>
             </Overlay>
 
+            <Overlay visible={historyOpen} onClose={() => setHistoryOpen(false)} maxHeight={height - 24}>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <T variant="h2">{t('caller.historyLast5')}</T>
+                <IconButton icon="close" onPress={() => setHistoryOpen(false)} />
+              </Row>
+              <Row gap={spacing.md} style={{ justifyContent: 'center', paddingVertical: spacing.md }}>
+                {called
+                  .map((n, i) => ({ n, order: i + 1 }))
+                  .slice(-5)
+                  .reverse()
+                  .map(({ n, order }) => (
+                    <View key={n} style={{ alignItems: 'center', gap: 4 }}>
+                      <MiniBall n={n} size={48} />
+                      <T variant="tiny" muted>
+                        #{order}
+                      </T>
+                    </View>
+                  ))}
+              </Row>
+            </Overlay>
+
             <Overlay visible={confirmReset} onClose={() => setConfirmReset(false)} maxHeight={height - 24}>
               <View style={{ alignItems: 'center', gap: spacing.sm }}>
                 <View style={[styles.confirmIcon, { backgroundColor: colors.error }]}>
@@ -419,7 +440,8 @@ const styles = StyleSheet.create({
     gap: 1,
   },
   boardCard: {
-    borderRadius: radius.lg,
+    // Card corners follow the cells' corners (cell radius + padding).
+    borderRadius: BOARD_CELL_RADIUS + 8,
     padding: 8,
     justifyContent: 'center',
     elevation: 8,
