@@ -43,41 +43,63 @@ type Tab = 'game' | 'players' | 'standings';
 
 function RoomHeader({ state, onBack }: { state: RoomState; onBack: () => void }) {
   const { t } = useTranslation();
-  const { colors } = useThemeColors();
-  const { room, game } = state;
+  const { room } = state;
   const share = () =>
     Share.share({ message: t('room.shareMessage', { title: room.title, app: APP_NAME, code: room.code }) }).catch(() => undefined);
   const copy = () => Clipboard.setStringAsync(room.code).then(() => showToast({ variant: 'success', title: t('common.copied') }));
-  const gameNo = game?.gameNo ?? room.gamesPlayed;
 
+  // Just back · room code (tap to copy) · share. Everything else is in the card below.
   return (
     <LinearGradient colors={heroGradient} style={styles.header}>
       <SafeAreaView edges={['top']}>
         <Row style={{ paddingHorizontal: spacing.md, justifyContent: 'space-between' }}>
           <IconButton icon="chevron-back" color="#fff" onPress={onBack} />
-          <View style={{ flex: 1, alignItems: 'center' }}>
-            <T variant="h2" color="#fff" numberOfLines={1}>
-              {room.title}
+          <Pressable onPress={copy} style={({ pressed }) => [styles.codePill, { opacity: pressed ? 0.8 : 1 }]}>
+            <T variant="tiny" color="rgba(255,255,255,0.8)">
+              {t('room.code')}
             </T>
-            <Row gap={6}>
-              <Pill label={t(`kind.${room.kind}`)} color="rgba(255,255,255,0.25)" />
-              <Pill label={t(`visibility.${room.visibility}`)} color="rgba(255,255,255,0.25)" />
-              {gameNo > 0 ? <Pill label={gameLabel(room, gameNo)} color={colors.pink} /> : null}
-            </Row>
-          </View>
+            <T variant="h2" color="#FDE68A" style={{ letterSpacing: 5 }}>
+              {room.code}
+            </T>
+            <Ionicons name="copy-outline" size={15} color="#FDE68A" />
+          </Pressable>
           <IconButton icon="share-social" color="#fff" onPress={share} />
         </Row>
-        <Pressable onPress={copy} style={styles.codePill}>
-          <T variant="tiny" color="rgba(255,255,255,0.8)">
-            {t('room.code')}
-          </T>
-          <T variant="h1" color="#FDE68A" style={{ letterSpacing: 6 }}>
-            {room.code}
-          </T>
-          <Ionicons name="copy-outline" size={16} color="#FDE68A" />
-        </Pressable>
       </SafeAreaView>
     </LinearGradient>
+  );
+}
+
+/** The room's name, mode, visibility and game — under the header. */
+function RoomInfoCard({ state }: { state: RoomState }) {
+  const { t } = useTranslation();
+  const { colors } = useThemeColors();
+  const { room, game } = state;
+  const gameNo = game?.gameNo ?? room.gamesPlayed;
+  const series = room.kind === 'series';
+  return (
+    <Card style={{ paddingVertical: spacing.md }}>
+      <Row gap={spacing.md}>
+        <LinearGradient
+          colors={series ? ['#F472B6', '#DB2777'] : ['#8B5CF6', '#6D28D9']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.infoTile}
+        >
+          <Ionicons name={series ? 'layers' : 'grid'} size={22} color="#fff" />
+        </LinearGradient>
+        <View style={{ flex: 1, gap: 4 }}>
+          <T variant="h2" numberOfLines={1}>
+            {room.title}
+          </T>
+          <Row gap={6} style={{ flexWrap: 'wrap' }}>
+            <Pill label={t(`kind.${room.kind}`)} color={series ? '#DB2777' : colors.primary} style={styles.rowPill} />
+            <Pill label={t(`visibility.${room.visibility}`)} color={colors.textMuted} style={styles.rowPill} />
+            {gameNo > 0 ? <Pill label={gameLabel(room, gameNo)} color={colors.goldDark} style={styles.rowPill} /> : null}
+          </Row>
+        </View>
+      </Row>
+    </Card>
   );
 }
 
@@ -311,7 +333,7 @@ function LobbyPanel({
       {state.previousGameId ? (
         <>
           <ResultsCard gameId={state.previousGameId} meId={me.id} highlight={t('results.nextGame')} />
-          <Button title={t('room.exitRoom')} variant="secondary" icon="exit-outline" onPress={onLeave} />
+          {isHost ? null : <Button title={t('room.exitRoom')} variant="secondary" icon="exit-outline" onPress={onLeave} />}
         </>
       ) : null}
 
@@ -623,7 +645,8 @@ function PlayersPanel({ state, me, onLeave, onEnd }: { state: RoomState; me: Me;
           onPress={onEnd}
         />
       ) : null}
-      <Button title={t('room.leave')} variant="ghost" icon="exit-outline" onPress={onLeave} />
+      {/* The host runs the room: they end / dismiss it instead of leaving. */}
+      {isHost ? null : <Button title={t('room.leave')} variant="ghost" icon="exit-outline" onPress={onLeave} />}
     </View>
   );
 }
@@ -865,6 +888,9 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
       <ScrollView
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl + insets.bottom + (state.room.chatEnabled ? 72 : 0) }}
       >
+        <View style={{ marginBottom: spacing.md }}>
+          <RoomInfoCard state={state} />
+        </View>
         {tab === 'game' ? (
           ended || !state.game ? (
             <EndedPanel state={state} me={me.data} onPlayAgain={() => playAgain.mutate()} busy={playAgain.isPending} />
@@ -912,12 +938,12 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
 
 const styles = StyleSheet.create({
   header: { paddingBottom: spacing.md, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
+  infoTile: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   codePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     alignSelf: 'center',
-    marginTop: spacing.sm,
     paddingHorizontal: spacing.lg,
     paddingVertical: 4,
     borderRadius: radius.pill,

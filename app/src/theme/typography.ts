@@ -5,6 +5,8 @@ export const fonts = {
   bold: 'Poppins_700Bold',
   /** Big numbers & headings. Poppins everywhere (owner preference). */
   display: 'Poppins_800ExtraBold',
+  /** The "Housie Tambola King" wordmark. */
+  brand: 'Lobster_400Regular',
 } as const;
 
 export const typography = {

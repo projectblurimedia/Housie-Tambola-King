@@ -7,6 +7,7 @@ import * as SystemUI from 'expo-system-ui';
 import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import {
   useFonts,
   Poppins_400Regular,
@@ -117,6 +118,7 @@ export default function App() {
     Poppins_600SemiBold,
     Poppins_700Bold,
     Poppins_800ExtraBold,
+    Lobster_400Regular,
   });
   const { colors, isDark } = useThemeColors();
   const sessionReady = useSessionStore((s) => s.isReady);

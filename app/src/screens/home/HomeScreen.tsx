@@ -314,9 +314,9 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
         <SafeAreaView edges={['top']}>
           <Row style={{ justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
             <View style={{ flex: 1 }}>
-              <T variant="h1" color="#FDE68A" numberOfLines={1}>
+              <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
                 👑 {APP_NAME}
-              </T>
+              </Text>
               <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
                 {t('home.greeting', { name: me.data?.displayName ?? '' })}
               </Text>
@@ -432,6 +432,16 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
+  // The wordmark: Lobster in gold with a soft glow.
+  brand: {
+    fontFamily: fonts.brand,
+    fontSize: 30,
+    lineHeight: 40,
+    color: '#FDE68A',
+    textShadowColor: 'rgba(0,0,0,0.25)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 6,
+  },
   roomCard: { paddingVertical: spacing.md, paddingHorizontal: spacing.md },
   roomTile: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },

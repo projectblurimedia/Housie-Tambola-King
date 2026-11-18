@@ -122,6 +122,15 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  // Looking at settings or the history pauses the calling (press Play to carry on).
+  const openSettings = () => {
+    setAuto(false);
+    setSettingsOpen(true);
+  };
+  const openHistory = () => {
+    setAuto(false);
+    setHistoryOpen(true);
+  };
   useEffect(() => {
     loadVoices().catch(() => undefined);
   }, []);
@@ -192,19 +201,24 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       {t('caller.title')}
                     </T>
                   </Row>
-                  <IconButton icon="options" color="#fff" onPress={() => setSettingsOpen(true)} accessibilityLabel={t('caller.settings')} />
+                  <Row gap={6}>
+                    {notStarted ? null : (
+                      <Pressable
+                        onPress={() => {
+                          setAuto(false);
+                          setConfirmReset(true);
+                        }}
+                        style={({ pressed }) => [styles.newGame, { opacity: pressed ? 0.75 : 1 }]}
+                      >
+                        <Ionicons name="refresh" size={14} color="#FCA5A5" />
+                        <T variant="tiny" color="#fff">
+                          {t('caller.newGame')}
+                        </T>
+                      </Pressable>
+                    )}
+                    <IconButton icon="options" color="#fff" onPress={openSettings} accessibilityLabel={t('caller.settings')} />
+                  </Row>
                 </Row>
-                {notStarted ? null : (
-                  <Pressable
-                    onPress={() => setConfirmReset(true)}
-                    style={({ pressed }) => [styles.newGame, { opacity: pressed ? 0.75 : 1 }]}
-                  >
-                    <Ionicons name="refresh" size={14} color="#FCA5A5" />
-                    <T variant="tiny" color="#fff">
-                      {t('caller.newGame')}
-                    </T>
-                  </Pressable>
-                )}
 
                 <Row gap={spacing.md} style={{ flex: 1 }}>
                   <View style={styles.ballHalo}>
@@ -286,12 +300,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                         </T>
                       </LinearGradient>
                     </Pressable>
-                    <RoundButton
-                      icon="time-outline"
-                      label={t('caller.history')}
-                      onPress={() => setHistoryOpen(true)}
-                      disabled={notStarted}
-                    />
+                    <RoundButton icon="time-outline" label={t('caller.history')} onPress={openHistory} disabled={notStarted} />
                   </Row>
                 )}
               </View>
@@ -484,9 +493,7 @@ const styles = StyleSheet.create({
   newGame: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
     gap: 5,
-    marginLeft: 8,
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: 999,
