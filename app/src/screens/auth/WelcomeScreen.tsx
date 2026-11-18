@@ -74,10 +74,8 @@ export function WelcomeScreen() {
                 <FloatingBall key={n} n={n} index={i} />
               ))}
             </View>
-            <Wordmark size="large" />
-            <T center color="rgba(255,255,255,0.85)" style={{ marginTop: 4 }}>
-              {t('app.tagline')}
-            </T>
+            {/* Icon with the title and a short line beside it — one compact row. */}
+            <Wordmark size="large" subtitle={t('app.taglineShort')} />
 
             <View style={styles.card}>
               <T variant="h2" color="#fff">

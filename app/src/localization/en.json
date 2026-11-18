@@ -19,7 +19,8 @@
     "off": "Off"
   },
   "app": {
-    "tagline": "Play Housie live with family & friends"
+    "tagline": "Play Housie live with family & friends",
+    "taglineShort": "Play with family & friends"
   },
   "language": {
     "title": "Choose your language",
