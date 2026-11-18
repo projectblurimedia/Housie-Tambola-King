@@ -5,9 +5,6 @@ export const fonts = {
   bold: 'Poppins_700Bold',
   /** Big numbers & headings. Poppins everywhere (owner preference). */
   display: 'Poppins_800ExtraBold',
-  /** The "Housie Tambola King" wordmark: KING in Cinzel Decorative, the rest in Cinzel. */
-  brand: 'CinzelDecorative_900Black',
-  brandTop: 'Cinzel_700Bold',
 } as const;
 
 export const typography = {

@@ -937,7 +937,8 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
 }
 
 const styles = StyleSheet.create({
-  header: { paddingBottom: spacing.md, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
+  // A little taller: room to breathe around the code.
+  header: { paddingBottom: spacing.xl, paddingTop: spacing.sm, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
   infoTile: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   codePill: {
     flexDirection: 'row',

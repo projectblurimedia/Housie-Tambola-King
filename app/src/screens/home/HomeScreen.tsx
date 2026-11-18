@@ -431,16 +431,6 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
-  // The wordmark: Lobster in gold with a soft glow.
-  brand: {
-    fontFamily: fonts.brand,
-    fontSize: 30,
-    lineHeight: 40,
-    color: '#FDE68A',
-    textShadowColor: 'rgba(0,0,0,0.25)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 6,
-  },
   roomCard: { paddingVertical: spacing.md, paddingHorizontal: spacing.md },
   roomTile: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },

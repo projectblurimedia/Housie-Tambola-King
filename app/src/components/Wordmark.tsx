@@ -1,97 +1,136 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Rect, Stop } from 'react-native-svg';
-import { fonts } from '@/theme';
+import { View } from 'react-native';
+import Svg, { Circle, Defs, G, LinearGradient as SvgGradient, Path, Rect, Stop, Text as SvgText } from 'react-native-svg';
 
-const GOLD_LIGHT = '#FFF1B8';
-const GOLD = '#F5C542';
-const GOLD_DEEP = '#B7791F';
+const FONT = 'Poppins_800ExtraBold';
 
-/** A jewelled gold crown, drawn (no image file). */
-export function Crown({ width = 48 }: { width?: number }) {
-  const height = width * 0.72;
+/** Shared gold gradients (ids are per-Svg, so each drawing defines its own). */
+function GoldDefs() {
   return (
-    <Svg width={width} height={height} viewBox="0 0 100 72">
-      <Defs>
-        <SvgGradient id="crownGold" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor={GOLD_LIGHT} />
-          <Stop offset="0.5" stopColor={GOLD} />
-          <Stop offset="1" stopColor={GOLD_DEEP} />
-        </SvgGradient>
-      </Defs>
-      {/* Five points with balls on top, and the band. */}
-      <Path d="M8 56 L4 18 L28 38 L50 6 L72 38 L96 18 L92 56 Z" fill="url(#crownGold)" stroke={GOLD_DEEP} strokeWidth={2} strokeLinejoin="round" />
-      <Rect x={8} y={56} width={84} height={12} rx={3} fill="url(#crownGold)" stroke={GOLD_DEEP} strokeWidth={2} />
-      <Circle cx={4} cy={16} r={5} fill="url(#crownGold)" stroke={GOLD_DEEP} strokeWidth={1.5} />
-      <Circle cx={50} cy={6} r={5.5} fill="url(#crownGold)" stroke={GOLD_DEEP} strokeWidth={1.5} />
-      <Circle cx={96} cy={16} r={5} fill="url(#crownGold)" stroke={GOLD_DEEP} strokeWidth={1.5} />
-      {/* Jewels on the band. */}
-      <Circle cx={30} cy={62} r={3.2} fill="#E11D48" />
-      <Circle cx={50} cy={62} r={3.6} fill="#2563EB" />
-      <Circle cx={70} cy={62} r={3.2} fill="#16A34A" />
-    </Svg>
+    <Defs>
+      {/* Polished gold: bright top, deep middle band, warm bottom — like stamped metal. */}
+      <SvgGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+        <Stop offset="0" stopColor="#FFF6C8" />
+        <Stop offset="0.42" stopColor="#FFD54A" />
+        <Stop offset="0.55" stopColor="#E0A21B" />
+        <Stop offset="1" stopColor="#FFE07A" />
+      </SvgGradient>
+      <SvgGradient id="ribbon" x1="0" y1="0" x2="0" y2="1">
+        <Stop offset="0" stopColor="#FFE58A" />
+        <Stop offset="0.5" stopColor="#F2B705" />
+        <Stop offset="1" stopColor="#C98A04" />
+      </SvgGradient>
+      <SvgGradient id="ribbonTail" x1="0" y1="0" x2="0" y2="1">
+        <Stop offset="0" stopColor="#C98A04" />
+        <Stop offset="1" stopColor="#8A5A00" />
+      </SvgGradient>
+      <SvgGradient id="crown" x1="0" y1="0" x2="0" y2="1">
+        <Stop offset="0" stopColor="#FFF3B0" />
+        <Stop offset="0.5" stopColor="#F5C542" />
+        <Stop offset="1" stopColor="#B7791F" />
+      </SvgGradient>
+    </Defs>
   );
 }
 
-/** A thin gold rule with a diamond in the middle. */
-function Rule({ width }: { width: number }) {
+/** Jewelled crown centred at (cx, top), `w` wide. */
+function CrownShape({ cx, top, w }: { cx: number; top: number; w: number }) {
+  const s = w / 100;
+  const x = (v: number) => cx - w / 2 + v * s;
+  const y = (v: number) => top + v * s;
   return (
-    <Svg width={width} height={10} viewBox={`0 0 ${width} 10`}>
-      <Defs>
-        <SvgGradient id="ruleGold" x1="0" y1="0" x2="1" y2="0">
-          <Stop offset="0" stopColor={GOLD} stopOpacity={0} />
-          <Stop offset="0.5" stopColor={GOLD} stopOpacity={1} />
-          <Stop offset="1" stopColor={GOLD} stopOpacity={0} />
-        </SvgGradient>
-      </Defs>
-      <Rect x={0} y={4.4} width={width} height={1.2} fill="url(#ruleGold)" />
-      <Path d={`M${width / 2} 0 L${width / 2 + 5} 5 L${width / 2} 10 L${width / 2 - 5} 5 Z`} fill={GOLD} />
-    </Svg>
+    <G>
+      <Path
+        d={`M${x(8)} ${y(56)} L${x(4)} ${y(18)} L${x(28)} ${y(38)} L${x(50)} ${y(6)} L${x(72)} ${y(38)} L${x(96)} ${y(18)} L${x(92)} ${y(56)} Z`}
+        fill="url(#crown)"
+        stroke="#8A5A00"
+        strokeWidth={1.6 * s}
+        strokeLinejoin="round"
+      />
+      <Rect x={x(8)} y={y(56)} width={84 * s} height={12 * s} rx={3 * s} fill="url(#crown)" stroke="#8A5A00" strokeWidth={1.6 * s} />
+      <Circle cx={x(4)} cy={y(16)} r={5 * s} fill="url(#crown)" stroke="#8A5A00" strokeWidth={1.2 * s} />
+      <Circle cx={x(50)} cy={y(6)} r={5.5 * s} fill="url(#crown)" stroke="#8A5A00" strokeWidth={1.2 * s} />
+      <Circle cx={x(96)} cy={y(16)} r={5 * s} fill="url(#crown)" stroke="#8A5A00" strokeWidth={1.2 * s} />
+      <Circle cx={x(30)} cy={y(62)} r={3.2 * s} fill="#E11D48" />
+      <Circle cx={x(50)} cy={y(62)} r={3.6 * s} fill="#2563EB" />
+      <Circle cx={x(70)} cy={y(62)} r={3.2 * s} fill="#16A34A" />
+    </G>
+  );
+}
+
+/** Glossy 3-D gold text: a deep shadow copy, a dark outline, then the gold face. */
+function GoldText({ x, y, size, spacing, children }: { x: number; y: number; size: number; spacing: number; children: string }) {
+  const common = { x, textAnchor: 'middle' as const, fontFamily: FONT, fontSize: size, letterSpacing: spacing };
+  return (
+    <G>
+      <SvgText {...common} y={y + size * 0.09} fill="#3B0764" opacity={0.85}>
+        {children}
+      </SvgText>
+      <SvgText {...common} y={y} fill="url(#gold)" stroke="#7C4A03" strokeWidth={size * 0.045} strokeLinejoin="round">
+        {children}
+      </SvgText>
+    </G>
+  );
+}
+
+/** The folded gold ribbon with KING on it, centred at (cx, top). */
+function KingRibbon({ cx, top, w, h }: { cx: number; top: number; w: number; h: number }) {
+  const left = cx - w / 2;
+  const right = cx + w / 2;
+  const tail = h * 0.75;
+  return (
+    <G>
+      {/* Tails, folded behind the band. */}
+      <Path
+        d={`M${left - tail} ${top + h * 0.3} L${left + h * 0.4} ${top + h * 0.3} L${left + h * 0.4} ${top + h * 1.15} L${left - tail} ${top + h * 1.15} L${left - tail + h * 0.35} ${top + h * 0.72} Z`}
+        fill="url(#ribbonTail)"
+      />
+      <Path
+        d={`M${right + tail} ${top + h * 0.3} L${right - h * 0.4} ${top + h * 0.3} L${right - h * 0.4} ${top + h * 1.15} L${right + tail} ${top + h * 1.15} L${right + tail - h * 0.35} ${top + h * 0.72} Z`}
+        fill="url(#ribbonTail)"
+      />
+      <Rect x={left} y={top} width={w} height={h} rx={h * 0.18} fill="url(#ribbon)" stroke="#8A5A00" strokeWidth={1.2} />
+      <Rect x={left + 3} y={top + 3} width={w - 6} height={h * 0.32} rx={h * 0.12} fill="#FFFFFF" opacity={0.22} />
+      <SvgText x={cx} y={top + h * 0.74} textAnchor="middle" fontFamily={FONT} fontSize={h * 0.62} letterSpacing={h * 0.22} fill="#4A2600">
+        KING
+      </SvgText>
+    </G>
   );
 }
 
 /**
- * The "Housie Tambola King" wordmark: gold crown, HOUSIE TAMBOLA in spaced Cinzel capitals,
- * a gold rule, and KING large in Cinzel Decorative with a warm glow.
- *  - size "large": stacked and centred (Welcome screen)
- *  - size "small": crown beside two lines (Home header)
+ * The "Housie Tambola King" logo, drawn in vector (sharp at any size):
+ * jewelled crown · HOUSIE TAMBOLA in glossy 3-D gold · KING on a folded gold ribbon.
+ *  - "large": stacked logo (Welcome)  ·  "small": one-line header logo (Home)
+ * It scales to the width it's given.
  */
 export function Wordmark({ size = 'large' }: { size?: 'large' | 'small' }) {
   if (size === 'small') {
+    // viewBox 300 × 64: crown on the left, gold title, ribbon beneath it.
     return (
-      <View style={styles.smallRow}>
-        <Crown width={38} />
-        <View>
-          <Text style={[styles.top, styles.topSmall]}>HOUSIE TAMBOLA</Text>
-          <Text style={[styles.king, styles.kingSmall]}>KING</Text>
-        </View>
+      <View style={{ width: '100%', maxWidth: 300, aspectRatio: 300 / 64 }}>
+        <Svg width="100%" height="100%" viewBox="0 0 300 64">
+          <GoldDefs />
+          <CrownShape cx={26} top={10} w={46} />
+          <GoldText x={170} y={32} size={25} spacing={1.5}>
+            HOUSIE TAMBOLA
+          </GoldText>
+          <KingRibbon cx={170} top={38} w={74} h={22} />
+        </Svg>
       </View>
     );
   }
+  // viewBox 320 × 160: crown, title, ribbon — stacked and centred.
   return (
-    <View style={styles.large}>
-      <Crown width={64} />
-      <Text style={[styles.top, styles.topLarge]}>HOUSIE TAMBOLA</Text>
-      <Rule width={180} />
-      <Text style={[styles.king, styles.kingLarge]}>KING</Text>
+    <View style={{ width: '100%', maxWidth: 360, aspectRatio: 320 / 160, alignSelf: 'center' }}>
+      <Svg width="100%" height="100%" viewBox="0 0 320 160">
+        <GoldDefs />
+        <CrownShape cx={160} top={4} w={70} />
+        <GoldText x={160} y={92} size={34} spacing={2}>
+          HOUSIE TAMBOLA
+        </GoldText>
+        <KingRibbon cx={160} top={110} w={120} h={36} />
+      </Svg>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  large: { alignItems: 'center', gap: 4 },
-  smallRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  top: { fontFamily: fonts.brandTop, color: GOLD_LIGHT, includeFontPadding: false },
-  topLarge: { fontSize: 20, letterSpacing: 5, marginTop: 6 },
-  topSmall: { fontSize: 12, letterSpacing: 3 },
-  king: {
-    fontFamily: fonts.brand,
-    color: GOLD,
-    includeFontPadding: false,
-    textShadowColor: 'rgba(183,121,31,0.9)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-  kingLarge: { fontSize: 50, letterSpacing: 10, lineHeight: 62 },
-  kingSmall: { fontSize: 24, letterSpacing: 5, lineHeight: 30 },
-});

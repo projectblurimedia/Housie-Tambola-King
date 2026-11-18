@@ -148,15 +148,6 @@ export function WelcomeScreen() {
 }
 
 const styles = StyleSheet.create({
-  // The wordmark: Lobster with a soft gold glow.
-  brand: {
-    fontFamily: fonts.brand,
-    fontSize: 40,
-    lineHeight: 52,
-    textShadowColor: 'rgba(245,183,0,0.55)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 10,
-  },
   scroll: { flexGrow: 1, justifyContent: 'center', padding: spacing.lg },
   balls: { flexDirection: 'row', justifyContent: 'center', alignItems: 'flex-end', gap: 6, marginBottom: spacing.lg },
   crown: { fontSize: 34, lineHeight: 44 },
