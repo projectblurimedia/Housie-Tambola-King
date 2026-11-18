@@ -98,38 +98,54 @@ function KingRibbon({ cx, top, w, h }: { cx: number; top: number; w: number; h: 
   );
 }
 
+/** Gold text anchored at its right end (so the ribbon can sit right after it on one line). */
+function GoldTextEnd({ x, y, size, spacing, children }: { x: number; y: number; size: number; spacing: number; children: string }) {
+  const common = { x, textAnchor: 'end' as const, fontFamily: FONT, fontSize: size, letterSpacing: spacing };
+  return (
+    <G>
+      <SvgText {...common} y={y + size * 0.09} fill="#3B0764" opacity={0.85}>
+        {children}
+      </SvgText>
+      <SvgText {...common} y={y} fill="url(#gold)" stroke="#7C4A03" strokeWidth={size * 0.045} strokeLinejoin="round">
+        {children}
+      </SvgText>
+    </G>
+  );
+}
+
 /**
- * The "Housie Tambola King" logo, drawn in vector (sharp at any size):
- * jewelled crown · HOUSIE TAMBOLA in glossy 3-D gold · KING on a folded gold ribbon.
- *  - "large": stacked logo (Welcome)  ·  "small": one-line header logo (Home)
+ * The "Housie Tambola King" logo, drawn in vector (sharp at any size), on ONE line:
+ * HOUSIE TAMBOLA in glossy 3-D gold with KING on a folded gold ribbon right after it.
+ *  - "large" (Welcome): jewelled crown above the line
+ *  - "small" (Home header): crown at the start of the line
  * It scales to the width it's given.
  */
 export function Wordmark({ size = 'large' }: { size?: 'large' | 'small' }) {
   if (size === 'small') {
-    // viewBox 300 × 64: crown on the left, gold title, ribbon beneath it.
+    // viewBox 384 × 50: crown · HOUSIE TAMBOLA · [KING]
     return (
-      <View style={{ width: '100%', maxWidth: 300, aspectRatio: 300 / 64 }}>
-        <Svg width="100%" height="100%" viewBox="0 0 300 64">
+      <View style={{ width: '100%', maxWidth: 340, aspectRatio: 384 / 50 }}>
+        <Svg width="100%" height="100%" viewBox="0 0 384 50">
           <GoldDefs />
-          <CrownShape cx={26} top={10} w={46} />
-          <GoldText x={170} y={32} size={25} spacing={1.5}>
+          <CrownShape cx={22} top={8} w={40} />
+          <GoldTextEnd x={272} y={34} size={22} spacing={1.2}>
             HOUSIE TAMBOLA
-          </GoldText>
-          <KingRibbon cx={170} top={38} w={74} h={22} />
+          </GoldTextEnd>
+          <KingRibbon cx={330} top={13} w={64} h={24} />
         </Svg>
       </View>
     );
   }
-  // viewBox 320 × 160: crown, title, ribbon — stacked and centred.
+  // viewBox 380 × 110: crown above · HOUSIE TAMBOLA · [KING]
   return (
-    <View style={{ width: '100%', maxWidth: 360, aspectRatio: 320 / 160, alignSelf: 'center' }}>
-      <Svg width="100%" height="100%" viewBox="0 0 320 160">
+    <View style={{ width: '100%', maxWidth: 380, aspectRatio: 380 / 110, alignSelf: 'center' }}>
+      <Svg width="100%" height="100%" viewBox="0 0 380 110">
         <GoldDefs />
-        <CrownShape cx={160} top={4} w={70} />
-        <GoldText x={160} y={92} size={34} spacing={2}>
+        <CrownShape cx={190} top={2} w={64} />
+        <GoldTextEnd x={256} y={92} size={24} spacing={1.5}>
           HOUSIE TAMBOLA
-        </GoldText>
-        <KingRibbon cx={160} top={110} w={120} h={36} />
+        </GoldTextEnd>
+        <KingRibbon cx={318} top={72} w={64} h={26} />
       </Svg>
     </View>
   );

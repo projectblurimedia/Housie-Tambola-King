@@ -52,13 +52,13 @@ function RoomHeader({ state, onBack }: { state: RoomState; onBack: () => void })
   return (
     <LinearGradient colors={heroGradient} style={styles.header}>
       <SafeAreaView edges={['top']}>
-        <Row style={{ paddingHorizontal: spacing.md, justifyContent: 'space-between' }}>
+        <Row style={{ paddingHorizontal: spacing.md, paddingTop: spacing.lg - 4, minHeight: 56, alignItems: 'center', justifyContent: 'space-between' }}>
           <IconButton icon="chevron-back" color="#fff" onPress={onBack} />
           <Pressable onPress={copy} style={({ pressed }) => [styles.codePill, { opacity: pressed ? 0.8 : 1 }]}>
-            <T variant="tiny" color="rgba(255,255,255,0.8)">
+            <T variant="tiny" color="rgba(255,255,255,0.8)" style={styles.codeText}>
               {t('room.code')}
             </T>
-            <T variant="h2" color="#FDE68A" style={{ letterSpacing: 5 }}>
+            <T variant="h2" color="#FDE68A" style={[styles.codeText, { letterSpacing: 5 }]}>
               {room.code}
             </T>
             <Ionicons name="copy-outline" size={15} color="#FDE68A" />
@@ -938,15 +938,18 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
 
 const styles = StyleSheet.create({
   // A little taller: room to breathe around the code.
-  header: { paddingBottom: spacing.xl, paddingTop: spacing.sm, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
+  // Taller, with the row centred in it: equal space above and below.
+  header: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
   infoTile: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  // Poppins carries extra top/bottom padding on Android: drop it so the text sits centred.
+  codeText: { includeFontPadding: false, textAlignVertical: 'center' },
   codePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
     alignSelf: 'center',
     paddingHorizontal: spacing.lg,
-    paddingVertical: 4,
+    paddingVertical: 7,
     borderRadius: radius.pill,
     backgroundColor: 'rgba(0,0,0,0.2)',
   },
