@@ -117,9 +117,6 @@ export default function App() {
     Poppins_600SemiBold,
     Poppins_700Bold,
     Poppins_800ExtraBold,
-    // App title font (Aquire Bold — freeware, NON-COMMERCIAL licence: buy a commercial
-    // licence or swap in an OFL look-alike before a commercial release).
-    'Aquire-Bold': require('./assets/fonts/Aquire-Bold.otf'),
   });
   const { colors, isDark } = useThemeColors();
   const sessionReady = useSessionStore((s) => s.isReady);

@@ -386,13 +386,16 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <LinearGradient colors={heroGradient} style={styles.hero}>
         <SafeAreaView edges={['top']}>
-          {/* Title first, the greeting under it; profile photo on the right. */}
-          <Row style={{ alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
-            <View style={{ flex: 1, gap: 4 }}>
-              <Wordmark size="small" />
+          {/* The logo is the title; greeting beside it; profile photo on the right. */}
+          <Row style={{ alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
+            <Wordmark size="small" />
+            <View style={{ flex: 1, gap: 2 }}>
               <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
                 {t('home.greeting', { name: me.data?.displayName ?? '' })}
               </Text>
+              <T variant="tiny" color="rgba(255,255,255,0.8)" numberOfLines={2}>
+                {t('app.tagline')}
+              </T>
             </View>
             <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={44} ring="#FDE68A" />
@@ -590,7 +593,7 @@ const styles = StyleSheet.create({
   hero: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
   // No elevation: Android's shadow turns into a dark smear when a system dialog dims the screen.
   big: { borderRadius: radius.xl, padding: spacing.md + 2, minHeight: 118 },
-  greeting: { fontFamily: fonts.medium, fontSize: 15, color: '#fff', includeFontPadding: false },
+  greeting: { fontFamily: fonts.bold, fontSize: 17, color: '#fff', includeFontPadding: false },
   bigIcon: {
     width: 42,
     height: 42,

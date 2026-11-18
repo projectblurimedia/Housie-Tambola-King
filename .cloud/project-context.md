@@ -53,7 +53,7 @@ All accounts for this project belong to projectblurimedia@gmail.com (owner's rul
 Removed in the 2026-11-17 redesign (never shipped): coins/wallet, daily bonus, Razorpay, public auto-scheduled tiers, global leaderboard.
 
 ## Before public launch
-- **Title font Aquire Bold (app/assets/fonts) is freeware NON-COMMERCIAL** (fontspace.com/aquire-font-f43735): buy a commercial licence or swap in an OFL look-alike (Michroma / Orbitron).
+- App logo = owner's artwork (app/assets/logo.png; icon/splash/adaptive made from it). New launcher icon + splash need the next APK build.
 - Replace no-OTP mobile login with real SMS OTP.
 
 ## Pending from owner
