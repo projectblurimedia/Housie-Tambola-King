@@ -8,6 +8,7 @@ import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
 import { Montserrat_800ExtraBold, Montserrat_900Black } from '@expo-google-fonts/montserrat';
+import { LuckiestGuy_400Regular } from '@expo-google-fonts/luckiest-guy';
 import {
   useFonts,
   Poppins_400Regular,
@@ -122,6 +123,7 @@ export default function App() {
     // Title font (header + opening screen).
     Montserrat_800ExtraBold,
     Montserrat_900Black,
+    LuckiestGuy_400Regular,
   });
   const { colors, isDark } = useThemeColors();
   const sessionReady = useSessionStore((s) => s.isReady);

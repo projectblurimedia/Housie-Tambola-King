@@ -5,6 +5,8 @@ import Svg, { Circle, Defs, Ellipse, G, LinearGradient as SvgGradient, Path, Rad
 /** Clean, premium font for the title (loaded in App). */
 const BOLD = 'Montserrat_800ExtraBold';
 const BLACK = 'Montserrat_900Black';
+/** Bold, playful game-title font for the opening screen. */
+const GAME = 'LuckiestGuy_400Regular';
 
 const BALL_COLORS: Record<string, [string, string, string]> = {
   red: ['#FF8A8A', '#E11D2E', '#7F0A14'],
@@ -35,17 +37,84 @@ export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string;
           </RadialGradient>
         </Defs>
         <Circle cx={50} cy={50} r={48} fill={`url(#${id})`} />
-        <Circle cx={50} cy={52} r={29} fill={`url(#${id}-face)`} />
+        <Circle cx={50} cy={50} r={29} fill={`url(#${id}-face)`} />
         <Ellipse cx={33} cy={23} rx={11} ry={5} fill="#FFFFFF" opacity={0.28} transform="rotate(-30 33 23)" />
       </Svg>
-      <View style={[StyleSheet.absoluteFill, styles.center, { paddingTop: size * 0.04 }]}>
+      <View style={[StyleSheet.absoluteFill, styles.center]}>
         <Text
-          style={{ fontFamily: BLACK, fontSize: size * (String(n).length > 1 ? 0.28 : 0.34), color: '#111827', includeFontPadding: false }}
+          style={{
+            fontFamily: BLACK,
+            fontSize: size * (String(n).length > 1 ? 0.28 : 0.34),
+            lineHeight: size * (String(n).length > 1 ? 0.34 : 0.4),
+            textAlign: 'center',
+            textAlignVertical: 'center',
+            color: '#111827',
+            includeFontPadding: false,
+          }}
         >
           {n}
         </Text>
       </View>
     </View>
+  );
+}
+
+/**
+ * The app icon for headers, drawn in code: a purple tile with a gold edge, a glossy gold
+ * crown on top and three little bingo balls (red, blue, green) — a tiny version of the logo.
+ */
+export function AppIcon({ size = 46 }: { size?: number }) {
+  const ball = (cx: number, light: string, mid: string, dark: string, key: string) => (
+    <G key={key}>
+      <Defs>
+        <RadialGradient id={`ic-${key}`} cx="38%" cy="34%" r="72%">
+          <Stop offset="0" stopColor={light} />
+          <Stop offset="0.5" stopColor={mid} />
+          <Stop offset="1" stopColor={dark} />
+        </RadialGradient>
+      </Defs>
+      <Circle cx={cx} cy={74} r={11} fill={`url(#ic-${key})`} />
+      <Circle cx={cx} cy={74} r={5.5} fill="#FFFFFF" />
+    </G>
+  );
+  return (
+    <Svg width={size} height={size} viewBox="0 0 100 100">
+      <Defs>
+        <RadialGradient id="ic-tile" cx="50%" cy="40%" r="70%">
+          <Stop offset="0" stopColor="#B83AF0" />
+          <Stop offset="0.6" stopColor="#6D28D9" />
+          <Stop offset="1" stopColor="#3B0A6B" />
+        </RadialGradient>
+        <SvgGradient id="ic-edge" x1="0" y1="0" x2="1" y2="1">
+          <Stop offset="0" stopColor="#FFF1B8" />
+          <Stop offset="0.5" stopColor="#F5B700" />
+          <Stop offset="1" stopColor="#B87400" />
+        </SvgGradient>
+        <SvgGradient id="ic-gold" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FFF8D6" />
+          <Stop offset="0.45" stopColor="#FFD84D" />
+          <Stop offset="1" stopColor="#C98A04" />
+        </SvgGradient>
+      </Defs>
+      <Rect x={3} y={3} width={94} height={94} rx={24} fill="url(#ic-tile)" stroke="url(#ic-edge)" strokeWidth={4} />
+      {/* Crown */}
+      <Path
+        d="M24 54 L20 24 L38 38 L50 14 L62 38 L80 24 L76 54 Z"
+        fill="url(#ic-gold)"
+        stroke="#8A5A00"
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      <Rect x={23} y={52} width={54} height={8} rx={3} fill="url(#ic-gold)" stroke="#8A5A00" strokeWidth={2} />
+      <Circle cx={20} cy={22} r={3.6} fill="url(#ic-gold)" />
+      <Circle cx={50} cy={12} r={4} fill="url(#ic-gold)" />
+      <Circle cx={80} cy={22} r={3.6} fill="url(#ic-gold)" />
+      <Path d="M50 36 L54.5 42 L50 48 L45.5 42 Z" fill="#E11D48" />
+      {/* Three balls */}
+      {ball(28, '#FF9A9A', '#E11D2E', '#7F0A14', 'r')}
+      {ball(50, '#9CCBFF', '#1D6BEB', '#0B2C7A', 'b')}
+      {ball(72, '#A8F5A8', '#16A34A', '#0B4D22', 'g')}
+    </Svg>
   );
 }
 
@@ -147,7 +216,7 @@ export function Wordmark({ size = 'large', subtitle }: { size?: 'large' | 'small
   const font = large ? 26 : 21;
   return (
     <View style={[styles.row, large && { justifyContent: 'center' }]}>
-      <BingoBall n={90} size={large ? 46 : subtitle ? 46 : 36} color="gold" />
+      <AppIcon size={large ? 52 : 48} />
       <View style={{ flexShrink: 1 }}>
         <Text
           style={[styles.line, { fontSize: font, lineHeight: font * 1.25 }]}
@@ -180,10 +249,19 @@ export function LaunchIntro({ onDone }: { onDone: () => void }) {
   const balls = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
   const fade = useRef(new Animated.Value(1)).current;
   const spin = useRef(new Animated.Value(0)).current;
+  const glow = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
     const turning = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 14000, easing: Easing.linear, useNativeDriver: true }));
     turning.start();
+    // The crown keeps glowing softly once it lands.
+    const glowing = Animated.loop(
+      Animated.sequence([
+        Animated.timing(glow, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(glow, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    glowing.start();
     Animated.sequence([
       Animated.parallel([
         Animated.spring(crown, { toValue: 1, friction: 5, tension: 70, useNativeDriver: true }),
@@ -196,8 +274,11 @@ export function LaunchIntro({ onDone }: { onDone: () => void }) {
       Animated.delay(700),
       Animated.timing(fade, { toValue: 0, duration: 380, easing: Easing.out(Easing.quad), useNativeDriver: true }),
     ]).start(() => onDone());
-    return () => turning.stop();
-  }, [crown, title, balls, fade, spin, onDone]);
+    return () => {
+      turning.stop();
+      glowing.stop();
+    };
+  }, [crown, title, balls, fade, spin, glow, onDone]);
 
   return (
     <Animated.View
@@ -229,7 +310,24 @@ export function LaunchIntro({ onDone }: { onDone: () => void }) {
         <Animated.View
           style={{ opacity: crown, transform: [{ translateY: crown.interpolate({ inputRange: [0, 1], outputRange: [-60, 0] }) }] }}
         >
-          <ShinyCrown width={150} />
+          <Animated.View
+            pointerEvents="none"
+            style={[styles.crownGlow, { opacity: glow.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.85] }) }]}
+          >
+            <Svg width={230} height={230}>
+              <Defs>
+                <RadialGradient id="crownGlow" cx="50%" cy="50%" r="50%">
+                  <Stop offset="0" stopColor="#FFD84D" stopOpacity={0.9} />
+                  <Stop offset="0.5" stopColor="#FFB020" stopOpacity={0.35} />
+                  <Stop offset="1" stopColor="#FFB020" stopOpacity={0} />
+                </RadialGradient>
+              </Defs>
+              <Circle cx={115} cy={115} r={115} fill="url(#crownGlow)" />
+            </Svg>
+          </Animated.View>
+          <Animated.View style={{ transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }] }}>
+            <ShinyCrown width={150} />
+          </Animated.View>
         </Animated.View>
         <Animated.View
           style={{
@@ -275,16 +373,26 @@ const styles = StyleSheet.create({
   king: { color: '#FFD43B' },
   subtitle: { fontFamily: 'Poppins_600SemiBold', fontSize: 14, color: 'rgba(255,255,255,0.9)', includeFontPadding: false, marginTop: 2 },
   rays: { position: 'absolute', width: 1000, height: 1000 },
-  introTop: { fontFamily: BOLD, fontSize: 24, letterSpacing: 4, color: '#FFFFFF', includeFontPadding: false },
+  introTop: {
+    fontFamily: GAME,
+    fontSize: 30,
+    letterSpacing: 2,
+    color: '#FFFFFF',
+    includeFontPadding: false,
+    textShadowColor: 'rgba(59,7,100,0.9)',
+    textShadowOffset: { width: 0, height: 3 },
+    textShadowRadius: 2,
+  },
   introKing: {
-    fontFamily: BLACK,
-    fontSize: 54,
-    letterSpacing: 8,
+    fontFamily: GAME,
+    fontSize: 64,
+    letterSpacing: 4,
     color: '#FFD43B',
     includeFontPadding: false,
     textShadowColor: 'rgba(255,196,0,0.6)',
     textShadowOffset: { width: 0, height: 0 },
     textShadowRadius: 18,
   },
+  crownGlow: { position: 'absolute', left: -40, top: -60, width: 230, height: 230 },
   ballsRow: { flexDirection: 'row', gap: 12, marginTop: 22 },
 });
