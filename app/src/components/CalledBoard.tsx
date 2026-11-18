@@ -39,7 +39,7 @@ export const CalledBoard = memo(function CalledBoard({
                 <Text
                   style={{
                     fontFamily: on ? fonts.bold : fonts.medium,
-                    fontSize: cellSize * 0.42,
+                    fontSize: cellSize * 0.46,
                     color: on ? colors.white : colors.textMuted,
                   }}
                 >

@@ -96,7 +96,7 @@ function Cell({
     if (!onPress) return;
     if (canStrike && !canStrike(n)) {
       // Not called yet: a small "no" wiggle, nothing else.
-      Haptics.selectionAsync().catch(() => undefined);
+      if (useSettingsStore.getState().haptics) Haptics.selectionAsync().catch(() => undefined);
       shake.setValue(0);
       Animated.sequence(
         [5, -5, 3, -3, 0].map((x) =>

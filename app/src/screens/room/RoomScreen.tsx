@@ -423,7 +423,13 @@ function LobbyPanel({
               <PulseButton title={t('lobby.chooseTickets')} icon="ticket" onPress={onOpenPicker} />
             </>
           ) : (
-            state.myTickets.map((tk) => <TicketView key={tk.id} cells={tk.cells} marked={NO_STRIKES} label={`#${tk.serial}`} compact />)
+            // The tickets themselves appear once the game starts.
+            <Row style={[styles.waitingBox, { backgroundColor: 'rgba(22,163,74,0.1)' }]}>
+              <Ionicons name="ticket" size={18} color={colors.success} />
+              <T variant="small" color={colors.success} style={{ flex: 1 }}>
+                {t('lobby.ticketsAtStart', { count: myTickets })}
+              </T>
+            </Row>
           )}
         </Card>
       ) : null}

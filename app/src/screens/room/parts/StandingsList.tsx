@@ -123,14 +123,14 @@ export function StandingsList({ roomId, meId }: { roomId: string; meId?: string 
 }
 
 /**
- * Game-by-game table: one row per finished game, one column per player (their +/− that
- * game; "–" if they didn't play it), and the totals at the bottom.
+ * Game-by-game table: one row per finished game, one column per player (what they won that
+ * game; "–" if they didn't play it), and total winnings at the bottom. Net is on the cards above.
  */
 function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: StandingRow[]; meId?: string }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const totals = new Map<string, number>();
-  games.forEach((g) => g.rows.forEach((r) => totals.set(r.userId, (totals.get(r.userId) ?? 0) + Number(r.net))));
+  games.forEach((g) => g.rows.forEach((r) => totals.set(r.userId, (totals.get(r.userId) ?? 0) + Number(r.won))));
   const cell = (v: number | null, bold?: boolean) => (
     <View style={styles.cell}>
       {v === null ? (
@@ -138,7 +138,16 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
           –
         </T>
       ) : (
-        <NetAmount value={v} size={bold ? 15 : 13} />
+        <T
+          style={{
+            fontFamily: fonts.bold,
+            fontSize: bold ? 15 : 13,
+            color: v > 0 ? colors.success : colors.textMuted,
+            includeFontPadding: false,
+          }}
+        >
+          {formatRupees(v)}
+        </T>
       )}
     </View>
   );
@@ -175,7 +184,7 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
               </View>
               {players.map((p) => {
                 const r = g.rows.find((x) => x.userId === p.userId);
-                return <React.Fragment key={p.userId}>{cell(r ? Number(r.net) : null)}</React.Fragment>;
+                return <React.Fragment key={p.userId}>{cell(r ? Number(r.won) : null)}</React.Fragment>;
               })}
             </Row>
           ))}

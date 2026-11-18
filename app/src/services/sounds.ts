@@ -77,7 +77,8 @@ export function playPrizeSound(kind: PrizeSound, withHaptics = true) {
       played = false;
     }
   }
-  if (withHaptics || !played) {
+  // Vibrate only when the player has vibration on (never as a stand-in for sound).
+  if (withHaptics) {
     HAPTIC_PATTERNS[kind].forEach((ms) =>
       setTimeout(() => Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy).catch(() => undefined), ms),
     );

@@ -294,7 +294,8 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 
 const styles = StyleSheet.create({
   hero: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
-  big: { borderRadius: radius.xl, padding: spacing.lg, minHeight: 136, elevation: 5 },
+  // No elevation: Android's shadow turns into a dark smear when a system dialog dims the screen.
+  big: { borderRadius: radius.xl, padding: spacing.lg, minHeight: 136 },
   greeting: { fontFamily: fonts.medium, fontSize: 15, color: '#fff', includeFontPadding: false },
   bigIcon: {
     width: 50,

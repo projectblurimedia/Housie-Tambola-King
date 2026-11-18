@@ -66,6 +66,28 @@ function describe(voices: Speech.Voice[], language: SupportedLanguage, t: TFunct
 }
 
 /**
+ * The phone's voice list, asked for once and shared. Android's TTS engine can take a moment
+ * (or never answer) the first time: after 4 s we show what we have and ask again next time.
+ */
+let voicesCache: Promise<Speech.Voice[]> | null = null;
+export function loadVoices(): Promise<Speech.Voice[]> {
+  if (!voicesCache) {
+    const request = Promise.race([
+      Speech.getAvailableVoicesAsync(),
+      new Promise<Speech.Voice[]>((resolve) => setTimeout(() => resolve([]), 4000)),
+    ]).then((voices) => {
+      if (!voices.length) voicesCache = null; // try again next time
+      return voices;
+    });
+    voicesCache = request.catch(() => {
+      voicesCache = null;
+      return [];
+    });
+  }
+  return voicesCache;
+}
+
+/**
  * Voice style (pitch/speed) + the distinct TTS voices installed for a language. Tapping
  * anything plays a sample number so the player can pick what they like.
  */
@@ -80,7 +102,7 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
 
   useEffect(() => {
     let alive = true;
-    Speech.getAvailableVoicesAsync()
+    loadVoices()
       .then((voices) => alive && setOptions(describe(voices, language, t)))
       .catch(() => alive && setOptions([]));
     return () => {
@@ -122,7 +144,10 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
           <Pressable
             key={o.id || 'default'}
             onPress={() => choose(o.id || null)}
-            style={[styles.row, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.surfaceAlt : colors.surface }]}
+            style={[
+              styles.row,
+              { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.surfaceAlt : colors.surface },
+            ]}
           >
             <View style={[styles.icon, { backgroundColor: active ? colors.primary : colors.surfaceAlt }]}>
               <T style={{ fontSize: 20, lineHeight: 26 }}>{o.icon}</T>
@@ -135,7 +160,11 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
                 </T>
               ) : null}
             </View>
-            <Ionicons name={active ? 'checkmark-circle' : 'play-circle-outline'} size={24} color={active ? colors.primary : colors.textMuted} />
+            <Ionicons
+              name={active ? 'checkmark-circle' : 'play-circle-outline'}
+              size={24}
+              color={active ? colors.primary : colors.textMuted}
+            />
           </Pressable>
         );
       })}

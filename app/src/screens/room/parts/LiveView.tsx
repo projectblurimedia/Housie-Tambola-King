@@ -187,16 +187,7 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
                 {connected ? gameLabel(room, game.gameNo) : t('game.reconnecting')}
               </T>
             </View>
-            {isHost ? (
-              <IconButton
-                icon="timer-outline"
-                color="#fff"
-                onPress={() => setSettingsOpen(true)}
-                accessibilityLabel={t('game.speedTitle')}
-              />
-            ) : (
-              <View style={{ width: 40 }} />
-            )}
+            <IconButton icon="settings-sharp" color="#fff" onPress={() => setSettingsOpen(true)} accessibilityLabel={t('game.settings')} />
           </Row>
           {checking ? (
             <ClaimHeader state={state} me={me} serverNow={serverNow} />
@@ -333,7 +324,7 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
           </LinearGradient>
         </Pressable>
       ) : null}
-      {isHost ? <GameSettingsSheet visible={settingsOpen} state={state} onClose={() => setSettingsOpen(false)} /> : null}
+      <GameSettingsSheet visible={settingsOpen} state={state} isHost={isHost} onClose={() => setSettingsOpen(false)} />
       <ConfirmModal
         visible={confirmLeave}
         icon="exit-outline"
@@ -428,7 +419,7 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const qc = useQueryClient();
-  const strike = useMarksStore((s) => s.strike);
+  const marks = useMarksStore((s) => s.marks);
   const { room } = state;
   const game = state.game!;
   const called = game.calledNumbers;
@@ -473,25 +464,36 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
   }, [enter, bell]);
 
   /** Claim everything my tickets completed: open prizes, or a share of one won on the same number. */
+  /**
+   * Claim = only what the player's OWN strikes complete (nothing is struck for them). A prize
+   * that's still open, or a share of one won on this number / later than my completion
+   * (Normal rule) — e.g. Fast 5 plus another line or Full Housie on the same number.
+   * If their ticket has it but some numbers aren't struck yet, they're asked to strike them first.
+   */
   const claimMine = useMutation({
     mutationFn: async () => {
-      let best: 'none' | 'shared' | 'late' = 'none';
+      let best: 'none' | 'shared' | 'late' | 'strikeFirst' = 'none';
+      const calledSet = new Set(called);
       for (const tk of state.myTickets) {
+        const struck = new Set((marks[tk.id] ?? []).filter((n) => calledSet.has(n)));
         for (const p of state.prizes) {
           const at = prizeCompletedAt(tk.cells, called, p.prize);
           if (at === null) continue;
           if (p.status === 'won' ? at > (p.wonAtCall ?? 0) : p.status !== 'open') continue;
-          const upTo = new Set(called.slice(0, at));
-          prizeNumbers(tk.cells, p.prize).forEach((n) => upTo.has(n) && strike(tk.id, n));
+          if (!isPrizeComplete(tk.cells, struck, p.prize)) {
+            if (best === 'none') best = 'strikeFirst';
+            continue;
+          }
           const r = await roomService.claim(tk.id, p.prize);
           if (r === 'won' || r === 'shared' || r === 'already_yours') best = 'shared';
-          else if (best === 'none' && r === 'already_claimed') best = 'late';
+          else if (best !== 'shared' && r === 'already_claimed') best = 'late';
         }
       }
       return best;
     },
     onSuccess: (r) => {
       if (r === 'shared') showToast({ variant: 'prize', title: t('game.claimedYours') });
+      else if (r === 'strikeFirst') showToast({ variant: 'info', title: t('game.strikeMissedFirst') });
       else if (r === 'late') showToast({ variant: 'info', title: t('game.claimTooLateAny') });
       else showToast({ variant: 'error', title: t('game.nothingToClaim') });
       refresh();

@@ -49,7 +49,8 @@ export const useSettingsStore = create<SettingsState>()(
       hasSelectedLanguage: false,
       themeMode: 'system',
       voice: true,
-      haptics: true,
+      // Vibration is off unless the player turns it on.
+      haptics: false,
       voiceByLanguage: {},
       voiceStyle: 'normal',
       sounds: true,
@@ -70,11 +71,13 @@ export const useSettingsStore = create<SettingsState>()(
     {
       name: 'settings-storage',
       // v1: ticket / strike / hint colours share one palette (old theme names are mapped).
-      version: 1,
-      migrate: (persisted) => {
+      // v2: vibration off by default — switched off once for everyone (they can turn it back on).
+      version: 2,
+      migrate: (persisted, version) => {
         const s = (persisted ?? {}) as Record<string, unknown>;
         return {
           ...s,
+          ...(version < 2 ? { haptics: false } : {}),
           ticketTheme: toPalette(s.ticketTheme as string | undefined, 'purple'),
           strikeColor: toPalette(s.strikeColor as string | undefined, 'purple'),
           hintColor: toPalette(s.hintColor as string | undefined, 'pink'),

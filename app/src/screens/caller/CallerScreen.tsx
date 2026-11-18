@@ -7,7 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { BOARD_CELL_RADIUS, BOARD_GAP, CalledBoard } from '@/components/CalledBoard';
 import { Landscape } from '@/components/Landscape';
-import { VoicePicker } from '@/components/VoicePicker';
+import { loadVoices, VoicePicker } from '@/components/VoicePicker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MiniBall, NumberBall } from '@/components/NumberBall';
 import { Button, Chip, IconButton, Row, T } from '@/components/ui';
@@ -34,7 +34,7 @@ function Overlay({
   onClose: () => void;
   children: React.ReactNode;
   maxHeight: number;
-  /** Take the full height (for a scrolling list) instead of shrinking to the content. */
+  /** A full-height side sheet on the right (for scrolling settings) instead of a centred card. */
   fill?: boolean;
 }) {
   const { colors } = useThemeColors();
@@ -51,14 +51,18 @@ function Overlay({
     <Animated.View style={[StyleSheet.absoluteFill, styles.overlay, { opacity: fade }]}>
       <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
       <Animated.View
-        style={[
-          styles.overlayCard,
-          {
-            backgroundColor: colors.surface,
-            ...(fill ? { height: maxHeight } : { maxHeight }),
-            transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
-          },
-        ]}
+        style={
+          fill
+            ? [styles.sideSheet, { backgroundColor: colors.surface }]
+            : [
+                styles.overlayCard,
+                {
+                  backgroundColor: colors.surface,
+                  maxHeight,
+                  transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
+                },
+              ]
+        }
       >
         {children}
       </Animated.View>
@@ -120,6 +124,9 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
+  useEffect(() => {
+    loadVoices().catch(() => undefined);
+  }, []);
   const calledSet = useMemo(() => new Set(called), [called]);
   const last = called.length ? called[called.length - 1] : null;
   /** The last five calls, newest first (the current one is the big ball). */
@@ -167,10 +174,10 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
   return (
     <Landscape>
       {({ width, height, padLeft, padRight }) => {
-        const pad = 10;
-        const boardPad = 8;
+        const pad = 6;
+        const boardPad = 6;
         const byHeight = (height - pad * 2 - boardPad * 2 - 8 * BOARD_GAP) / 9;
-        const byWidth = (Math.min(width * 0.6, 640) - boardPad * 2 - 9 * BOARD_GAP) / 10;
+        const byWidth = (Math.min(width * 0.66, 760) - boardPad * 2 - 9 * BOARD_GAP) / 10;
         const cell = Math.max(22, Math.floor(Math.min(byHeight, byWidth)));
         const boardWidth = cell * 10 + 9 * BOARD_GAP + boardPad * 2;
         const ball = Math.min(Math.floor(height * 0.3), 118);
@@ -291,7 +298,13 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                 <T variant="h2">{t('caller.settings')}</T>
                 <IconButton icon="close" onPress={() => setSettingsOpen(false)} />
               </Row>
-              <ScrollView style={{ flex: 1 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.md }}>
+              <ScrollView
+                style={{ flex: 1 }}
+                nestedScrollEnabled
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator
+                contentContainerStyle={{ paddingBottom: spacing.xl }}
+              >
                 <T variant="smallBold" muted style={styles.label}>
                   {t('caller.mode')}
                 </T>
@@ -361,25 +374,25 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
               </ScrollView>
             </Overlay>
 
-            <Overlay visible={historyOpen} onClose={() => setHistoryOpen(false)} maxHeight={height - 24}>
+            <Overlay visible={historyOpen} onClose={() => setHistoryOpen(false)} maxHeight={height - 24} fill>
               <Row style={{ justifyContent: 'space-between' }}>
-                <T variant="h2">{t('caller.historyLast5')}</T>
+                <T variant="h2">{t('caller.historyAll', { count: called.length })}</T>
                 <IconButton icon="close" onPress={() => setHistoryOpen(false)} />
               </Row>
-              <Row gap={spacing.md} style={{ justifyContent: 'center', paddingVertical: spacing.md }}>
-                {called
-                  .map((n, i) => ({ n, order: i + 1 }))
-                  .slice(-5)
-                  .reverse()
-                  .map(({ n, order }) => (
-                    <View key={n} style={{ alignItems: 'center', gap: 4 }}>
-                      <MiniBall n={n} size={48} />
-                      <T variant="tiny" muted>
-                        #{order}
-                      </T>
-                    </View>
-                  ))}
-              </Row>
+              <T variant="tiny" muted>
+                {t('caller.historyOrderHint')}
+              </T>
+              {/* Every called number in the order it was called: #1, #2, … */}
+              <ScrollView style={{ flex: 1, marginTop: spacing.sm }} nestedScrollEnabled contentContainerStyle={styles.historyGrid}>
+                {called.map((n, i) => (
+                  <View key={n} style={styles.historyItem}>
+                    <MiniBall n={n} size={36} />
+                    <T variant="tiny" muted>
+                      #{i + 1}
+                    </T>
+                  </View>
+                ))}
+              </ScrollView>
             </Overlay>
 
             <Overlay visible={confirmReset} onClose={() => setConfirmReset(false)} maxHeight={height - 24}>
@@ -441,8 +454,8 @@ const styles = StyleSheet.create({
   },
   boardCard: {
     // Card corners follow the cells' corners (cell radius + padding).
-    borderRadius: BOARD_CELL_RADIUS + 8,
-    padding: 8,
+    borderRadius: BOARD_CELL_RADIUS + 6,
+    padding: 6,
     justifyContent: 'center',
     elevation: 8,
     shadowColor: '#000',
@@ -451,6 +464,20 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   overlay: { backgroundColor: 'rgba(10,4,24,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  historyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: spacing.lg },
+  historyItem: { alignItems: 'center', gap: 2, width: 44 },
+  sideSheet: {
+    position: 'absolute',
+    top: 0,
+    bottom: 0,
+    right: 0,
+    width: '46%',
+    maxWidth: 440,
+    borderTopLeftRadius: radius.xl,
+    borderBottomLeftRadius: radius.xl,
+    padding: spacing.lg,
+    paddingRight: spacing.xl,
+  },
   overlayCard: { width: '100%', maxWidth: 460, borderRadius: radius.xl, padding: spacing.lg, flexDirection: 'column' },
   label: { marginTop: spacing.md, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },

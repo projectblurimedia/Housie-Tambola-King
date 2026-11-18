@@ -33,7 +33,7 @@ A series' next game starts again at step 1.
 ## Room options
 - **Claim rule** — two options:
   - **Normal** (default): when someone claims, the number header on every phone is replaced (with a sound) by "X claimed Fast 5 — check your tickets" and a countdown (the host's check time: 5/10/15/20/30 s or **until everyone is ready**, default 10). Players can strike numbers they missed meanwhile. A player whose ticket had the prize complete on an earlier number (claimed late) still shares it during the check; **I have it too!** strikes the winning numbers and claims and an **I have it too!** button. Anyone whose ticket completed the same prize on the same number joins the win (split equally). Then the winner is announced (7 s pause).
-  - During a check every player taps **I have it too!** (claims everything their tickets completed) or **Checked**; the check ends early once everyone has, and the host sees who hasn't (can remove them or continue).
+  - During a check every player taps **I have it too!** (claims only what their own strikes complete — nothing is struck for them; if their ticket has it but numbers aren't struck yet they're asked to strike them first; other prizes completed on the same or an earlier number are claimed too) or **Checked**; the check ends early once everyone has, and the host sees who hasn't (can remove them or continue).
   - **Fastest finger**: the first claim wins it alone — no sharing.
 - **Last check**: after number 90 the game doesn't end at once — everyone gets a final check to claim (≥15 s, or until all ready).
   (Fair play was removed on 2026-11-18; old fair rooms became Normal.)
@@ -52,6 +52,9 @@ A series' next game starts again at step 1.
 - Every phone shows the winner announcement: name, prize, the winning numbers, amount (or "each" when split). Prizes won on the same number (e.g. Third Line + Full Housie) appear together on one card.
 - Each kind of prize has its own sound (fast / line / column / Full Housie); when several are won together one sound plays — Full Housie's if it is one of them.
 - Game ends when Full Housie is settled or all 90 numbers are called; prizes nobody claimed are *unclaimed*.
+
+## Phone settings
+Vibration is off by default (Profile or the in-game gear turns it on). The in-game gear also has prize sounds and strike sound; the host also sets the calling speed there.
 
 ## Standings
 Players are their phone number: leaving and rejoining a room continues their totals. The Standings tab also shows a game-by-game table (each player's +/− per game, "–" if they didn't play) with totals.
