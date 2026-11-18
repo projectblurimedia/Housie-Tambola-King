@@ -7,8 +7,7 @@ import * as SystemUI from 'expo-system-ui';
 import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
-import { LilitaOne_400Regular } from '@expo-google-fonts/lilita-one';
-import { Lobster_400Regular } from '@expo-google-fonts/lobster';
+import { Montserrat_800ExtraBold, Montserrat_900Black } from '@expo-google-fonts/montserrat';
 import {
   useFonts,
   Poppins_400Regular,
@@ -120,9 +119,9 @@ export default function App() {
     Poppins_600SemiBold,
     Poppins_700Bold,
     Poppins_800ExtraBold,
-    // The logo's lettering (title in the Home header).
-    LilitaOne_400Regular,
-    Lobster_400Regular,
+    // Title font (header + opening screen).
+    Montserrat_800ExtraBold,
+    Montserrat_900Black,
   });
   const { colors, isDark } = useThemeColors();
   const sessionReady = useSessionStore((s) => s.isReady);

@@ -3,8 +3,7 @@
   "version": "1.0.0",
   "main": "index.ts",
   "dependencies": {
-    "@expo-google-fonts/lilita-one": "^0.4.1",
-    "@expo-google-fonts/lobster": "^0.4.1",
+    "@expo-google-fonts/montserrat": "^0.4.2",
     "@expo-google-fonts/poppins": "^0.4.1",
     "@expo/vector-icons": "^15.0.2",
     "@formatjs/intl-pluralrules": "^7.0.4",
