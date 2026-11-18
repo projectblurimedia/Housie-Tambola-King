@@ -35,10 +35,65 @@ export function CheckTimePicker({ value, onChange }: { value: number; onChange: 
       </Row>
       <Row gap={spacing.sm} style={{ marginTop: spacing.md, flexWrap: 'wrap' }}>
         {CHECK_TIMES.map((s) => (
-          <Chip key={s} label={s === 0 ? t('create.untilReady') : t('common.seconds', { count: s })} active={value === s} onPress={() => onChange(s)} />
+          <Chip
+            key={s}
+            label={s === 0 ? t('create.untilReady') : t('common.seconds', { count: s })}
+            active={value === s}
+            onPress={() => onChange(s)}
+          />
         ))}
       </Row>
     </Card>
+  );
+}
+
+const RULE_ICONS: Record<ClaimRule, keyof typeof Ionicons.glyphMap> = {
+  normal: 'shield-checkmark',
+  fastest: 'flash',
+  auto: 'hardware-chip',
+};
+
+/** Normal / Fastest finger / Auto as full-width cards; Normal's text shows the chosen check time. */
+export function RulePicker({
+  value,
+  onChange,
+  checkSeconds,
+}: {
+  value: ClaimRule;
+  onChange: (r: ClaimRule) => void;
+  checkSeconds: number;
+}) {
+  const { t } = useTranslation();
+  const { colors } = useThemeColors();
+  const time = checkSeconds === 0 ? t('create.untilReadyLower') : t('common.seconds', { count: checkSeconds });
+  return (
+    <View style={{ gap: spacing.sm }}>
+      {(['normal', 'fastest', 'auto'] as ClaimRule[]).map((m) => {
+        const active = value === m;
+        return (
+          <Card
+            key={m}
+            onPress={() => onChange(m)}
+            style={[
+              styles.ruleCard,
+              { borderColor: active ? colors.primary : colors.border },
+              active && { backgroundColor: colors.surfaceAlt },
+            ]}
+          >
+            <View style={[styles.optIcon, { backgroundColor: active ? colors.primary : colors.surfaceAlt }]}>
+              <Ionicons name={RULE_ICONS[m]} size={19} color={active ? '#fff' : colors.textMuted} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <T variant="h3">{t(`create.rule_${m}`)}</T>
+              <T variant="tiny" muted>
+                {m === 'normal' ? t('create.rule_normal_desc', { time }) : t(`create.rule_${m}_desc`)}
+              </T>
+            </View>
+            <Ionicons name={active ? 'radio-button-on' : 'radio-button-off'} size={22} color={active ? colors.primary : colors.textMuted} />
+          </Card>
+        );
+      })}
+    </View>
   );
 }
 
@@ -73,15 +128,29 @@ export function RoomSettingsCard({ state, isHost }: { state: RoomState; isHost: 
           <Ionicons name="options" size={20} color={undefined} />
           <T variant="h3">{t('lobby.roomSettings')}</T>
         </Row>
-        {canEdit ? <Button title={t('lobby.editSettings')} small variant="secondary" icon="create-outline" onPress={() => setEditing(true)} /> : null}
+        {canEdit ? (
+          <Button title={t('lobby.editSettings')} small variant="secondary" icon="create-outline" onPress={() => setEditing(true)} />
+        ) : null}
       </Row>
       <View style={styles.grid}>
-        <SummaryItem icon={rule === 'normal' ? 'shield-checkmark' : 'flash'} label={t('create.claimRule')} value={t(`create.rule_${rule}`)} />
-        {rule === 'normal' ? <SummaryItem icon="hourglass" label={t('create.checkTime')} value={room.checkSeconds === 0 ? t('create.untilReady') : t('common.seconds', { count: room.checkSeconds })} /> : null}
+        <SummaryItem icon={RULE_ICONS[rule]} label={t('create.claimRule')} value={t(`create.rule_${rule}`)} />
+        {rule === 'normal' ? (
+          <SummaryItem
+            icon="hourglass"
+            label={t('create.checkTime')}
+            value={room.checkSeconds === 0 ? t('create.untilReady') : t('common.seconds', { count: room.checkSeconds })}
+          />
+        ) : null}
         <SummaryItem icon="pricetag" label={t('create.ticketPrice')} value={formatRupees(room.ticketPrice)} />
         <SummaryItem icon="people" label={t('create.maxPlayers')} value={String(room.maxPlayers)} />
-        <SummaryItem icon={room.visibility === 'public' ? 'earth' : 'lock-closed'} label={t('create.visibility')} value={t(`visibility.${room.visibility}`)} />
-        <SummaryItem icon="bulb" label={t('create.autoHint')} value={room.autoMark ? t('common.on') : t('common.off')} />
+        <SummaryItem
+          icon={room.visibility === 'public' ? 'earth' : 'lock-closed'}
+          label={t('create.visibility')}
+          value={t(`visibility.${room.visibility}`)}
+        />
+        {rule === 'auto' ? null : (
+          <SummaryItem icon="bulb" label={t('create.autoHint')} value={room.autoMark ? t('common.on') : t('common.off')} />
+        )}
         <SummaryItem icon="chatbubbles" label={t('create.chat')} value={room.chatEnabled ? t('common.on') : t('common.off')} />
         <SummaryItem icon="timer-outline" label={t('game.speedTitle')} value={t('common.seconds', { count: room.callIntervalSeconds })} />
       </View>
@@ -156,11 +225,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
             <T variant="smallBold" muted style={styles.label}>
               {t('create.claimRule')}
             </T>
-            <Row gap={spacing.sm}>
-              {(['normal', 'fastest'] as ClaimRule[]).map((m) => (
-                <Chip key={m} label={t(`create.rule_${m}`)} active={rule === m} onPress={() => setRule(m)} />
-              ))}
-            </Row>
+            <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
             {rule === 'normal' ? <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} /> : null}
 
             <T variant="smallBold" muted style={styles.label}>
@@ -198,16 +263,25 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
               ))}
             </Row>
 
-            <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
-              <T variant="bodyMedium">{t('create.autoHint')}</T>
-              <Toggle value={autoHint} onValueChange={setAutoHint} />
-            </Row>
+            {rule === 'auto' ? null : (
+              <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
+                <T variant="bodyMedium">{t('create.autoHint')}</T>
+                <Toggle value={autoHint} onValueChange={setAutoHint} />
+              </Row>
+            )}
             <Row style={{ justifyContent: 'space-between', marginTop: spacing.md }}>
               <T variant="bodyMedium">{t('create.chat')}</T>
               <Toggle value={chat} onValueChange={setChat} />
             </Row>
           </ScrollView>
-          <Button title={t('common.save')} icon="checkmark" variant="gold" style={{ marginTop: spacing.md }} loading={save.isPending} onPress={() => save.mutate()} />
+          <Button
+            title={t('common.save')}
+            icon="checkmark"
+            variant="gold"
+            style={{ marginTop: spacing.md }}
+            loading={save.isPending}
+            onPress={() => save.mutate()}
+          />
         </View>
       </KeyboardAvoidingView>
     </Modal>
@@ -216,12 +290,29 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
 
 const styles = StyleSheet.create({
   group: { padding: spacing.md, borderWidth: 2 },
+  ruleCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderWidth: 2 },
   optIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  item: { width: '48%', flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: radius.md, paddingHorizontal: 10, paddingVertical: 8 },
+  item: {
+    width: '48%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    borderRadius: radius.md,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+  },
   backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, maxHeight: '92%' },
   label: { marginTop: spacing.lg, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
-  priceBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: radius.sm, paddingHorizontal: 10, width: 140, height: 52 },
+  priceBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    width: 140,
+    height: 52,
+  },
   priceInput: { flex: 1, fontFamily: fonts.bold, fontSize: 22, height: 52, paddingHorizontal: 4 },
 });

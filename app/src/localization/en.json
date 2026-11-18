@@ -65,7 +65,9 @@
     "howToPlay": "How to play",
     "maintenance": "Notice",
     "seeAll": "See all",
-    "howToPlayDesc": "Rules & prizes"
+    "howToPlayDesc": "Rules & prizes",
+    "roomsCount_one": "{{count}} room",
+    "roomsCount_other": "{{count}} rooms"
   },
   "kind": {
     "normal": "Normal",
@@ -98,7 +100,7 @@
     "limitGamesOn": "Series ends after {{count}} games",
     "claimRule": "How winners are decided",
     "rule_normal": "Normal",
-    "rule_normal_desc": "Everyone gets 10 s to check before the winner is announced; same-number wins are shared",
+    "rule_normal_desc": "After a claim everyone gets {{time}} to check their tickets; same-number wins are shared",
     "rule_fastest": "Fastest finger",
     "rule_fastest_desc": "Whoever claims first wins — no sharing",
     "autoHint": "Auto hint",
@@ -107,7 +109,10 @@
     "chatDesc": "Players can chat with each other during the room",
     "checkTime": "Time to check",
     "checkTimeDesc": "After a claim, how long everyone gets to check their tickets and claim too",
-    "untilReady": "Until all ready"
+    "untilReady": "Until all ready",
+    "rule_auto": "Auto",
+    "rule_auto_desc": "The app strikes every called number by itself — no hints, no tapping. Everyone who completes a prize on the same number shares it",
+    "untilReadyLower": "until all are ready"
   },
   "join": {
     "title": "Join Room",
@@ -284,7 +289,8 @@
     "continueGame": "Continue the game",
     "notCheckedYetPlain": "Not checked yet:",
     "strikeMissedFirst": "Your ticket has it — strike the numbers you missed, then tap Claim.",
-    "thisPhone": "On this phone"
+    "thisPhone": "On this phone",
+    "autoRuleHint": "Auto: numbers are struck for you and prizes are awarded automatically."
   },
   "winner": {
     "title": "WINNER!",
@@ -317,7 +323,10 @@
     "left": "left the room",
     "gameByGame": "Game by game",
     "game": "Game",
-    "total": "Total"
+    "total": "Total",
+    "tapBox": "Tap a box for details",
+    "potOf": "Pot {{pot}}",
+    "noPrizesThisGame": "No prizes in this game."
   },
   "prizes": {
     "fast_3": "Fast 3",

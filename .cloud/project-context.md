@@ -22,6 +22,7 @@ _Last updated: 2026-11-18_
 - Animated winner announcement on all phones: name, prize, winning numbers, amount/split.
 - Standings per room/series saved: wins, won, spent, net, every win listed.
 - Lobby steps every game: players join → host "Next" → everyone takes tickets → host "Next" (all have tickets) → set prizes & play.
+- Third rule **Auto** (claim_mode 'fair'): app strikes, server awards same-number winners.
 - Claim rules: **Normal** (default; 10 s "check your tickets", same-number wins shared, then the announcement) or **Fastest finger** (first claim wins alone). Fair play removed.
 - Auto hint (called numbers glow; never auto-marked). Prizes per game only (no prize choice at creation).
 - Step 3 = prizes set → everyone "ready" → host starts (no auto start). Late claimers share during a check. Check rounds end early when all checked; check time can be "until all ready" (0). Final check after number 90.
@@ -40,7 +41,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (13 migrations, latest 20261124000001_host_start_late_share_ledger) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (14 migrations, latest 20261125000001_auto_rule) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |

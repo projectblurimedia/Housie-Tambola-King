@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, BackHandler, Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
@@ -23,6 +23,11 @@ const STAGE = ['#1E0B4B', '#4C1D95', '#7C3AED'] as const;
 /**
  * In-tree overlay with a smooth fade (a <Modal> would not rotate with the landscape view).
  */
+/**
+ * Caller Mode's pop-ups (settings, history, reset) as real Modals: they scroll and take touches
+ * reliably (an overlay drawn inside the screen sometimes didn't). fill = a full-height sheet
+ * on the right; otherwise a centred card.
+ */
 function Overlay({
   visible,
   onClose,
@@ -34,39 +39,32 @@ function Overlay({
   onClose: () => void;
   children: React.ReactNode;
   maxHeight: number;
-  /** A full-height side sheet on the right (for scrolling settings) instead of a centred card. */
   fill?: boolean;
 }) {
   const { colors } = useThemeColors();
-  const fade = useRef(new Animated.Value(0)).current;
-  const [mounted, setMounted] = useState(visible);
-  useEffect(() => {
-    if (visible) setMounted(true);
-    Animated.timing(fade, { toValue: visible ? 1 : 0, duration: 220, useNativeDriver: true }).start(({ finished }) => {
-      if (finished && !visible) setMounted(false);
-    });
-  }, [visible, fade]);
-  if (!mounted) return null;
   return (
-    <Animated.View style={[StyleSheet.absoluteFill, styles.overlay, { opacity: fade }]}>
-      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
-      <Animated.View
-        style={
-          fill
-            ? [styles.sideSheet, { backgroundColor: colors.surface }]
-            : [
-                styles.overlayCard,
-                {
-                  backgroundColor: colors.surface,
-                  maxHeight,
-                  transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }],
-                },
-              ]
-        }
-      >
-        {children}
-      </Animated.View>
-    </Animated.View>
+    <Modal
+      visible={visible}
+      transparent
+      animationType="fade"
+      onRequestClose={onClose}
+      statusBarTranslucent
+      navigationBarTranslucent
+      supportedOrientations={['landscape', 'landscape-left', 'landscape-right']}
+    >
+      <View style={[styles.overlay, fill && styles.overlayFill]}>
+        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        <View
+          style={
+            fill
+              ? [styles.sideSheet, { backgroundColor: colors.surface }]
+              : [styles.overlayCard, { backgroundColor: colors.surface, maxHeight }]
+          }
+        >
+          {children}
+        </View>
+      </View>
+    </Modal>
   );
 }
 
@@ -176,10 +174,10 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
       {({ width, height, padLeft, padRight }) => {
         const pad = 6;
         const boardPad = 6;
-        const byHeight = (height - pad * 2 - boardPad * 2 - 8 * BOARD_GAP) / 9;
-        const byWidth = (Math.min(width * 0.66, 760) - boardPad * 2 - 9 * BOARD_GAP) / 10;
-        const cell = Math.max(22, Math.floor(Math.min(byHeight, byWidth)));
-        const boardWidth = cell * 10 + 9 * BOARD_GAP + boardPad * 2;
+        // Board: about two-thirds of the screen; each box as wide as that allows, as tall as the height allows.
+        const boardWidth = Math.floor(Math.min(width * 0.66, 820));
+        const cell = Math.max(24, Math.floor((height - pad * 2 - boardPad * 2 - 8 * BOARD_GAP) / 9));
+        const cellWidth = Math.max(cell, Math.floor((boardWidth - boardPad * 2 - 9 * BOARD_GAP) / 10));
         const ball = Math.min(Math.floor(height * 0.3), 118);
         return (
           <LinearGradient colors={STAGE} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width, height }}>
@@ -283,13 +281,20 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       onPress={() => setHistoryOpen(true)}
                       disabled={notStarted}
                     />
+                    <RoundButton
+                      icon="refresh"
+                      label={t('caller.reset')}
+                      onPress={() => setConfirmReset(true)}
+                      disabled={notStarted}
+                      tint="#FCA5A5"
+                    />
                   </Row>
                 )}
               </View>
 
               {/* Right: the board */}
               <View style={[styles.boardCard, { width: boardWidth, backgroundColor: colors.surface }]}>
-                <CalledBoard called={calledSet} last={last} cellSize={cell} square />
+                <CalledBoard called={calledSet} last={last} cellSize={cell} cellWidth={cellWidth} />
               </View>
             </View>
 
@@ -463,14 +468,12 @@ const styles = StyleSheet.create({
     shadowRadius: 10,
     shadowOffset: { width: 0, height: 4 },
   },
-  overlay: { backgroundColor: 'rgba(10,4,24,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  overlay: { flex: 1, backgroundColor: 'rgba(10,4,24,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.md },
   historyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10, paddingBottom: spacing.lg },
   historyItem: { alignItems: 'center', gap: 2, width: 44 },
+  overlayFill: { alignItems: 'flex-end', justifyContent: 'flex-start', padding: 0 },
   sideSheet: {
-    position: 'absolute',
-    top: 0,
-    bottom: 0,
-    right: 0,
+    height: '100%',
     width: '46%',
     maxWidth: 440,
     borderTopLeftRadius: radius.xl,

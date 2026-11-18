@@ -7,13 +7,13 @@ export const CalledBoard = memo(function CalledBoard({
   called,
   last,
   cellSize = 30,
-  square,
+  cellWidth,
 }: {
   called: ReadonlySet<number>;
   last?: number | null;
   cellSize?: number;
-  /** Fixed square cells (cellSize × cellSize) instead of stretching to the width. */
-  square?: boolean;
+  /** Fixed cell width (Caller Mode's big board); otherwise cells stretch to fill the width. */
+  cellWidth?: number;
 }) {
   const { colors } = useThemeColors();
   return (
@@ -29,7 +29,7 @@ export const CalledBoard = memo(function CalledBoard({
                 key={n}
                 style={[
                   styles.cell,
-                  square && { flex: 0, width: cellSize },
+                  cellWidth ? { flex: 0, width: cellWidth } : null,
                   {
                     height: cellSize,
                     backgroundColor: isLast ? colors.pink : on ? colors.primary : colors.surfaceAlt,
@@ -54,7 +54,8 @@ export const CalledBoard = memo(function CalledBoard({
   );
 });
 
-export const BOARD_CELL_RADIUS = 6;
+/** "Semi box": rounded rectangle corners. */
+export const BOARD_CELL_RADIUS = 9;
 export const BOARD_GAP = 3;
 
 const styles = StyleSheet.create({

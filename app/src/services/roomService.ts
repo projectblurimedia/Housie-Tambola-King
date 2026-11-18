@@ -59,7 +59,7 @@ export const roomService = {
         p_call_interval_seconds: input.callIntervalSeconds,
         p_series_length: input.seriesLength,
         p_prizes: input.prizes,
-        p_claim_mode: 'fastest',
+        p_claim_mode: input.rule === 'auto' ? 'fair' : 'fastest',
         p_auto_mark: input.autoMark,
         p_check_claims: input.rule === 'normal',
         p_chat_enabled: input.chatEnabled,
@@ -125,6 +125,7 @@ export const roomService = {
         p_check_seconds: input.checkSeconds,
         p_auto_mark: input.autoMark,
         p_chat_enabled: input.chatEnabled,
+        p_claim_mode: input.rule === 'auto' ? 'fair' : 'fastest',
       }),
     );
   },

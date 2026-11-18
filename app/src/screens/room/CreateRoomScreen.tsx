@@ -10,7 +10,7 @@ import { showToast } from '@/state/toastStore';
 import type { PrizeType } from '@/game/engine/ticket';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import type { ClaimRule, RoomKind, RoomVisibility } from '@/types/api';
-import { CheckTimePicker } from './parts/RoomSettingsModal';
+import { CheckTimePicker, RulePicker } from './parts/RoomSettingsModal';
 import type { ScreenProps } from '@/navigation/types';
 
 /**
@@ -113,14 +113,24 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
 
   return (
     <Screen scroll title={t('create.title')}>
-      <TextField label={t('create.roomName')} value={title} onChangeText={setTitle} placeholder={t('create.roomNamePlaceholder')} maxLength={40} />
+      <TextField
+        label={t('create.roomName')}
+        value={title}
+        onChangeText={setTitle}
+        placeholder={t('create.roomNamePlaceholder')}
+        maxLength={40}
+      />
 
       <T variant="smallBold" muted style={styles.sectionLabel}>
         {t('create.type')}
       </T>
       <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
         {(['normal', 'series'] as RoomKind[]).map((k) => (
-          <Card key={k} onPress={() => setKind(k)} style={[styles.option, kind === k && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}>
+          <Card
+            key={k}
+            onPress={() => setKind(k)}
+            style={[styles.option, kind === k && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}
+          >
             <Ionicons name={k === 'series' ? 'layers' : 'grid'} size={24} color={kind === k ? colors.primary : colors.textMuted} />
             <T variant="h3">{t(`kind.${k}`)}</T>
             <T variant="tiny" muted>
@@ -154,8 +164,16 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
       </T>
       <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
         {(['private', 'public'] as RoomVisibility[]).map((v) => (
-          <Card key={v} onPress={() => setVisibility(v)} style={[styles.option, visibility === v && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}>
-            <Ionicons name={v === 'public' ? 'earth' : 'lock-closed'} size={24} color={visibility === v ? colors.primary : colors.textMuted} />
+          <Card
+            key={v}
+            onPress={() => setVisibility(v)}
+            style={[styles.option, visibility === v && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}
+          >
+            <Ionicons
+              name={v === 'public' ? 'earth' : 'lock-closed'}
+              size={24}
+              color={visibility === v ? colors.primary : colors.textMuted}
+            />
             <T variant="h3">{t(`visibility.${v}`)}</T>
             <T variant="tiny" muted>
               {v === 'public' ? t('create.publicDesc') : t('create.privateDesc')}
@@ -202,23 +220,15 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         {t('create.ticketPriceHelp')}
       </T>
 
-
       <T variant="smallBold" muted style={styles.sectionLabel}>
         {t('create.claimRule')}
       </T>
-      <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
-        {(['normal', 'fastest'] as ClaimRule[]).map((m) => (
-          <Card key={m} onPress={() => setRule(m)} style={[styles.option, rule === m && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}>
-            <Ionicons name={m === 'fastest' ? 'flash' : 'shield-checkmark'} size={24} color={rule === m ? colors.primary : colors.textMuted} />
-            <T variant="h3">{t(`create.rule_${m}`)}</T>
-            <T variant="tiny" muted>
-              {t(`create.rule_${m}_desc`)}
-            </T>
-          </Card>
-        ))}
-      </Row>
+      <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
       {rule === 'normal' ? <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} /> : null}
-      <OptionToggle icon="bulb" title={t('create.autoHint')} desc={t('create.autoHintDesc')} value={autoHint} onChange={setAutoHint} />
+      {/* Auto strikes everything itself — hints make no sense there. */}
+      {rule === 'auto' ? null : (
+        <OptionToggle icon="bulb" title={t('create.autoHint')} desc={t('create.autoHintDesc')} value={autoHint} onChange={setAutoHint} />
+      )}
       <OptionToggle icon="chatbubbles" title={t('create.chat')} desc={t('create.chatDesc')} value={chatEnabled} onChange={setChatEnabled} />
 
       <Spacer h={spacing.xl} />
@@ -231,7 +241,15 @@ const styles = StyleSheet.create({
   sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
   option: { flex: 1, gap: 2, padding: spacing.md, borderWidth: 2 },
   group: { padding: spacing.md, borderWidth: 2 },
-  priceBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: radius.sm, paddingHorizontal: 10, width: 120, height: 52 },
+  priceBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderRadius: radius.sm,
+    paddingHorizontal: 10,
+    width: 120,
+    height: 52,
+  },
   priceInput: { flex: 1, fontFamily: fonts.bold, fontSize: 22, height: 52, paddingHorizontal: 4 },
   optIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   preset: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill },

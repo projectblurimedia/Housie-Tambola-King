@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -122,61 +122,68 @@ export function StandingsList({ roomId, meId }: { roomId: string; meId?: string 
   );
 }
 
+const COL_GAME = 66;
+const COL_PLAYER = 84;
+
 /**
- * Game-by-game table: one row per finished game, one column per player (what they won that
- * game; "–" if they didn't play it), and total winnings at the bottom. Net is on the cards above.
+ * Game-by-game table: rows = games in order (Game 1, 2, …), columns = players (best first),
+ * each box what that player won in that game ("–" if they didn't play it), totals at the
+ * bottom. Tap any box for the details: tickets, spent, won, net and the prizes.
  */
 function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: StandingRow[]; meId?: string }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
+  const [picked, setPicked] = useState<{ game: LedgerGame; player: StandingRow } | null>(null);
   const totals = new Map<string, number>();
   games.forEach((g) => g.rows.forEach((r) => totals.set(r.userId, (totals.get(r.userId) ?? 0) + Number(r.won))));
-  const cell = (v: number | null, bold?: boolean) => (
-    <View style={styles.cell}>
-      {v === null ? (
-        <T variant="small" muted>
-          –
-        </T>
-      ) : (
-        <T
-          style={{
-            fontFamily: fonts.bold,
-            fontSize: bold ? 15 : 13,
-            color: v > 0 ? colors.success : colors.textMuted,
-            includeFontPadding: false,
-          }}
-        >
-          {formatRupees(v)}
-        </T>
-      )}
+  const line = colors.border;
+
+  const head = (label: React.ReactNode, width: number, key: string) => (
+    <View key={key} style={[styles.th, { width, borderColor: line, backgroundColor: colors.surfaceAlt }]}>
+      {label}
     </View>
   );
+
+  const detail = picked ? picked.game.rows.find((r) => r.userId === picked.player.userId) : null;
+  const prizes = picked ? picked.player.list.filter((w) => w.gameNo === picked.game.gameNo) : [];
+
   return (
     <Card style={{ padding: spacing.md, gap: spacing.sm }}>
       <Row>
-        <Ionicons name="list" size={18} color={colors.primary} />
-        <T variant="h3">{t('standings.gameByGame')}</T>
+        <Ionicons name="grid-outline" size={18} color={colors.primary} />
+        <T variant="h3" style={{ flex: 1 }}>
+          {t('standings.gameByGame')}
+        </T>
+        <T variant="tiny" muted>
+          {t('standings.tapBox')}
+        </T>
       </Row>
       <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View>
-          <Row gap={0} style={[styles.tr, { borderBottomColor: colors.border }]}>
-            <View style={styles.gameCol}>
+        <View style={[styles.table, { borderColor: line }]}>
+          <View style={styles.tr}>
+            {head(
               <T variant="tiny" muted>
                 {t('standings.game')}
-              </T>
-            </View>
-            {players.map((p) => (
-              <View key={p.userId} style={[styles.cell, { alignItems: 'center' }]}>
-                <Avatar avatarKey={p.avatarKey} size={24} />
-                <T variant="tiny" numberOfLines={1} color={p.userId === meId ? colors.primary : undefined}>
-                  {p.userId === meId ? t('common.you') : p.name.split(' ')[0]}
-                </T>
-              </View>
-            ))}
-          </Row>
-          {games.map((g) => (
-            <Row key={g.gameId} gap={0} style={[styles.tr, { borderBottomColor: colors.border }]}>
-              <View style={styles.gameCol}>
+              </T>,
+              COL_GAME,
+              'g',
+            )}
+            {players.map((p) =>
+              head(
+                <>
+                  <Avatar avatarKey={p.avatarKey} size={22} />
+                  <T variant="tiny" numberOfLines={1} color={p.userId === meId ? colors.primary : undefined}>
+                    {p.userId === meId ? t('common.you') : p.name.split(' ')[0]}
+                  </T>
+                </>,
+                COL_PLAYER,
+                p.userId,
+              ),
+            )}
+          </View>
+          {games.map((g, gi) => (
+            <View key={g.gameId} style={[styles.tr, gi % 2 === 1 && { backgroundColor: colors.surfaceAlt }]}>
+              <View style={[styles.td, { width: COL_GAME, borderColor: line, alignItems: 'flex-start' }]}>
                 <T variant="smallBold">{t('standings.gameShort', { n: g.gameNo })}</T>
                 <T variant="tiny" muted>
                   {formatRupees(g.pot)}
@@ -184,20 +191,115 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
               </View>
               {players.map((p) => {
                 const r = g.rows.find((x) => x.userId === p.userId);
-                return <React.Fragment key={p.userId}>{cell(r ? Number(r.won) : null)}</React.Fragment>;
+                const won = r ? Number(r.won) : null;
+                return (
+                  <Pressable
+                    key={p.userId}
+                    disabled={!r}
+                    onPress={() => setPicked({ game: g, player: p })}
+                    style={({ pressed }) => [styles.td, { width: COL_PLAYER, borderColor: line, opacity: pressed ? 0.6 : 1 }]}
+                  >
+                    {won === null ? (
+                      <T variant="small" muted>
+                        –
+                      </T>
+                    ) : (
+                      <T style={{ fontFamily: fonts.bold, fontSize: 13, color: won > 0 ? colors.success : colors.textMuted }}>
+                        {formatRupees(won)}
+                      </T>
+                    )}
+                  </Pressable>
+                );
               })}
-            </Row>
+            </View>
           ))}
-          <Row gap={0} style={[styles.tr, { backgroundColor: colors.surfaceAlt, borderBottomWidth: 0 }]}>
-            <View style={styles.gameCol}>
+          <View style={[styles.tr, { backgroundColor: `${colors.primary}14` }]}>
+            <View style={[styles.td, { width: COL_GAME, borderColor: line, alignItems: 'flex-start' }]}>
               <T variant="smallBold">{t('standings.total')}</T>
             </View>
             {players.map((p) => (
-              <React.Fragment key={p.userId}>{cell(totals.get(p.userId) ?? 0, true)}</React.Fragment>
+              <View key={p.userId} style={[styles.td, { width: COL_PLAYER, borderColor: line }]}>
+                <T
+                  style={{
+                    fontFamily: fonts.bold,
+                    fontSize: 14,
+                    color: (totals.get(p.userId) ?? 0) > 0 ? colors.success : colors.textMuted,
+                  }}
+                >
+                  {formatRupees(totals.get(p.userId) ?? 0)}
+                </T>
+              </View>
             ))}
-          </Row>
+          </View>
         </View>
       </ScrollView>
+
+      <Modal visible={picked !== null} transparent animationType="fade" onRequestClose={() => setPicked(null)} statusBarTranslucent>
+        <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={() => setPicked(null)}>
+          <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation()}>
+            {picked && detail ? (
+              <>
+                <Row gap={spacing.md}>
+                  <Avatar avatarKey={picked.player.avatarKey} size={44} />
+                  <View style={{ flex: 1 }}>
+                    <T variant="h3" numberOfLines={1}>
+                      {picked.player.userId === meId ? t('common.you') : picked.player.name}
+                    </T>
+                    <T variant="small" muted>
+                      {t('standings.gameShort', { n: picked.game.gameNo })} · {t('standings.potOf', { pot: formatRupees(picked.game.pot) })}
+                    </T>
+                  </View>
+                </Row>
+                <Row gap={spacing.sm}>
+                  <View style={[styles.stat, { backgroundColor: colors.surfaceAlt }]}>
+                    <T variant="tiny" muted>
+                      {t('standings.spentTickets', { count: detail.tickets })}
+                    </T>
+                    <T variant="h3" color={colors.error}>
+                      {formatRupees(detail.spent)}
+                    </T>
+                  </View>
+                  <View style={[styles.stat, { backgroundColor: 'rgba(22,163,74,0.1)' }]}>
+                    <T variant="tiny" muted>
+                      {t('standings.won')}
+                    </T>
+                    <T variant="h3" color={colors.success}>
+                      {formatRupees(detail.won)}
+                    </T>
+                  </View>
+                  <View style={[styles.stat, { backgroundColor: colors.surfaceAlt }]}>
+                    <T variant="tiny" muted>
+                      {t('standings.net')}
+                    </T>
+                    <NetAmount value={detail.net} size={16} />
+                  </View>
+                </Row>
+                {prizes.length ? (
+                  prizes.map((w, k) => (
+                    <View key={k} style={[styles.win, { backgroundColor: colors.surfaceAlt }]}>
+                      <Row style={{ justifyContent: 'space-between' }}>
+                        <T variant="smallBold">{t(`prizes.${w.prize}`)}</T>
+                        <T variant="smallBold" color={colors.success}>
+                          +{formatRupees(w.amount)}
+                        </T>
+                      </Row>
+                      <Row gap={4} style={{ flexWrap: 'wrap', marginTop: 4 }}>
+                        {w.numbers.map((n) => (
+                          <MiniBall key={n} n={n} size={22} />
+                        ))}
+                      </Row>
+                    </View>
+                  ))
+                ) : (
+                  <T muted center>
+                    {t('standings.noPrizesThisGame')}
+                  </T>
+                )}
+              </>
+            ) : null}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </Card>
   );
 }
@@ -206,7 +308,26 @@ const styles = StyleSheet.create({
   details: { marginTop: spacing.md, paddingTop: spacing.md, borderTopWidth: 1, gap: spacing.sm },
   stat: { flex: 1, borderRadius: radius.md, padding: spacing.sm, alignItems: 'center' },
   win: { borderRadius: radius.md, padding: spacing.sm },
-  tr: { borderBottomWidth: StyleSheet.hairlineWidth, paddingVertical: 6 },
-  gameCol: { width: 64, justifyContent: 'center' },
-  cell: { width: 78, alignItems: 'flex-end', justifyContent: 'center', paddingHorizontal: 6 },
+  table: { borderWidth: 1, borderRadius: radius.md, overflow: 'hidden' },
+  tr: { flexDirection: 'row' },
+  th: {
+    borderRightWidth: 1,
+    borderBottomWidth: 1,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 2,
+  },
+  td: {
+    borderRightWidth: StyleSheet.hairlineWidth,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    paddingVertical: 9,
+    paddingHorizontal: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    minHeight: 44,
+  },
+  backdrop: { flex: 1, justifyContent: 'center', padding: spacing.lg },
+  sheet: { borderRadius: radius.xl, padding: spacing.lg, gap: spacing.md },
 });

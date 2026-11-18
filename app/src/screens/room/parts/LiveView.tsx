@@ -60,12 +60,19 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
   const previous = called.slice(-6, -1).reverse();
 
   /** Auto hint: called numbers are highlighted on tickets; players still strike them. */
-  const autoHint = room.autoMark;
+  /** Auto rule: the app strikes every called number and the server awards prizes — no taps. */
+  const autoRule = room.claimMode === 'fair';
+  const autoHint = room.autoMark && !autoRule;
   const isHost = room.hostId === me.id;
   const [settingsOpen, setSettingsOpen] = useState(false);
   const struckSets = useMemo(
-    () => state.myTickets.map((tk) => new Set((marks[tk.id] ?? NO_STRIKES).filter((n) => calledSet.has(n)))),
-    [state.myTickets, marks, calledSet],
+    () =>
+      state.myTickets.map((tk) =>
+        autoRule
+          ? new Set(tk.cells.filter((n) => n > 0 && calledSet.has(n)))
+          : new Set((marks[tk.id] ?? NO_STRIKES).filter((n) => calledSet.has(n))),
+      ),
+    [state.myTickets, marks, calledSet, autoRule],
   );
   const hintSets = useMemo(
     () =>
@@ -283,7 +290,7 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
           ) : (
             <>
               <T variant="small" muted center>
-                {'👆 ' + t('game.tapToStrike')}
+                {autoRule ? '🤖 ' + t('game.autoRuleHint') : '👆 ' + t('game.tapToStrike')}
                 {autoHint ? ' ' + t('game.autoHintOn') : ''}
               </T>
               {state.myTickets.map((tk, i) => (
@@ -291,9 +298,10 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
                   key={tk.id}
                   cells={tk.cells}
                   marked={struckSets[i]}
-                  lastCalled={last}
+                  // The glowing ring on the newest number is part of Auto hint — off means no rings.
+                  lastCalled={autoHint ? last : null}
                   hinted={hintSets?.[i]}
-                  onPressNumber={onPressNumber(tk, i)}
+                  onPressNumber={autoRule ? undefined : onPressNumber(tk, i)}
                   canStrike={(n) => calledSet.has(n)}
                   label={`#${tk.serial}`}
                   badge={wonByTicket(tk.id) || undefined}
@@ -564,15 +572,18 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
 
       {state.myTickets.length && !iChecked ? (
         <Row gap={spacing.sm} style={{ marginTop: spacing.sm }}>
-          <Button
-            title={final ? t('game.claimMine') : t('game.checkHaveIt')}
-            variant="gold"
-            icon="hand-left"
-            small
-            style={{ flex: 1 }}
-            loading={claimMine.isPending}
-            onPress={() => claimMine.mutate()}
-          />
+          {/* Auto rule: the server already awarded everything — only "Checked". */}
+          {room.claimMode === 'fair' ? null : (
+            <Button
+              title={final ? t('game.claimMine') : t('game.checkHaveIt')}
+              variant="gold"
+              icon="hand-left"
+              small
+              style={{ flex: 1 }}
+              loading={claimMine.isPending}
+              onPress={() => claimMine.mutate()}
+            />
+          )}
           {isHost ? null : (
             <Pressable
               onPress={() => done.mutate()}

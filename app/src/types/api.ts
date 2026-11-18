@@ -70,7 +70,8 @@ export interface Room {
   gamesPlayed: number;
   memberCount: number;
   /** Server value; the rule players see is ClaimRule (see claimRule()). */
-  claimMode: 'fastest';
+  /** 'fair' = the Auto rule (server strikes and awards). */
+  claimMode: 'fastest' | 'fair';
   /** "Auto hint": called numbers on tickets are highlighted (players still strike them). */
   autoMark: boolean;
   /** Normal rule: a claim waits ~10 s for others to check their tickets before announcing. */
@@ -85,8 +86,14 @@ export interface Room {
  * Normal (default): claims are checked for 10 s and same-number completions share.
  * Fastest finger: whoever claims first wins it alone.
  */
-export type ClaimRule = 'normal' | 'fastest';
-export const claimRule = (room: Pick<Room, 'checkClaims'>): ClaimRule => (room.checkClaims ? 'normal' : 'fastest');
+export type ClaimRule = 'normal' | 'fastest' | 'auto';
+/**
+ * Normal: claims are checked, same-number completions share. Fastest finger: first claim wins.
+ * Auto: the app strikes every called number and the server awards everyone who completes a
+ * prize on the same number (shared) — no tapping.
+ */
+export const claimRule = (room: Pick<Room, 'checkClaims' | 'claimMode'>): ClaimRule =>
+  room.claimMode === 'fair' ? 'auto' : room.checkClaims ? 'normal' : 'fastest';
 
 export interface ChatMessage {
   id: number;
