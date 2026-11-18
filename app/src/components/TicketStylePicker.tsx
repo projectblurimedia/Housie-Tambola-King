@@ -4,16 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '@/state/settingsStore';
-import {
-  HINT_COLORS,
-  HintColorKey,
-  STRIKE_COLORS,
-  StrikeColorKey,
-  TICKET_COMBOS,
-  TICKET_THEMES,
-  TicketCombo,
-  TicketThemeKey,
-} from '@/theme/ticketThemes';
+import { HINT_COLORS, PALETTE, PaletteKey, STRIKE_COLORS, TICKET_COMBOS, TICKET_THEMES, TicketCombo, toPalette } from '@/theme/ticketThemes';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import { TicketView } from './TicketView';
 import { T } from './ui';
@@ -77,6 +68,8 @@ function Swatches<K extends string>({
   onPick: (k: K) => void;
   render: (k: K, selected: boolean) => React.ReactNode;
 }) {
+  const { t } = useTranslation();
+  const colorName = (k: K) => t('ticketStyle.colors.' + String(k));
   return (
     <View style={{ gap: 8 }}>
       <T variant="smallBold" muted style={styles.label}>
@@ -84,8 +77,11 @@ function Swatches<K extends string>({
       </T>
       <View style={styles.swatches}>
         {keys.map((k) => (
-          <Pressable key={k} onPress={() => onPick(k)} accessibilityLabel={k} hitSlop={4}>
+          <Pressable key={k} onPress={() => onPick(k)} accessibilityLabel={k} hitSlop={4} style={{ alignItems: 'center', gap: 3 }}>
             {render(k, k === value)}
+            <T variant="tiny" muted>
+              {colorName(k)}
+            </T>
           </Pressable>
         ))}
       </View>
@@ -97,9 +93,9 @@ function Swatches<K extends string>({
 export function TicketStylePicker() {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
-  const ticketTheme = useSettingsStore((s) => s.ticketTheme);
-  const strikeColor = useSettingsStore((s) => s.strikeColor);
-  const hintColor = useSettingsStore((s) => s.hintColor);
+  const ticketTheme = toPalette(useSettingsStore((s) => s.ticketTheme), 'purple');
+  const strikeColor = toPalette(useSettingsStore((s) => s.strikeColor), 'purple');
+  const hintColor = toPalette(useSettingsStore((s) => s.hintColor), 'pink');
   const set = useSettingsStore((s) => s.set);
   const activeCombo = TICKET_COMBOS.find((c) => c.theme === ticketTheme && c.strike === strikeColor && c.hint === hintColor)?.key;
 
@@ -128,9 +124,9 @@ export function TicketStylePicker() {
         </T>
       </View>
 
-      <Swatches<TicketThemeKey>
+      <Swatches<PaletteKey>
         label={t('ticketStyle.background')}
-        keys={Object.keys(TICKET_THEMES) as TicketThemeKey[]}
+        keys={[...PALETTE]}
         value={ticketTheme}
         onPick={(k) => set({ ticketTheme: k })}
         render={(k, selected) => (
@@ -140,15 +136,12 @@ export function TicketStylePicker() {
                 {selected ? <Ionicons name="checkmark" size={16} color={TICKET_THEMES[k].ink} /> : null}
               </View>
             </LinearGradient>
-            <T variant="tiny" muted style={{ marginTop: 2 }}>
-              {t(`ticketStyle.themes.${k}`)}
-            </T>
           </View>
         )}
       />
-      <Swatches<StrikeColorKey>
+      <Swatches<PaletteKey>
         label={t('ticketStyle.strike')}
-        keys={Object.keys(STRIKE_COLORS) as StrikeColorKey[]}
+        keys={[...PALETTE]}
         value={strikeColor}
         onPick={(k) => set({ strikeColor: k })}
         render={(k, selected) => (
@@ -157,9 +150,9 @@ export function TicketStylePicker() {
           </LinearGradient>
         )}
       />
-      <Swatches<HintColorKey>
+      <Swatches<PaletteKey>
         label={t('ticketStyle.hint')}
-        keys={Object.keys(HINT_COLORS) as HintColorKey[]}
+        keys={[...PALETTE]}
         value={hintColor}
         onPick={(k) => set({ hintColor: k })}
         render={(k, selected) => (
@@ -183,9 +176,9 @@ const styles = StyleSheet.create({
   comboStrike: { width: 12, height: 2, borderRadius: 1, transform: [{ rotate: '-40deg' }] },
   comboCheck: { position: 'absolute', top: -6, right: -6, width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   previewBox: { borderRadius: radius.lg, padding: spacing.md },
-  swatches: { flexDirection: 'row', flexWrap: 'wrap', gap: 12 },
-  themeSwatch: { width: 50, height: 38, borderRadius: 11, padding: 4, borderWidth: 2.5 },
+  swatches: { flexDirection: 'row', justifyContent: 'space-between' },
+  themeSwatch: { width: 40, height: 40, borderRadius: 12, padding: 4, borderWidth: 2.5 },
   themeInner: { flex: 1, borderRadius: 7, alignItems: 'center', justifyContent: 'center' },
-  dot: { width: 38, height: 38, borderRadius: 19, borderWidth: 2.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
+  dot: { width: 40, height: 40, borderRadius: 20, borderWidth: 2.5, borderColor: 'transparent', alignItems: 'center', justifyContent: 'center' },
   dotLine: { width: 18, height: 2.5, borderRadius: 2, transform: [{ rotate: '-40deg' }] },
 });

@@ -1,10 +1,10 @@
 import React, { memo, useEffect, useRef } from 'react';
-import { Animated, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { COLS, Cells } from '@/game/engine/ticket';
 import { fonts, goldGradient, radius } from '@/theme';
-import { HINT_COLORS, STRIKE_COLORS, TICKET_THEMES, TicketTheme } from '@/theme/ticketThemes';
+import { HINT_COLORS, STRIKE_COLORS, TICKET_THEMES, TicketTheme, toPalette } from '@/theme/ticketThemes';
 import { useSettingsStore } from '@/state/settingsStore';
 
 interface Props {
@@ -13,7 +13,7 @@ interface Props {
   marked: ReadonlySet<number>;
   /** Pulsing ring on the most recent call (if it's on this ticket and not struck yet). */
   lastCalled?: number | null;
-  /** Auto hint: called numbers not struck yet get a steady ring in the hint colour. */
+  /** Auto hint: called numbers not struck yet get a ring in the hint colour and gently pulse. */
   hinted?: ReadonlySet<number>;
   onPressNumber?: (n: number) => void;
   /** When given, tapping a number this returns false for just shakes the cell (not called yet). */
@@ -32,6 +32,7 @@ function Cell({
   struck,
   isLast,
   isHinted,
+  hintPulse,
   hint,
   fontSize,
   theme,
@@ -43,6 +44,7 @@ function Cell({
   struck: boolean;
   isLast: boolean;
   isHinted: boolean;
+  hintPulse: Animated.Value;
   hint: string;
   fontSize: number;
   theme: TicketTheme;
@@ -88,9 +90,12 @@ function Cell({
     onPress(n);
   };
 
+  const hinting = isHinted && !struck;
+  const scale = hinting || (isLast && !struck) ? hintPulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.09] }) : 1;
+
   return (
     <View style={styles.slot}>
-      <Animated.View style={[styles.circleWrap, { transform: [{ translateX: shake }] }]}>
+      <Animated.View style={[styles.circleWrap, { transform: [{ translateX: shake }, { scale }] }]}>
         <Pressable
           onPress={press}
           disabled={!onPress}
@@ -98,7 +103,7 @@ function Cell({
           style={[
             styles.circle,
             { backgroundColor: theme.cell, borderColor: theme.cellBorder },
-            isHinted && !struck && { borderColor: hint, borderWidth: 2.5, backgroundColor: hint + '22' },
+            hinting && { borderColor: hint, borderWidth: 2.5, backgroundColor: hint + '22' },
           ]}
         >
           {isLast && !struck ? (
@@ -123,16 +128,30 @@ function Cell({
   );
 }
 
-/** A 3×9 housie ticket of round number chips, in the player's chosen colours. */
+/** A 3×9 housie ticket of round number chips, lines between rows and column groups. */
 export const TicketView = memo(function TicketView({ cells, marked, lastCalled, hinted, onPressNumber, canStrike, label, badge, compact }: Props) {
-  const themeKey = useSettingsStore((s) => s.ticketTheme);
-  const strikeKey = useSettingsStore((s) => s.strikeColor);
-  const theme: TicketTheme = TICKET_THEMES[themeKey] ?? TICKET_THEMES.classic;
-  const strike = STRIKE_COLORS[strikeKey] ?? STRIKE_COLORS.purple;
-  const hintKey = useSettingsStore((s) => s.hintColor);
-  const hint = HINT_COLORS[hintKey] ?? HINT_COLORS.pink;
-  const fontSize = compact ? 13 : 16;
-  const gap = compact ? 3 : 4;
+  const theme = TICKET_THEMES[toPalette(useSettingsStore((s) => s.ticketTheme), 'purple')];
+  const strike = STRIKE_COLORS[toPalette(useSettingsStore((s) => s.strikeColor), 'purple')];
+  const hint = HINT_COLORS[toPalette(useSettingsStore((s) => s.hintColor), 'pink')];
+  const fontSize = compact ? 15 : 19;
+
+  // One shared, gentle zoom for every hinted number on this ticket.
+  const hintPulse = useRef(new Animated.Value(0)).current;
+  const pulsing = !!hinted?.size || (lastCalled != null && cells.includes(lastCalled) && !marked.has(lastCalled));
+  useEffect(() => {
+    if (!pulsing) {
+      hintPulse.setValue(0);
+      return;
+    }
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(hintPulse, { toValue: 1, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(hintPulse, { toValue: 0, duration: 700, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [pulsing, hintPulse]);
 
   return (
     <LinearGradient colors={theme.frame} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.frame}>
@@ -151,41 +170,46 @@ export const TicketView = memo(function TicketView({ cells, marked, lastCalled, 
             <Text style={[styles.brand, { color: theme.brand }]}>♛ HOUSIE TAMBOLA KING</Text>
           )}
         </View>
-        <View style={{ gap }}>
-          {[0, 1, 2].map((r) => (
-            <View key={r} style={[styles.row, { gap: compact ? 6 : 8 }]}>
+        {[0, 1, 2].map((r) => (
+          <View key={r}>
+            {r > 0 ? <View style={[styles.hLine, { backgroundColor: theme.divider }]} /> : null}
+            <View style={styles.row}>
               {[0, 1, 2].map((group) => (
-                <View key={group} style={[styles.group, { gap }]}>
-                  {[0, 1, 2].map((k) => {
-                    const c = group * 3 + k;
-                    const n = cells[r * COLS + c];
-                    return n === 0 ? (
-                      <View key={c} style={styles.slot}>
-                        <View style={[styles.circleWrap, styles.blankCircle, { backgroundColor: theme.blankCell }]}>
-                          <View style={[styles.blankDot, { backgroundColor: theme.blank }]} />
+                <React.Fragment key={group}>
+                  {group > 0 ? <View style={[styles.vLine, { backgroundColor: theme.divider }]} /> : null}
+                  <View style={styles.group}>
+                    {[0, 1, 2].map((k) => {
+                      const c = group * 3 + k;
+                      const n = cells[r * COLS + c];
+                      return n === 0 ? (
+                        <View key={c} style={styles.slot}>
+                          <View style={[styles.circleWrap, styles.blankCircle, { backgroundColor: theme.blankCell }]}>
+                            <View style={[styles.blankDot, { backgroundColor: theme.blank }]} />
+                          </View>
                         </View>
-                      </View>
-                    ) : (
-                      <Cell
-                        key={c}
-                        n={n}
-                        struck={marked.has(n)}
-                        isLast={lastCalled === n}
-                        isHinted={!!hinted?.has(n)}
-                        hint={hint}
-                        fontSize={fontSize}
-                        theme={theme}
-                        strike={strike}
-                        onPress={onPressNumber}
-                        canStrike={canStrike}
-                      />
-                    );
-                  })}
-                </View>
+                      ) : (
+                        <Cell
+                          key={c}
+                          n={n}
+                          struck={marked.has(n)}
+                          isLast={lastCalled === n}
+                          isHinted={!!hinted?.has(n)}
+                          hintPulse={hintPulse}
+                          hint={hint}
+                          fontSize={fontSize}
+                          theme={theme}
+                          strike={strike}
+                          onPress={onPressNumber}
+                          canStrike={canStrike}
+                        />
+                      );
+                    })}
+                  </View>
+                </React.Fragment>
               ))}
             </View>
-          ))}
-        </View>
+          </View>
+        ))}
       </View>
     </LinearGradient>
   );
@@ -201,17 +225,19 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 5 },
     elevation: 6,
   },
-  card: { borderRadius: radius.lg - 3, padding: 8 },
-  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8, gap: 8 },
+  card: { borderRadius: radius.lg - 3, paddingHorizontal: 4, paddingTop: 6, paddingBottom: 6 },
+  header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginBottom: 6, gap: 8, paddingHorizontal: 4 },
   tag: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   tagText: { fontFamily: fonts.bold, fontSize: 12, color: '#3B1D00', includeFontPadding: false },
   brand: { fontFamily: fonts.bold, fontSize: 9, letterSpacing: 1.5, includeFontPadding: false },
   badge: { backgroundColor: '#16A34A', borderRadius: 999, paddingHorizontal: 9, paddingVertical: 3, flexShrink: 1 },
   badgeText: { fontFamily: fonts.semibold, fontSize: 10, color: '#fff', includeFontPadding: false },
-  row: { flexDirection: 'row' },
+  row: { flexDirection: 'row', alignItems: 'center' },
   group: { flex: 3, flexDirection: 'row' },
-  slot: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  circleWrap: { width: '100%', maxWidth: 46, aspectRatio: 1 },
+  hLine: { height: 1.5, marginVertical: 3, marginHorizontal: 2, borderRadius: 1 },
+  vLine: { width: 1.5, alignSelf: 'stretch', marginHorizontal: 2, borderRadius: 1 },
+  slot: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: 1.5 },
+  circleWrap: { width: '100%', maxWidth: 54, aspectRatio: 1 },
   circle: {
     flex: 1,
     borderRadius: 999,

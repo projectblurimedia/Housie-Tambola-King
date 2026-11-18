@@ -1,4 +1,5 @@
 import * as Haptics from 'expo-haptics';
+import { requireOptionalNativeModule } from 'expo';
 import { FAST_PRIZES, LINE_PRIZES, COLUMN_PRIZES, PrizeType } from '@/game/engine/ticket';
 
 export type PrizeSound = 'fast' | 'line' | 'column' | 'fullhouse';
@@ -32,12 +33,17 @@ type AudioModule = {
 };
 
 /**
- * expo-audio is loaded lazily and guarded: builds made before it was added have no native
- * module, so they fall back to a haptic pattern instead of crashing.
+ * expo-audio is loaded lazily: builds made before it was added have no native module, and
+ * they fall back to a haptic pattern. The native module must be checked FIRST — requiring a
+ * package whose native side is missing is a fatal error in Metro (try/catch can't stop it).
  */
 let audio: AudioModule | null | undefined;
 function loadAudio(): AudioModule | null {
   if (audio !== undefined) return audio;
+  if (!requireOptionalNativeModule('ExpoAudio')) {
+    audio = null;
+    return audio;
+  }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     audio = require('expo-audio') as AudioModule;

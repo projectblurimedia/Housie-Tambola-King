@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -29,6 +30,7 @@ export function RoomChat({ state, meId, raised }: { state: RoomState; meId: stri
   const { colors } = useThemeColors();
   const qc = useQueryClient();
   const roomId = state.room.id;
+  const insets = useSafeAreaInsets();
   const [open, setOpen] = useState(false);
   const [text, setText] = useState('');
   const listRef = useRef<FlatList<ChatMessage>>(null);
@@ -70,7 +72,7 @@ export function RoomChat({ state, meId, raised }: { state: RoomState; meId: stri
       <Pressable
         onPress={() => setOpen(true)}
         accessibilityLabel={t('chat.title')}
-        style={({ pressed }) => [styles.fab, { bottom: raised ? spacing.xl + 74 : spacing.xl, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
+        style={({ pressed }) => [styles.fab, { bottom: (raised ? spacing.xl + 74 : spacing.xl) + insets.bottom, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
       >
         <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fabInner}>
           <Ionicons name="chatbubbles" size={26} color="#fff" />
@@ -170,7 +172,7 @@ export function RoomChat({ state, meId, raised }: { state: RoomState; meId: stri
               }}
             />
 
-            <Row style={[styles.inputRow, { borderTopColor: colors.border }]}>
+            <Row style={[styles.inputRow, { borderTopColor: colors.border, paddingBottom: spacing.lg + insets.bottom }]}>
               <TextInput
                 value={text}
                 onChangeText={(v) => setText(v.slice(0, 200))}

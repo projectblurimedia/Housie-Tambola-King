@@ -1,9 +1,9 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useKeepAwake } from 'expo-keep-awake';
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from '@react-navigation/native';
@@ -25,7 +25,7 @@ import { useMarksStore } from '@/state/marksStore';
 import { useSettingsStore } from '@/state/settingsStore';
 import { ClaimCheck, useClaimCheckStore } from '@/state/claimCheckStore';
 import { Button } from '@/components/ui';
-import { isPrizeComplete, prizeCompletedAt, remainingFor } from '@/game/engine/ticket';
+import { isPrizeComplete, prizeCompletedAt, prizeNumbers, remainingFor } from '@/game/engine/ticket';
 import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { Me, RoomState, Ticket } from '@/types/api';
 import { StandingsList } from './StandingsList';
@@ -50,6 +50,7 @@ export function LiveView({
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const navigation = useNavigation();
+  const insets = useSafeAreaInsets();
   const qc = useQueryClient();
   const caller = useCaller();
   const haptics = useSettingsStore((s) => s.haptics);
@@ -149,7 +150,16 @@ export function LiveView({
     onSuccess: () => qc.invalidateQueries({ queryKey: roomKey(room.id) }),
     onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
   });
-  const checks = useClaimCheckStore((s) => s.checks).filter((c) => c.gameId === game.id);
+  // A claim waiting for everyone to check replaces the number header until its time is up.
+  const activeCheck = useClaimCheckStore((s) => s.checks).find(
+    (c) => c.gameId === game.id && new Date(c.deadline).getTime() > serverNow() - 500,
+  );
+
+  // The timer bar stops where it is while the game is paused.
+  const livePct = Math.max(0, Math.min(100, 100 - (msToNext / (room.callIntervalSeconds * 1000)) * 100));
+  const frozenPct = useRef(livePct);
+  if (!game.paused) frozenPct.current = livePct;
+  const progressPct = game.paused ? frozenPct.current : livePct;
 
   const [confirmLeave, setConfirmLeave] = useState(false);
   const leave = () => setConfirmLeave(true);
@@ -169,11 +179,14 @@ export function LiveView({
               </T>
             </View>
             {isHost ? (
-              <IconButton icon="speedometer" color="#fff" onPress={() => setSettingsOpen(true)} accessibilityLabel={t('game.speedTitle')} />
+              <IconButton icon="timer-outline" color="#fff" onPress={() => setSettingsOpen(true)} accessibilityLabel={t('game.speedTitle')} />
             ) : (
               <View style={{ width: 40 }} />
             )}
           </Row>
+          {activeCheck ? (
+            <ClaimHeader key={activeCheck.prize + activeCheck.callIndex} check={activeCheck} state={state} me={me} serverNow={serverNow} />
+          ) : (
           <Row style={{ paddingHorizontal: spacing.lg, paddingTop: spacing.sm }} gap={spacing.lg}>
             <NumberBall number={last} size={112} />
             <View style={{ flex: 1 }}>
@@ -182,7 +195,9 @@ export function LiveView({
                   <T variant="h2" color="#fff">
                     {t('game.getReady')}
                   </T>
-                  <T color="rgba(255,255,255,0.85)">{t('game.firstNumberIn', { seconds: Math.max(0, Math.ceil(msToNext / 1000)) })}</T>
+                  <T color="rgba(255,255,255,0.85)">
+                    {game.paused ? t('game.paused') : t('game.firstNumberIn', { seconds: Math.max(0, Math.ceil(msToNext / 1000)) })}
+                  </T>
                 </>
               ) : (
                 <>
@@ -200,7 +215,7 @@ export function LiveView({
                         height: '100%',
                         borderRadius: 3,
                         backgroundColor: colors.gold,
-                        width: `${Math.max(0, Math.min(100, 100 - (msToNext / (room.callIntervalSeconds * 1000)) * 100))}%`,
+                        width: `${progressPct}%`,
                       }}
                     />
                   </View>
@@ -213,6 +228,7 @@ export function LiveView({
               )}
             </View>
           </Row>
+          )}
         </SafeAreaView>
       </LinearGradient>
 
@@ -224,9 +240,6 @@ export function LiveView({
           </T>
         </Pressable>
       ) : null}
-      {checks.map((c) => (
-        <ClaimCheckBanner key={c.prize} check={c} state={state} me={me} serverNow={serverNow} />
-      ))}
       <View style={{ paddingHorizontal: spacing.md, paddingTop: spacing.md }}>
         <Segmented
           value={tab}
@@ -240,7 +253,14 @@ export function LiveView({
         />
       </View>
 
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, gap: spacing.md, paddingBottom: spacing.xxl + (isHost ? 56 : 0) }}>
+      <ScrollView
+        contentContainerStyle={{
+          paddingHorizontal: tab === 'tickets' ? spacing.sm : spacing.lg,
+          paddingTop: spacing.md,
+          gap: spacing.md,
+          paddingBottom: spacing.xxl + insets.bottom + (isHost ? 64 : 0) + (room.chatEnabled ? 74 : 0),
+        }}
+      >
         {tab === 'tickets' ? (
           state.myTickets.length === 0 ? (
             <Card>
@@ -279,7 +299,7 @@ export function LiveView({
           onPress={() => togglePause.mutate()}
           disabled={togglePause.isPending}
           accessibilityLabel={game.paused ? t('game.resume') : t('game.pause')}
-          style={({ pressed }) => [styles.fab, { opacity: pressed || togglePause.isPending ? 0.8 : 1 }]}
+          style={({ pressed }) => [styles.fab, { bottom: spacing.xl + insets.bottom, opacity: pressed || togglePause.isPending ? 0.8 : 1 }]}
         >
           <LinearGradient colors={game.paused ? ['#22C55E', '#15803D'] : ['#F59E0B', '#D97706']} style={styles.fabInner}>
             <Ionicons name={game.paused ? 'play' : 'pause'} size={28} color="#fff" />
@@ -309,7 +329,6 @@ const styles = StyleSheet.create({
   fab: {
     position: 'absolute',
     right: spacing.lg,
-    bottom: spacing.xl,
     borderRadius: 32,
     elevation: 8,
     shadowColor: '#000',
@@ -318,68 +337,123 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 4 },
   },
   fabInner: { width: 62, height: 62, borderRadius: 31, alignItems: 'center', justifyContent: 'center' },
-  checkTimer: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  checkCard: { marginHorizontal: spacing.md, marginTop: spacing.sm, borderWidth: 2, gap: spacing.sm },
+  claimBox: {
+    marginHorizontal: spacing.md,
+    marginTop: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(236,72,153,0.35)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(253,230,138,0.6)',
+  },
+  bell: { fontSize: 34 },
+  checkBar: { height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.25)' },
   pausedBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 8 },
   progress: { height: 6, borderRadius: 3, marginTop: spacing.sm, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.25)' },
 });
 
 /**
- * Fastest finger + "check before announcing": someone claimed a prize — everyone gets a few
- * seconds to check their own tickets and claim too if they completed it on the same number.
+ * Normal rule ("check before announcing"): someone claimed a prize. This replaces the number
+ * header for the check time: who claimed what on which number, a countdown, and — for
+ * everyone else — "I have it too!", which strikes the missed numbers and claims a share.
+ * Players can also keep striking numbers they missed on their tickets below.
  */
-function ClaimCheckBanner({ check, state, me, serverNow }: { check: ClaimCheck; state: RoomState; me: Me; serverNow: () => number }) {
+function ClaimHeader({ check, state, me, serverNow }: { check: ClaimCheck; state: RoomState; me: Me; serverNow: () => number }) {
   const { t } = useTranslation();
-  const { colors } = useThemeColors();
   const qc = useQueryClient();
+  const strike = useMarksStore((s) => s.strike);
   const game = state.game!;
   const called = game.calledNumbers;
-  const number = called[check.callIndex - 1];
-  const left = Math.max(0, Math.ceil((new Date(check.deadline).getTime() - serverNow()) / 1000));
+  const number = called[check.callIndex - 1] ?? null;
+  const msLeft = Math.max(0, new Date(check.deadline).getTime() - serverNow());
+  const left = Math.ceil(msLeft / 1000);
+  const total = Math.max(1, state.room.checkSeconds * 1000);
   const mine = check.winners.some((w) => w.userId === me.id);
-  const names = check.winners.map((w) => (w.userId === me.id ? t('common.you') : w.name)).join(', ');
+  const names = check.winners.map((w) => (w.userId === me.id ? t('common.you') : w.name)).join(' & ');
+  const prize = t(`prizes.${check.prize}`);
+
+  const enter = useRef(new Animated.Value(0)).current;
+  const bell = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(enter, { toValue: 1, friction: 6, tension: 80, useNativeDriver: true }).start();
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bell, { toValue: 1, duration: 120, useNativeDriver: true }),
+        Animated.timing(bell, { toValue: -1, duration: 240, useNativeDriver: true }),
+        Animated.timing(bell, { toValue: 0, duration: 120, useNativeDriver: true }),
+        Animated.delay(900),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [enter, bell]);
 
   const claim = useMutation({
     mutationFn: async () => {
       const tickets = state.myTickets.filter((tk) => prizeCompletedAt(tk.cells, called, check.prize) === check.callIndex);
       if (!tickets.length) return 'none' as const;
-      let best: string = 'already_claimed';
+      // Strike the numbers that made it, in case some were missed.
+      const upTo = new Set(called.slice(0, check.callIndex));
+      tickets.forEach((tk) => prizeNumbers(tk.cells, check.prize).forEach((n) => upTo.has(n) && strike(tk.id, n)));
+      let best = 'already_claimed';
       for (const tk of tickets) {
         const r = await roomService.claim(tk.id, check.prize);
-        if (r === 'won' || r === 'shared') best = r;
+        if (r === 'won' || r === 'shared' || r === 'already_yours') best = 'shared';
       }
       return best;
     },
     onSuccess: (r) => {
-      const prize = t(`prizes.${check.prize}`);
       if (r === 'none') showToast({ variant: 'error', title: t('game.checkNotYours', { prize }) });
-      else if (r === 'won' || r === 'shared') showToast({ variant: 'prize', title: t('game.claimShared', { prize }) });
+      else if (r === 'shared') showToast({ variant: 'prize', title: t('game.claimShared', { prize }) });
       else showToast({ variant: 'info', title: t('game.claimTooLate', { prize }) });
       qc.invalidateQueries({ queryKey: roomKey(state.room.id) });
     },
     onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
   });
 
-  if (left <= 0 && !claim.isPending) return null;
   return (
-    <Card style={[styles.checkCard, { borderColor: colors.pink }]}>
-      <Row>
-        <T style={{ fontSize: 26, lineHeight: 34 }}>🔔</T>
+    <Animated.View
+      style={[
+        styles.claimBox,
+        {
+          opacity: enter,
+          transform: [
+            { scale: enter.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) },
+            { translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [-12, 0] }) },
+          ],
+        },
+      ]}
+    >
+      <Row gap={spacing.md}>
+        <Animated.Text style={[styles.bell, { transform: [{ rotate: bell.interpolate({ inputRange: [-1, 1], outputRange: ['-18deg', '18deg'] }) }] }]}>
+          🔔
+        </Animated.Text>
         <View style={{ flex: 1 }}>
-          <T variant="h3">{t('game.checkTitle', { name: names, prize: t(`prizes.${check.prize}`) })}</T>
-          <T variant="small" muted>
-            {mine ? t('game.checkWaitingOthers') : t('game.checkYours', { number: number ?? '' })}
+          <T variant="tiny" color="#FDE68A" style={{ letterSpacing: 1 }}>
+            {t('game.claimedLabel').toUpperCase()}
+          </T>
+          <T variant="h2" color="#fff" numberOfLines={2}>
+            {t('game.checkTitle', { name: names, prize })}
           </T>
         </View>
-        <View style={[styles.checkTimer, { backgroundColor: colors.pink }]}>
-          <T variant="h3" color="#fff">
-            {left}
-          </T>
-        </View>
+        {number !== null ? <MiniBall n={number} size={44} /> : null}
       </Row>
-      {!mine && state.myTickets.length ? (
-        <Button title={t('game.checkHaveIt')} variant="gold" icon="hand-left" small loading={claim.isPending} onPress={() => claim.mutate()} />
-      ) : null}
-    </Card>
+      <T variant="small" color="rgba(255,255,255,0.9)" style={{ marginTop: 6 }}>
+        {mine ? t('game.checkWaitingOthers') : t('game.checkYours', { number: number ?? '' })}
+      </T>
+      <Row gap={spacing.sm} style={{ marginTop: spacing.sm }}>
+        <View style={{ flex: 1, gap: 4 }}>
+          <View style={styles.checkBar}>
+            <View style={{ height: '100%', borderRadius: 4, backgroundColor: '#FDE68A', width: `${(msLeft / total) * 100}%` }} />
+          </View>
+          <T variant="tiny" color="rgba(255,255,255,0.8)">
+            {t('game.checkSecondsLeft', { count: left })}
+          </T>
+        </View>
+        {!mine && state.myTickets.length ? (
+          <Button title={t('game.checkHaveIt')} variant="gold" icon="hand-left" small loading={claim.isPending} onPress={() => claim.mutate()} />
+        ) : null}
+      </Row>
+    </Animated.View>
   );
 }

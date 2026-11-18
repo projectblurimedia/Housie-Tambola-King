@@ -77,6 +77,8 @@ export interface Room {
   checkClaims: boolean;
   /** Room chat on (host's choice at creation). */
   chatEnabled: boolean;
+  /** Normal rule: seconds everyone gets to check after a claim (5–60, default 10). */
+  checkSeconds: number;
 }
 
 /**

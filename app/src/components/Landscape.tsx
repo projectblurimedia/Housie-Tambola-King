@@ -1,6 +1,7 @@
 import React, { useEffect } from 'react';
 import { StyleSheet, useWindowDimensions, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { requireOptionalNativeModule } from 'expo';
 
 type OrientationModule = {
   lockAsync: (lock: number) => Promise<void>;
@@ -8,12 +9,17 @@ type OrientationModule = {
 };
 
 /**
- * expo-screen-orientation is loaded lazily and guarded: app builds made before it was added
- * have no native module, and those get the rotated-view fallback below instead.
+ * expo-screen-orientation is loaded lazily: app builds made before it was added have no native
+ * module and get the rotated-view fallback below. The native module must be checked FIRST —
+ * requiring a package whose native side is missing is a fatal error in Metro (uncatchable).
  */
 let orientation: OrientationModule | null | undefined;
 function loadOrientation(): OrientationModule | null {
   if (orientation !== undefined) return orientation;
+  if (!requireOptionalNativeModule('ExpoScreenOrientation')) {
+    orientation = null;
+    return orientation;
+  }
   try {
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     orientation = require('expo-screen-orientation') as OrientationModule;

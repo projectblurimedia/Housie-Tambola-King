@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
-import { SafeAreaView } from 'react-native-safe-area-context';
+import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -21,7 +21,11 @@ import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { useWinnerStore } from '@/state/winnerStore';
 import { useClaimCheckStore } from '@/state/claimCheckStore';
+import { useSettingsStore } from '@/state/settingsStore';
+import { playPrizeSound, soundFor } from '@/services/sounds';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RoomChat } from './parts/RoomChat';
+import { RoomSettingsCard } from './parts/RoomSettingsModal';
 import { APP_NAME } from '@/constants/config';
 import type { PrizeType } from '@/game/engine/ticket';
 import { gameLabel } from '@/utils/gameLabel';
@@ -215,6 +219,8 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
       <Card style={{ paddingVertical: spacing.md }}>
         <StepBar step={step} />
       </Card>
+
+      <RoomSettingsCard state={state} isHost={isHost} />
 
       {isHost && state.joinRequests.length ? (
         <Card style={{ borderColor: colors.pink, borderWidth: 2 }}>
@@ -494,11 +500,20 @@ function EndedPanel({ state, me, onPlayAgain, busy }: { state: RoomState; me: Me
   );
 }
 
-export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
+export function RoomScreen(props: ScreenProps<'Room'>) {
+  return (
+    <ErrorBoundary onBack={() => props.navigation.goBack()}>
+      <RoomScreenInner {...props} />
+    </ErrorBoundary>
+  );
+}
+
+function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
   const { roomId } = route.params;
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const qc = useQueryClient();
+  const insets = useSafeAreaInsets();
   const me = useMe();
   const meRef = useRef<string | undefined>(undefined);
   meRef.current = me.data?.id;
@@ -512,6 +527,7 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
 
   /** Read inside the realtime handler (which is created before the first fetch). */
   const checkClaimsRef = useRef(false);
+  const isHostRef = useRef(false);
   const onEvent = useCallback(
     (e: RoomEvent) => {
       switch (e.type) {
@@ -522,9 +538,13 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
           announce({ gameId: e.gameId, callIndex: e.callIndex, prize: e.prize, amount: Number(e.amount), winners: e.winners });
           if (e.winners.some((w) => w.userId === meRef.current)) caller.celebrate();
           break;
-        case 'claim_check':
+        case 'claim_check': {
+          const fresh = !useClaimCheckStore.getState().checks.some((c) => c.gameId === e.gameId && c.prize === e.prize);
           useClaimCheckStore.getState().add(e);
+          const { sounds, haptics } = useSettingsStore.getState();
+          if (fresh && sounds) playPrizeSound(soundFor(e.prize), haptics);
           break;
+        }
         case 'prize_settled':
           useClaimCheckStore.getState().remove(e.gameId, e.prize);
           // Checked rooms announce only now, once everyone had the chance to claim too.
@@ -538,6 +558,9 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
           break;
         case 'paused':
           showToast({ variant: e.paused ? 'error' : 'info', title: e.paused ? t('game.pausedToast') : t('game.resumedToast') });
+          break;
+        case 'room_settings':
+          if (!isHostRef.current) showToast({ variant: 'info', title: t('lobby.settingsUpdated') });
           break;
         case 'phase':
           showToast({ variant: 'info', title: t('lobby.ticketsOpenToast') });
@@ -570,6 +593,7 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
   const state = roomQuery.data;
   checkClaimsRef.current = !!state && state.room.checkClaims;
   const isHost = !!state && state.room.hostId === me.data?.id;
+  isHostRef.current = isHost;
 
   useEffect(
     () => () => {
@@ -671,7 +695,7 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
           ]}
         />
       </View>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl + (state.room.chatEnabled ? 72 : 0) }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl + insets.bottom + (state.room.chatEnabled ? 72 : 0) }}>
         {tab === 'game' ? (
           ended || !state.game ? (
             <EndedPanel state={state} me={me.data} onPlayAgain={() => playAgain.mutate()} busy={playAgain.isPending} />

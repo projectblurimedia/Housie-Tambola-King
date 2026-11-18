@@ -14,7 +14,9 @@
     "you": "You",
     "edit": "Edit",
     "seconds": "{{count}}s",
-    "minutesSeconds": "{{m}}m {{s}}s"
+    "minutesSeconds": "{{m}}m {{s}}s",
+    "on": "On",
+    "off": "Off"
   },
   "app": {
     "tagline": "Play Housie live with family & friends"
@@ -102,7 +104,9 @@
     "autoHint": "Auto hint",
     "autoHintDesc": "Called numbers glow on tickets so nobody misses one. Players still tap to strike.",
     "chat": "Room chat",
-    "chatDesc": "Players can chat with each other during the room"
+    "chatDesc": "Players can chat with each other during the room",
+    "checkTime": "Time to check",
+    "checkTimeDesc": "After a claim, how long everyone gets to check their tickets and claim too"
   },
   "join": {
     "title": "Join Room",
@@ -194,7 +198,12 @@
     "waitingForTickets_other": "Waiting for {{count}} players to take tickets…",
     "waitingHostTickets": "Waiting for {{name}} to open tickets…",
     "setAndPlay": "Set & Play",
-    "ticketsOpenToast": "Tickets are open — choose yours now!"
+    "ticketsOpenToast": "Tickets are open — choose yours now!",
+    "roomSettings": "Room settings",
+    "editSettings": "Edit settings",
+    "settingsSaved": "Room settings saved",
+    "settingsUpdated": "The host updated the room settings",
+    "priceLocked": "Ticket price can’t change after tickets are taken."
   },
   "game": {
     "getReady": "Get ready…",
@@ -229,7 +238,10 @@
     "checkNotYours": "Your tickets did not complete {{prize}} on that number.",
     "speedTitle": "Calling speed",
     "secShort": "sec",
-    "autoHintOn": "Glowing numbers are called — tap them."
+    "autoHintOn": "Glowing numbers are called — tap them.",
+    "claimedLabel": "Claimed!",
+    "checkSecondsLeft_one": "{{count}} second left — strike any number you missed",
+    "checkSecondsLeft_other": "{{count}} seconds left — strike any number you missed"
   },
   "winner": {
     "title": "WINNER!",
@@ -426,7 +438,10 @@
     "TICKETS_NOT_OPEN": "Tickets are not open yet. Wait for the host.",
     "CHAT_OFF": "Chat is turned off in this room.",
     "CHAT_TOO_FAST": "Slow down — wait a few seconds before sending more.",
-    "INVALID_MESSAGE": "Type a message (up to 200 characters)."
+    "INVALID_MESSAGE": "Type a message (up to 200 characters).",
+    "screenCrashed": "Something went wrong",
+    "screenCrashedHint": "Tap Try again — your game continues on the server.",
+    "PRICE_LOCKED": "Ticket price can’t change after tickets are taken."
   },
   "update": {
     "title": "Updating app…",
@@ -472,14 +487,6 @@
     "title": "Ticket style",
     "background": "Ticket colour",
     "strike": "Strike colour",
-    "themes": {
-      "classic": "Classic",
-      "mint": "Mint",
-      "sky": "Sky",
-      "rose": "Rose",
-      "sunset": "Sunset",
-      "night": "Night"
-    },
     "looks": "Ready-made looks",
     "previewHint": "Struck numbers, the newest call and hints — exactly as in a game",
     "hint": "Hint colour",
@@ -489,9 +496,15 @@
       "ocean": "Ocean",
       "blossom": "Blossom",
       "festival": "Festival",
-      "midnight": "Midnight",
-      "king": "King",
-      "fresh": "Fresh"
+      "ruby": "Ruby"
+    },
+    "colors": {
+      "purple": "Purple",
+      "green": "Green",
+      "blue": "Blue",
+      "pink": "Pink",
+      "orange": "Orange",
+      "red": "Red"
     }
   },
   "chat": {

@@ -24,6 +24,8 @@ _Last updated: 2026-11-18_
 - Lobby steps every game: players join → host "Next" → everyone takes tickets → host "Next" (all have tickets) → set prizes & play.
 - Claim rules: **Normal** (default; 10 s "check your tickets", same-number wins shared, then the announcement) or **Fastest finger** (first claim wins alone). Fair play removed.
 - Auto hint (called numbers glow; never auto-marked). Prizes per game only (no prize choice at creation).
+- Host can edit room settings in the lobby (visible to all). Normal rule has a check time (default 10 s); the claim replaces the number header with a sound.
+- Native modules added after the last APK (expo-audio, expo-screen-orientation, expo-navigation-bar) are loaded only if requireOptionalNativeModule finds them — a plain require crashes the app.
 - Room chat (host option, default on; per-player mute). **Voice chat pending**: needs a provider (LiveKit/Agora, owner's account) + a native build.
 - Voice, sounds and ticket style live only in Profile. Caller Mode is landscape (real rotation needs expo-screen-orientation → next build; current APK draws it rotated).
 - Wins on the same number show on one card; prize sounds (fast/line/column/full house; full house wins). Sounds need expo-audio → only in the next APK build; the current APK falls back to haptics.
@@ -37,7 +39,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (10 migrations, latest 20261121000001_normal_fastest_chat) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (11 migrations, latest 20261122000001_check_time_room_settings) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |

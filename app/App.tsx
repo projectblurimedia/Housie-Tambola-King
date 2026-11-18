@@ -22,6 +22,7 @@ import { useSessionStore } from '@/state/sessionStore';
 import { useSettingsStore } from '@/state/settingsStore';
 import { useMe } from '@/hooks/useMe';
 import { registerForPush } from '@/services/pushService';
+import { hideNavigationBar } from '@/services/systemBars';
 import { toAppError } from '@/services/errors';
 import { useThemeColors } from '@/theme';
 
@@ -115,6 +116,13 @@ export default function App() {
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', onAppStateChange);
+    return () => sub.remove();
+  }, []);
+
+  // Full-screen game: no Back / Home / Recents bar over the buttons at the bottom.
+  useEffect(() => {
+    hideNavigationBar();
+    const sub = AppState.addEventListener('change', (s) => s === 'active' && hideNavigationBar());
     return () => sub.remove();
   }, []);
 

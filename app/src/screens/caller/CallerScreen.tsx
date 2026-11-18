@@ -7,6 +7,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { CalledBoard } from '@/components/CalledBoard';
 import { Landscape } from '@/components/Landscape';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MiniBall, NumberBall } from '@/components/NumberBall';
 import { Button, Chip, IconButton, Row, T } from '@/components/ui';
 import { useCaller } from '@/hooks/useCaller';
@@ -62,7 +63,15 @@ function RoundButton({ icon, label, onPress, disabled, tint = '#fff' }: { icon: 
   );
 }
 
-export function CallerScreen({ navigation }: ScreenProps<'Caller'>) {
+export function CallerScreen(props: ScreenProps<'Caller'>) {
+  return (
+    <ErrorBoundary onBack={() => props.navigation.goBack()}>
+      <CallerScreenInner {...props} />
+    </ErrorBoundary>
+  );
+}
+
+function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
   useKeepAwake();
   const { t } = useTranslation();
   const { colors } = useThemeColors();

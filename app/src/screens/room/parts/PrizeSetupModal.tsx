@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
@@ -81,6 +82,7 @@ export function PrizeSetupModal({
   };
 
   // Keep the focused amount above the keyboard: scroll its row into view once the keyboard is up.
+  const insets = useSafeAreaInsets();
   const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
   const groupY = useRef<Record<string, number>>({});
   const rowY = useRef<Partial<Record<PrizeType, { group: string; y: number }>>>({});
@@ -98,7 +100,7 @@ export function PrizeSetupModal({
       {/* The modal window doesn't resize for the keyboard on Android (edge-to-edge), so pad on both. */}
       <KeyboardAvoidingView behavior="padding" style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
-        <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
+        <View style={[styles.sheet, { backgroundColor: colors.surface, paddingBottom: spacing.xl + insets.bottom }]}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
           <T variant="h1">{t('lobby.prizeSetupTitle')}</T>
           {hint ? (

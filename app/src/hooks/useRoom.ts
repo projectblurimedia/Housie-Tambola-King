@@ -18,7 +18,8 @@ export type RoomEvent =
   | { type: 'members'; memberCount: number; joined?: string; removed?: string }
   | { type: 'room_ended'; reason: string }
   | { type: 'join_request'; userId: string; name: string }
-  | { type: 'chat'; message: ChatMessage };
+  | { type: 'chat'; message: ChatMessage }
+  | { type: 'room_settings' };
 
 /** How late a number may be before this phone nudges the server clock itself. */
 const NUDGE_GRACE_MS = 2500;
@@ -152,6 +153,10 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
       .on('broadcast', { event: 'claim_check' }, ({ payload }) => {
         refetch();
         emit({ type: 'claim_check', ...(payload as Omit<Extract<RoomEvent, { type: 'claim_check' }>, 'type'>) });
+      })
+      .on('broadcast', { event: 'room_settings' }, () => {
+        refetch();
+        emit({ type: 'room_settings' });
       })
       .on('broadcast', { event: 'chat' }, ({ payload }) => {
         const message = payload as ChatMessage;

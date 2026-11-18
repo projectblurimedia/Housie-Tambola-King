@@ -1,4 +1,10 @@
-/** Ticket looks the player can pick (Profile → Ticket style, or in-game settings). */
+/**
+ * Ticket looks the player can pick (Profile → Ticket style). Ticket, strike and hint colours
+ * all use the SAME six colours, so every row of choices matches.
+ */
+export const PALETTE = ['purple', 'green', 'blue', 'pink', 'orange', 'red'] as const;
+export type PaletteKey = (typeof PALETTE)[number];
+
 export interface TicketTheme {
   /** Outer frame gradient. */
   frame: [string, string, ...string[]];
@@ -8,116 +14,149 @@ export interface TicketTheme {
   cell: string;
   cellBorder: string;
   ink: string;
-  /** The little dot in a blank cell. */
+  /** The little dot in a blank cell, and the blank circle's fill. */
   blank: string;
-  /** Fill of a blank (no number) circle. */
   blankCell: string;
+  /** Lines between the 3 rows and the 3 column groups. */
+  divider: string;
   /** Brand line text. */
   brand: string;
 }
 
-export const TICKET_THEMES = {
-  classic: {
+export const TICKET_THEMES: Record<PaletteKey, TicketTheme> = {
+  purple: {
     frame: ['#4C1D95', '#7C3AED', '#C026D3'],
     paper: '#FFF8E7',
     cell: '#FFFFFF',
     cellBorder: '#E8DCBF',
     ink: '#2E1065',
-    blank: 'rgba(180,83,9,0.22)',
+    blank: 'rgba(124,58,237,0.3)',
     blankCell: '#F3E6C5',
+    divider: 'rgba(124,58,237,0.35)',
     brand: 'rgba(76,29,149,0.45)',
   },
-  mint: {
+  green: {
     frame: ['#065F46', '#059669', '#34D399'],
     paper: '#ECFDF5',
     cell: '#FFFFFF',
     cellBorder: '#A7F3D0',
     ink: '#064E3B',
-    blank: 'rgba(5,150,105,0.25)',
+    blank: 'rgba(5,150,105,0.3)',
     blankCell: '#D1FAE5',
+    divider: 'rgba(5,150,105,0.35)',
     brand: 'rgba(6,95,70,0.45)',
   },
-  sky: {
+  blue: {
     frame: ['#1E3A8A', '#2563EB', '#38BDF8'],
     paper: '#EFF6FF',
     cell: '#FFFFFF',
     cellBorder: '#BFDBFE',
     ink: '#1E3A8A',
-    blank: 'rgba(37,99,235,0.25)',
+    blank: 'rgba(37,99,235,0.3)',
     blankCell: '#DBEAFE',
+    divider: 'rgba(37,99,235,0.35)',
     brand: 'rgba(30,58,138,0.45)',
   },
-  rose: {
+  pink: {
     frame: ['#9D174D', '#DB2777', '#F472B6'],
     paper: '#FFF1F2',
     cell: '#FFFFFF',
     cellBorder: '#FBCFE8',
     ink: '#831843',
-    blank: 'rgba(219,39,119,0.25)',
+    blank: 'rgba(219,39,119,0.3)',
     blankCell: '#FFE4E6',
+    divider: 'rgba(219,39,119,0.35)',
     brand: 'rgba(157,23,77,0.45)',
   },
-  sunset: {
+  orange: {
     frame: ['#9A3412', '#EA580C', '#FBBF24'],
     paper: '#FFFBEB',
     cell: '#FFFFFF',
     cellBorder: '#FDE68A',
     ink: '#7C2D12',
-    blank: 'rgba(234,88,12,0.25)',
+    blank: 'rgba(234,88,12,0.3)',
     blankCell: '#FEF3C7',
+    divider: 'rgba(234,88,12,0.35)',
     brand: 'rgba(154,52,18,0.45)',
   },
-  night: {
-    frame: ['#0F172A', '#334155', '#64748B'],
-    paper: '#1E293B',
-    cell: '#0F172A',
-    cellBorder: '#475569',
-    ink: '#F8FAFC',
-    blank: 'rgba(148,163,184,0.35)',
-    blankCell: '#273449',
-    brand: 'rgba(226,232,240,0.45)',
+  red: {
+    frame: ['#7F1D1D', '#DC2626', '#F87171'],
+    paper: '#FEF2F2',
+    cell: '#FFFFFF',
+    cellBorder: '#FECACA',
+    ink: '#7F1D1D',
+    blank: 'rgba(220,38,38,0.3)',
+    blankCell: '#FEE2E2',
+    divider: 'rgba(220,38,38,0.35)',
+    brand: 'rgba(127,29,29,0.45)',
   },
-} satisfies Record<string, TicketTheme>;
-export type TicketThemeKey = keyof typeof TICKET_THEMES;
+};
 
 /** Strike colours: disc gradient + the strike line across it. */
-export const STRIKE_COLORS = {
+export const STRIKE_COLORS: Record<PaletteKey, { disc: [string, string]; line: string }> = {
   purple: { disc: ['#8B5CF6', '#6D28D9'], line: '#FDE68A' },
-  red: { disc: ['#F87171', '#DC2626'], line: '#FFFFFF' },
   green: { disc: ['#4ADE80', '#16A34A'], line: '#FFFFFF' },
   blue: { disc: ['#60A5FA', '#2563EB'], line: '#FFFFFF' },
-  orange: { disc: ['#FB923C', '#EA580C'], line: '#FFFFFF' },
   pink: { disc: ['#F472B6', '#DB2777'], line: '#FFFFFF' },
-  gold: { disc: ['#FDE68A', '#F5B700'], line: '#7C2D12' },
-} satisfies Record<string, { disc: [string, string]; line: string }>;
-export type StrikeColorKey = keyof typeof STRIKE_COLORS;
+  orange: { disc: ['#FB923C', '#EA580C'], line: '#FFFFFF' },
+  red: { disc: ['#F87171', '#DC2626'], line: '#FFFFFF' },
+};
 
 /** Hint colour: the ring on the newest number and (with Auto hint) every called number. */
-export const HINT_COLORS = {
+export const HINT_COLORS: Record<PaletteKey, string> = {
+  purple: '#8B5CF6',
+  green: '#22C55E',
+  blue: '#3B82F6',
   pink: '#EC4899',
-  gold: '#F59E0B',
-  cyan: '#06B6D4',
-  lime: '#84CC16',
+  orange: '#F97316',
   red: '#EF4444',
-  violet: '#8B5CF6',
-} as const;
-export type HintColorKey = keyof typeof HINT_COLORS;
+};
+
+/** Swatch shown for a palette colour in the pickers. */
+export const PALETTE_SWATCH: Record<PaletteKey, [string, string]> = {
+  purple: ['#8B5CF6', '#6D28D9'],
+  green: ['#4ADE80', '#16A34A'],
+  blue: ['#60A5FA', '#2563EB'],
+  pink: ['#F472B6', '#DB2777'],
+  orange: ['#FB923C', '#EA580C'],
+  red: ['#F87171', '#DC2626'],
+};
+
+export type TicketThemeKey = PaletteKey;
+export type StrikeColorKey = PaletteKey;
+export type HintColorKey = PaletteKey;
 
 export interface TicketCombo {
   key: string;
-  theme: TicketThemeKey;
-  strike: StrikeColorKey;
-  hint: HintColorKey;
+  theme: PaletteKey;
+  strike: PaletteKey;
+  hint: PaletteKey;
 }
 
 /** Ready-made looks where ticket, strike and hint colours suit each other. First = default. */
 export const TICKET_COMBOS: TicketCombo[] = [
-  { key: 'royal', theme: 'classic', strike: 'purple', hint: 'pink' },
-  { key: 'emerald', theme: 'mint', strike: 'green', hint: 'gold' },
-  { key: 'ocean', theme: 'sky', strike: 'blue', hint: 'pink' },
-  { key: 'blossom', theme: 'rose', strike: 'pink', hint: 'violet' },
-  { key: 'festival', theme: 'sunset', strike: 'orange', hint: 'red' },
-  { key: 'midnight', theme: 'night', strike: 'gold', hint: 'cyan' },
-  { key: 'king', theme: 'classic', strike: 'gold', hint: 'red' },
-  { key: 'fresh', theme: 'sky', strike: 'green', hint: 'lime' },
+  { key: 'royal', theme: 'purple', strike: 'purple', hint: 'pink' },
+  { key: 'emerald', theme: 'green', strike: 'green', hint: 'orange' },
+  { key: 'ocean', theme: 'blue', strike: 'blue', hint: 'pink' },
+  { key: 'blossom', theme: 'pink', strike: 'pink', hint: 'purple' },
+  { key: 'festival', theme: 'orange', strike: 'orange', hint: 'red' },
+  { key: 'ruby', theme: 'red', strike: 'red', hint: 'blue' },
 ];
+
+/** Old saved values (before the shared palette) → palette colours. */
+const LEGACY: Record<string, PaletteKey> = {
+  classic: 'purple',
+  mint: 'green',
+  sky: 'blue',
+  rose: 'pink',
+  sunset: 'orange',
+  night: 'purple',
+  gold: 'orange',
+  cyan: 'blue',
+  lime: 'green',
+  violet: 'purple',
+};
+export function toPalette(value: string | undefined, fallback: PaletteKey): PaletteKey {
+  if (value && (PALETTE as readonly string[]).includes(value)) return value as PaletteKey;
+  return (value && LEGACY[value]) || fallback;
+}

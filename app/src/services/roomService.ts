@@ -30,6 +30,18 @@ export interface CreateRoomInput {
   /** Auto hint (highlight called numbers). */
   autoMark: boolean;
   chatEnabled: boolean;
+  checkSeconds: number;
+}
+
+export interface RoomSettingsInput {
+  title: string;
+  visibility: RoomVisibility;
+  maxPlayers: number;
+  ticketPrice: number;
+  rule: ClaimRule;
+  checkSeconds: number;
+  autoMark: boolean;
+  chatEnabled: boolean;
 }
 
 export type ClaimResult = 'won' | 'shared' | 'already_claimed' | 'already_yours' | 'not_complete' | 'auto';
@@ -50,6 +62,7 @@ export const roomService = {
         p_auto_mark: input.autoMark,
         p_check_claims: input.rule === 'normal',
         p_chat_enabled: input.chatEnabled,
+        p_check_seconds: input.checkSeconds,
       }),
     ) as { roomId: string; code: string };
   },
@@ -78,6 +91,22 @@ export const roomService = {
 
   async setPaused(gameId: string, paused: boolean): Promise<void> {
     unwrap(await supabase.rpc('set_game_paused', { p_game: gameId, p_paused: paused }));
+  },
+
+  async updateSettings(roomId: string, input: RoomSettingsInput): Promise<void> {
+    unwrap(
+      await supabase.rpc('update_room_settings', {
+        p_room: roomId,
+        p_title: input.title,
+        p_visibility: input.visibility,
+        p_max_players: input.maxPlayers,
+        p_ticket_price: input.ticketPrice,
+        p_check_claims: input.rule === 'normal',
+        p_check_seconds: input.checkSeconds,
+        p_auto_mark: input.autoMark,
+        p_chat_enabled: input.chatEnabled,
+      }),
+    );
   },
 
   async getChat(roomId: string): Promise<ChatMessage[]> {

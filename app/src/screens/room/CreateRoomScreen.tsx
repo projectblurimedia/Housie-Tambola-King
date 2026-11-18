@@ -10,6 +10,7 @@ import { showToast } from '@/state/toastStore';
 import type { PrizeType } from '@/game/engine/ticket';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import type { ClaimRule, RoomKind, RoomVisibility } from '@/types/api';
+import { CheckTimePicker } from './parts/RoomSettingsModal';
 import type { ScreenProps } from '@/navigation/types';
 
 /**
@@ -75,6 +76,8 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [price, setPrice] = useState('10');
   const [rule, setRule] = useState<ClaimRule>('normal');
   const [autoHint, setAutoHint] = useState(false);
+  /** Normal rule: seconds everyone gets to check after a claim. */
+  const [checkSeconds, setCheckSeconds] = useState(10);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -97,6 +100,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         rule,
         autoMark: autoHint,
         chatEnabled,
+        checkSeconds,
       });
       qc.invalidateQueries({ queryKey: ['myRooms'] });
       navigation.replace('Room', { roomId });
@@ -213,6 +217,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
           </Card>
         ))}
       </Row>
+      {rule === 'normal' ? <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} /> : null}
       <OptionToggle icon="bulb" title={t('create.autoHint')} desc={t('create.autoHintDesc')} value={autoHint} onChange={setAutoHint} />
       <OptionToggle icon="chatbubbles" title={t('create.chat')} desc={t('create.chatDesc')} value={chatEnabled} onChange={setChatEnabled} />
 

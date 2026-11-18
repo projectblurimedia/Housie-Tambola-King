@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n, { deviceLanguage, SupportedLanguage } from '@/localization/i18n';
-import type { HintColorKey, StrikeColorKey, TicketThemeKey } from '@/theme/ticketThemes';
+import { toPalette, type HintColorKey, type StrikeColorKey, type TicketThemeKey } from '@/theme/ticketThemes';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -49,7 +49,7 @@ export const useSettingsStore = create<SettingsState>()(
       voiceByLanguage: {},
       voiceStyle: 'normal',
       sounds: true,
-      ticketTheme: 'classic',
+      ticketTheme: 'purple',
       strikeColor: 'purple',
       hintColor: 'pink',
       isHydrated: false,
@@ -63,6 +63,17 @@ export const useSettingsStore = create<SettingsState>()(
     }),
     {
       name: 'settings-storage',
+      // v1: ticket / strike / hint colours share one palette (old theme names are mapped).
+      version: 1,
+      migrate: (persisted) => {
+        const s = (persisted ?? {}) as Record<string, unknown>;
+        return {
+          ...s,
+          ticketTheme: toPalette(s.ticketTheme as string | undefined, 'purple'),
+          strikeColor: toPalette(s.strikeColor as string | undefined, 'purple'),
+          hintColor: toPalette(s.hintColor as string | undefined, 'pink'),
+        } as never;
+      },
       storage: createJSONStorage(() => AsyncStorage),
       partialize: ({ isHydrated: _h, setLanguage: _a, confirmLanguage: _b, set: _c, setVoiceFor: _d, ...rest }) => rest,
       onRehydrateStorage: () => (state) => {

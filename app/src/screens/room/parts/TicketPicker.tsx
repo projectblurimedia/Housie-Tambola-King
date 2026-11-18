@@ -1,3 +1,4 @@
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Modal, Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -27,6 +28,7 @@ export function TicketPicker({
   onPick: (count: number) => void;
   onClose: () => void;
 }) {
+  const insets = useSafeAreaInsets();
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const slide = useRef(new Animated.Value(0)).current;
@@ -47,6 +49,7 @@ export function TicketPicker({
           <Animated.View
             style={[
               styles.sheet,
+              { paddingBottom: spacing.xxl + insets.bottom },
               { backgroundColor: colors.surface, transform: [{ translateY: slide.interpolate({ inputRange: [0, 1], outputRange: [400, 0] }) }] },
             ]}
           >

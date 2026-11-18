@@ -32,10 +32,11 @@ A series' next game starts again at step 1.
 
 ## Room options
 - **Claim rule** — two options:
-  - **Normal** (default): when someone claims, every phone shows "X claimed Fast 5 — check your tickets" with a 10 s countdown and an **I have it too!** button. Anyone whose ticket completed the same prize on the same number joins the win (split equally). Then the winner is announced (7 s pause).
+  - **Normal** (default): when someone claims, the number header on every phone is replaced (with a sound) by "X claimed Fast 5 — check your tickets" and a countdown (the host's check time: 5/10/15/20/30 s, default 10). Players can strike numbers they missed meanwhile; **I have it too!** strikes the winning numbers and claims and an **I have it too!** button. Anyone whose ticket completed the same prize on the same number joins the win (split equally). Then the winner is announced (7 s pause).
   - **Fastest finger**: the first claim wins it alone — no sharing.
   (Fair play was removed on 2026-11-18; old fair rooms became Normal.)
-- **Auto hint**: called numbers glow on tickets (in the player's hint colour); players still tap to strike. Nothing is marked automatically.
+- **Room settings**: everyone sees them in the lobby; the host can edit them (name, rule, check time, price, max players, public/private, auto hint, chat) until the game starts — the ticket price only until tickets are taken.
+- **Auto hint**: called numbers glow and gently pulse on tickets (in the player's hint colour); players still tap to strike. Nothing is marked automatically.
 - **Room chat** (host's choice, on by default): floating chat button; each player can mute anyone for themselves. Voice chat is planned (needs a voice provider + a new app build).
 - Default calling speed 3 s (set in game, 1–10 s). During a game the host has an on-screen **pause/play** button and can change the speed in settings; every phone gets a message when the speed changes or the game is paused/resumed. Voice, sounds and ticket style (ready-made looks, ticket / strike / hint colours) are set only in Profile.
 - Numbers pause for 8 s after a prize is won (7 s after a checked claim) so everyone sees the winner announcement.
