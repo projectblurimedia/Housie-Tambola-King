@@ -114,12 +114,6 @@ function PublicRoomCard({ room, onPress }: { room: PublicRoomSummary; onPress: (
         <T variant="h3" numberOfLines={1}>
           {room.title}
         </T>
-        <Row gap={6}>
-          <Avatar avatarKey={room.hostAvatar ?? 'a1'} size={20} />
-          <T variant="small" muted numberOfLines={1} style={{ flex: 1 }}>
-            {t('join.hostedBy', { name: room.hostName ?? '' })}
-          </T>
-        </Row>
         {/* Seats taken. */}
         <View style={{ gap: 4 }}>
           <Row style={{ justifyContent: 'space-between' }}>

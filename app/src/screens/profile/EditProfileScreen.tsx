@@ -48,7 +48,7 @@ export function EditProfileScreen({ navigation }: ScreenProps<'EditProfile'>) {
       <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: spacing.md, justifyContent: 'center' }}>
         {AVATAR_KEYS.map((key) => (
           <Pressable key={key} onPress={() => setAvatar(key)}>
-            <Avatar avatarKey={key} size={56} ring={key === avatar ? colors.primary : undefined} />
+            <Avatar avatarKey={key} size={52} ring={key === avatar ? colors.primary : undefined} />
           </Pressable>
         ))}
       </View>

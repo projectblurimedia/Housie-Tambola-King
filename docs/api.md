@@ -13,7 +13,7 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | RPC | Args | Returns | Errors |
 |---|---|---|---|
 | `get_me` | – | profile + stats | `PROFILE_NOT_FOUND` |
-| `update_my_profile` | `p_display_name?, p_avatar_key?, p_language?` | `get_me` | `INVALID_DISPLAY_NAME`, `INVALID_AVATAR` |
+| `update_my_profile` | `p_display_name?, p_avatar_key? (a1…a50), p_language?` | `get_me` | `INVALID_DISPLAY_NAME`, `INVALID_AVATAR` |
 | `delete_my_account` | – | – | – |
 | `create_room` | `p_title, p_kind (normal/series), p_visibility (public/private), p_max_players, p_ticket_price, p_call_interval_seconds, p_series_length, p_prizes {prize: ₹}, p_claim_mode ('fastest' | 'fair' = Auto), p_auto_mark (= auto hint), p_check_claims (true = Normal rule, false = Fastest finger), p_chat_enabled (default true), p_check_seconds (5–60, default 10)` | `{roomId, code}` | `INVALID_PRIZES`, `INVALID_TICKET_PRICE`, `INVALID_MAX_PLAYERS`, `INVALID_SERIES_LENGTH`, `TOO_MANY_OPEN_ROOMS` |
 | `join_room_by_code` | `p_code` | `{roomId, status: member/pending}` (host must accept) | `ROOM_NOT_FOUND`, `ROOM_FULL`, `ROOM_ENDED` |

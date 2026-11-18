@@ -50,8 +50,8 @@ function KingBadge({ size }: { size: number }) {
 }
 
 /**
- * The app title as real text (crisp on every phone): crown · "Housie Tambola" in Baloo 2
- * ExtraBold · a gold KING badge — all on one line, shrinking to fit narrow phones.
+ * The app title as real text (crisp on every phone): "Housie Tambola" in Baloo 2 ExtraBold
+ * followed by the gold crown — the crown is the "King". One line, shrinking to fit.
  *  - "large": Welcome screen, centred
  *  - "small": Home header
  */
@@ -99,7 +99,6 @@ export function Wordmark({ size = 'large' }: { size?: 'large' | 'small' }) {
   const font = size === 'large' ? 30 : 24;
   return (
     <View style={[styles.row, size === 'large' && { justifyContent: 'center' }]}>
-      <AppEmblem size={size === 'large' ? 46 : 38} />
       <Text
         style={[styles.title, { fontSize: font, lineHeight: font * 1.25 }]}
         numberOfLines={1}
@@ -108,7 +107,8 @@ export function Wordmark({ size = 'large' }: { size?: 'large' | 'small' }) {
       >
         Housie Tambola
       </Text>
-      <KingBadge size={size === 'large' ? 24 : 20} />
+      {/* The crown is the "King": Housie Tambola 👑 */}
+      <Crown width={size === 'large' ? 46 : 36} />
     </View>
   );
 }

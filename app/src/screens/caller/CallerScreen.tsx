@@ -73,7 +73,7 @@ function RoundButton({
   label,
   onPress,
   disabled,
-  colors = ['#60A5FA', '#4F46E5'],
+  colors = ['#F472B6', '#E11D48'],
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
@@ -215,7 +215,8 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       >
                         {/* Compact round button beside Settings — never crowds the title. */}
                         <LinearGradient colors={['#F472B6', '#E11D48']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.newGame}>
-                          <Ionicons name="refresh" size={19} color="#fff" style={styles.iconCentred} />
+                          {/* The refresh glyph sits a touch low in its box: lift it to the true centre. */}
+                          <Ionicons name="refresh" size={19} color="#fff" style={[styles.iconCentred, { marginTop: -2 }]} />
                         </LinearGradient>
                       </Pressable>
                     )}
