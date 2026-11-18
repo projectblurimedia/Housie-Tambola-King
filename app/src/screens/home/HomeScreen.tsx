@@ -386,21 +386,21 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <LinearGradient colors={heroGradient} style={styles.hero}>
         <SafeAreaView edges={['top']}>
-          {/* The logo is the title; greeting beside it; profile photo on the right. */}
-          <Row style={{ alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
+          {/* Logo + the title lettered like the logo (Housie / Tambola / King); photo on the right. */}
+          <Row style={{ alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
             <Wordmark size="small" />
-            <View style={{ flex: 1, gap: 2 }}>
-              <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                {t('home.greeting', { name: me.data?.displayName ?? '' })}
-              </Text>
-              <T variant="tiny" color="rgba(255,255,255,0.8)" numberOfLines={2}>
-                {t('app.tagline')}
-              </T>
-            </View>
             <Pressable onPress={() => navigation.navigate('Profile')}>
-              <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={44} ring="#FDE68A" />
+              <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={46} ring="#FDE68A" />
             </Pressable>
           </Row>
+          <Text
+            style={[styles.greeting, { paddingHorizontal: spacing.lg, marginTop: spacing.sm }]}
+            numberOfLines={1}
+            adjustsFontSizeToFit
+            minimumFontScale={0.75}
+          >
+            {t('home.greeting', { name: me.data?.displayName ?? '' })}
+          </Text>
         </SafeAreaView>
       </LinearGradient>
 

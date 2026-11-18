@@ -7,6 +7,8 @@ import * as SystemUI from 'expo-system-ui';
 import * as Updates from 'expo-updates';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Notifications from 'expo-notifications';
+import { LilitaOne_400Regular } from '@expo-google-fonts/lilita-one';
+import { Lobster_400Regular } from '@expo-google-fonts/lobster';
 import {
   useFonts,
   Poppins_400Regular,
@@ -25,6 +27,7 @@ import { RootNavigator } from '@/navigation/RootNavigator';
 import { ToastHost } from '@/components/ToastHost';
 import { WinnerOverlay } from '@/components/WinnerOverlay';
 import { UpdateOverlay } from '@/components/UpdateOverlay';
+import { LaunchIntro } from '@/components/Wordmark';
 import { Screen, T } from '@/components/ui';
 import { useSessionStore } from '@/state/sessionStore';
 import { useSettingsStore } from '@/state/settingsStore';
@@ -117,6 +120,9 @@ export default function App() {
     Poppins_600SemiBold,
     Poppins_700Bold,
     Poppins_800ExtraBold,
+    // The logo's lettering (title in the Home header).
+    LilitaOne_400Regular,
+    Lobster_400Regular,
   });
   const { colors, isDark } = useThemeColors();
   const sessionReady = useSessionStore((s) => s.isReady);
@@ -157,6 +163,9 @@ export default function App() {
   const { isUpdateAvailable, isUpdatePending, isDownloading, availableUpdate } = Updates.useUpdates();
   const [showUpdateOverlay, setShowUpdateOverlay] = useState(false);
   const [downloadProgress, setDownloadProgress] = useState(0);
+  // Logo intro when the app opens (once per launch).
+  const [introDone, setIntroDone] = useState(false);
+  const finishIntro = useCallback(() => setIntroDone(true), []);
   const appStateRef = useRef(AppState.currentState);
 
   // Each update is fetched once. After the restart the same update can still be reported as
@@ -260,6 +269,7 @@ export default function App() {
         <WinnerOverlay />
         <ToastHost />
         {showUpdateOverlay ? <UpdateOverlay progress={downloadProgress} /> : null}
+        {introDone ? null : <LaunchIntro onDone={finishIntro} />}
       </QueryClientProvider>
     </SafeAreaProvider>
   );
