@@ -96,18 +96,18 @@ export function Screen({
       )}
       {/* Edge-to-edge Android doesn't resize the window for the keyboard: pad on both platforms. */}
       <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
-      {scroll ? (
-        <ScrollView
-          contentContainerStyle={[inner, { paddingTop: spacing.lg, paddingBottom: spacing.xxl }]}
-          keyboardShouldPersistTaps="handled"
-          refreshControl={refreshControl as never}
-          showsVerticalScrollIndicator={false}
-        >
-          {children}
-        </ScrollView>
-      ) : (
-        <View style={[{ flex: 1, paddingTop: spacing.lg }, inner]}>{children}</View>
-      )}
+        {scroll ? (
+          <ScrollView
+            contentContainerStyle={[inner, { paddingTop: spacing.lg, paddingBottom: spacing.xxl }]}
+            keyboardShouldPersistTaps="handled"
+            refreshControl={refreshControl as never}
+            showsVerticalScrollIndicator={false}
+          >
+            {children}
+          </ScrollView>
+        ) : (
+          <View style={[{ flex: 1, paddingTop: spacing.lg }, inner]}>{children}</View>
+        )}
       </KeyboardAvoidingView>
     </View>
   );
@@ -122,10 +122,10 @@ export function Header({ title, right, onBack }: { title?: string; right?: React
       colors={heroGradient}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
-      style={[styles.header, { paddingTop: insets.top + spacing.xs }]}
+      style={[styles.header, { paddingTop: insets.top + spacing.md }]}
     >
       <IconButton icon="chevron-back" onPress={onBack ?? (() => navigation.goBack())} color="#fff" accessibilityLabel="back" />
-      <T variant="h2" color="#fff" style={{ flex: 1, textAlign: 'center' }} numberOfLines={1}>
+      <T variant="h2" color="#fff" style={styles.headerTitle} numberOfLines={1}>
         {title ?? ''}
       </T>
       <View style={{ minWidth: 40, alignItems: 'flex-end' }}>{right}</View>
@@ -157,8 +157,7 @@ export function Button({
 }) {
   const { colors } = useThemeColors();
   const isDisabled = disabled || loading;
-  const fg =
-    variant === 'secondary' || variant === 'ghost' ? colors.primary : variant === 'gold' ? '#3B1D00' : colors.white;
+  const fg = variant === 'secondary' || variant === 'ghost' ? colors.primary : variant === 'gold' ? '#3B1D00' : colors.white;
   const content = (
     <View style={[styles.buttonInner, small && styles.buttonSmall]}>
       {loading ? (
@@ -467,7 +466,17 @@ export function EmptyState({ icon, title, action }: { icon: IconName; title: str
   );
 }
 
-export function Pill({ label, color, textColor, style }: { label: string; color: string; textColor?: string; style?: StyleProp<ViewStyle> }) {
+export function Pill({
+  label,
+  color,
+  textColor,
+  style,
+}: {
+  label: string;
+  color: string;
+  textColor?: string;
+  style?: StyleProp<ViewStyle>;
+}) {
   return (
     <View style={[styles.pill, { backgroundColor: color }, style]}>
       <Text style={[typography.tiny, { color: textColor ?? '#fff', includeFontPadding: false }]}>{label}</Text>
@@ -476,11 +485,13 @@ export function Pill({ label, color, textColor, style }: { label: string; color:
 }
 
 const styles = StyleSheet.create({
+  // Every screen header: a little taller, back · title · action centred on one line.
   header: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 56,
     paddingHorizontal: spacing.sm,
-    paddingBottom: spacing.md,
+    paddingBottom: spacing.md + 4,
     borderBottomLeftRadius: radius.md,
     borderBottomRightRadius: radius.md,
   },
@@ -509,6 +520,7 @@ const styles = StyleSheet.create({
   segmented: { flexDirection: 'row', borderRadius: radius.md, padding: 4 },
   segment: { flex: 1, paddingVertical: 10, borderRadius: radius.sm, alignItems: 'center', paddingHorizontal: 4 },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: spacing.xl },
+  headerTitle: { flex: 1, textAlign: 'center', textAlignVertical: 'center', includeFontPadding: false },
   segDot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#EF4444' },
   pill: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: radius.pill, alignSelf: 'flex-start' },
 });

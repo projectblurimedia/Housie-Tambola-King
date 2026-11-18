@@ -124,7 +124,7 @@ export function Wordmark({ size = 'large' }: { size?: 'large' | 'small' }) {
   if (size === 'small') {
     // viewBox 384 × 50: crown · HOUSIE TAMBOLA · [KING]
     return (
-      <View style={{ width: '100%', maxWidth: 340, aspectRatio: 384 / 50 }}>
+      <View style={{ width: '100%', maxWidth: 400, aspectRatio: 384 / 50 }}>
         <Svg width="100%" height="100%" viewBox="0 0 384 50">
           <GoldDefs />
           <CrownShape cx={22} top={8} w={40} />

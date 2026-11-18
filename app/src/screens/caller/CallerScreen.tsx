@@ -208,12 +208,14 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                           setAuto(false);
                           setConfirmReset(true);
                         }}
-                        style={({ pressed }) => [styles.newGame, { opacity: pressed ? 0.75 : 1 }]}
+                        style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] })}
                       >
-                        <Ionicons name="refresh" size={14} color="#FCA5A5" />
-                        <T variant="tiny" color="#fff">
-                          {t('caller.newGame')}
-                        </T>
+                        <LinearGradient colors={['#F472B6', '#E11D48']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.newGame}>
+                          <Ionicons name="refresh-circle" size={16} color="#fff" />
+                          <T variant="smallBold" color="#fff" style={{ includeFontPadding: false }}>
+                            {t('caller.newGame')}
+                          </T>
+                        </LinearGradient>
                       </Pressable>
                     )}
                     <IconButton icon="options" color="#fff" onPress={openSettings} accessibilityLabel={t('caller.settings')} />
@@ -407,14 +409,18 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                 showsVerticalScrollIndicator={false}
                 contentContainerStyle={styles.historyGrid}
               >
-                {called.map((n, i) => (
-                  <View key={n} style={styles.historyItem}>
-                    <MiniBall n={n} size={36} />
-                    <T variant="tiny" muted>
-                      #{i + 1}
-                    </T>
-                  </View>
-                ))}
+                {/* Latest first: #N, #N-1 … #1. */}
+                {called
+                  .map((n, i) => ({ n, order: i + 1 }))
+                  .reverse()
+                  .map(({ n, order }) => (
+                    <View key={n} style={styles.historyItem}>
+                      <MiniBall n={n} size={36} />
+                      <T variant="tiny" muted>
+                        #{order}
+                      </T>
+                    </View>
+                  ))}
               </ScrollView>
             </Overlay>
 
@@ -493,13 +499,12 @@ const styles = StyleSheet.create({
   newGame: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    gap: 6,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
     borderWidth: 1,
-    borderColor: 'rgba(252,165,165,0.5)',
+    borderColor: 'rgba(255,255,255,0.35)',
   },
   sideSheet: {
     height: '100%',

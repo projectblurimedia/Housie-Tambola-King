@@ -397,7 +397,7 @@
     "both": "Both",
     "bothHint": "Each number is said in English, then in Telugu — so the speed is at least 4 s.",
     "historyAll": "Called numbers ({{count}})",
-    "historyOrderHint": "In the order they were called."
+    "historyOrderHint": "Latest first."
   },
   "profile": {
     "title": "Profile",

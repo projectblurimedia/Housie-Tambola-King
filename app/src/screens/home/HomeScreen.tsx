@@ -58,12 +58,12 @@ function BigAction({
           <Animated.View
             style={[styles.bigIcon, { transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] }) }] }]}
           >
-            <Ionicons name={icon} size={28} color="#fff" />
+            <Ionicons name={icon} size={23} color="#fff" />
           </Animated.View>
-          <T variant="h2" color="#fff" numberOfLines={1} style={{ marginTop: spacing.sm }}>
+          <T variant="h3" color="#fff" numberOfLines={1} style={{ marginTop: spacing.sm }}>
             {title}
           </T>
-          <T variant="small" color="rgba(255,255,255,0.88)" numberOfLines={2}>
+          <T variant="tiny" color="rgba(255,255,255,0.88)" numberOfLines={2}>
             {desc}
           </T>
         </LinearGradient>
@@ -168,6 +168,44 @@ const PEEK_SHRINK = 0.05;
  * cards peeking out underneath — so many rooms never push the rest of Home down. See all opens
  * every room in a separate full-screen list.
  */
+/** Home section heading, the same everywhere: gradient icon · title · thin rule · See all · N. */
+function SectionHeading({ icon, title, count, onSeeAll }: { icon: IconName; title: string; count?: number; onSeeAll?: () => void }) {
+  const { t } = useTranslation();
+  const { colors } = useThemeColors();
+  return (
+    <Row gap={10} style={{ marginBottom: 10 }}>
+      <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headIcon}>
+        <Ionicons name={icon} size={15} color="#fff" />
+      </LinearGradient>
+      <T variant="h3" numberOfLines={1} style={{ flexShrink: 1 }}>
+        {title}
+      </T>
+      <View style={[styles.rule, { backgroundColor: `${colors.primary}1F` }]} />
+      {onSeeAll ? (
+        <Pressable
+          onPress={onSeeAll}
+          hitSlop={8}
+          style={({ pressed }) => [
+            styles.seeAll,
+            { borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}10`, opacity: pressed ? 0.8 : 1 },
+          ]}
+        >
+          <T variant="smallBold" color={colors.primary}>
+            {t('home.seeAll')}
+          </T>
+          {count !== undefined ? (
+            <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.seeAllCount}>
+              <T variant="tiny" color="#fff">
+                {count}
+              </T>
+            </LinearGradient>
+          ) : null}
+        </Pressable>
+      ) : null}
+    </Row>
+  );
+}
+
 function MyRoomsStack({ rooms, onOpen }: { rooms: MyRoomSummary[]; onOpen: (room: MyRoomSummary) => void }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -179,34 +217,12 @@ function MyRoomsStack({ rooms, onOpen }: { rooms: MyRoomSummary[]; onOpen: (room
 
   return (
     <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xl }}>
-      <Row gap={10} style={{ marginBottom: 10 }}>
-        <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.headIcon}>
-          <Ionicons name="albums" size={15} color="#fff" />
-        </LinearGradient>
-        <T variant="h3" numberOfLines={1} style={{ flexShrink: 1 }}>
-          {t('home.myRooms')}
-        </T>
-        <View style={[styles.rule, { backgroundColor: `${colors.primary}1F` }]} />
-        {rooms.length ? (
-          <Pressable
-            onPress={() => setListOpen(true)}
-            hitSlop={8}
-            style={({ pressed }) => [
-              styles.seeAll,
-              { borderColor: `${colors.primary}40`, backgroundColor: `${colors.primary}10`, opacity: pressed ? 0.8 : 1 },
-            ]}
-          >
-            <T variant="smallBold" color={colors.primary}>
-              {t('home.seeAll')}
-            </T>
-            <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.seeAllCount}>
-              <T variant="tiny" color="#fff">
-                {rooms.length}
-              </T>
-            </LinearGradient>
-          </Pressable>
-        ) : null}
-      </Row>
+      <SectionHeading
+        icon="albums"
+        title={t('home.myRooms')}
+        count={rooms.length || undefined}
+        onSeeAll={rooms.length ? () => setListOpen(true) : undefined}
+      />
 
       {front ? (
         <View style={{ paddingBottom: behind.length * PEEK_OFFSET }}>
@@ -313,17 +329,25 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <LinearGradient colors={heroGradient} style={styles.hero}>
         <SafeAreaView edges={['top']}>
-          <Row style={{ justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-            <View style={{ flex: 1 }}>
-              <Wordmark size="small" />
-              <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-                {t('home.greeting', { name: me.data?.displayName ?? '' })}
-              </Text>
-            </View>
+          <Row
+            style={{
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              paddingHorizontal: spacing.lg,
+              paddingTop: spacing.sm,
+              minHeight: 52,
+            }}
+          >
+            <Text style={[styles.greeting, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+              {t('home.greeting', { name: me.data?.displayName ?? '' })}
+            </Text>
             <Pressable onPress={() => navigation.navigate('Profile')}>
-              <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={46} ring="#FDE68A" />
+              <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={42} ring="#FDE68A" />
             </Pressable>
           </Row>
+          <View style={styles.logoLine}>
+            <Wordmark size="small" />
+          </View>
         </SafeAreaView>
       </LinearGradient>
 
@@ -351,6 +375,31 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
           />
         </Row>
 
+        <Row gap={spacing.md} style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md }}>
+          {(
+            [
+              ['megaphone', t('home.caller'), t('home.callerDesc'), () => navigation.navigate('Caller')],
+              ['help-circle', t('home.howToPlay'), t('home.howToPlayDesc'), () => navigation.navigate('HowToPlay')],
+            ] as [IconName, string, string, () => void][]
+          ).map(([icon, title, desc, onPress]) => (
+            <Card key={title} onPress={onPress} style={styles.smallTile}>
+              <Row gap={spacing.sm}>
+                <View style={[styles.smallTileIcon, { backgroundColor: `${colors.primary}14` }]}>
+                  <Ionicons name={icon} size={20} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <T variant="smallBold" numberOfLines={1}>
+                    {title}
+                  </T>
+                  <T variant="tiny" muted numberOfLines={1}>
+                    {desc}
+                  </T>
+                </View>
+              </Row>
+            </Card>
+          ))}
+        </Row>
+
         {settings.data?.maintenance_message ? (
           <Card style={{ margin: spacing.lg, marginBottom: 0, borderColor: colors.warning }}>
             <T variant="smallBold" color={colors.warning}>
@@ -360,14 +409,14 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
           </Card>
         ) : null}
 
-        <Row style={styles.sectionHeader}>
-          <T variant="h2">{t('home.publicRooms')}</T>
-          <Pressable onPress={() => navigation.navigate('JoinRoom')}>
-            <T variant="smallBold" color={colors.primary}>
-              {t('home.seeAll')}
-            </T>
-          </Pressable>
-        </Row>
+        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xl }}>
+          <SectionHeading
+            icon="earth"
+            title={t('home.publicRooms')}
+            count={publicRooms.data?.length || undefined}
+            onSeeAll={() => navigation.navigate('JoinRoom')}
+          />
+        </View>
         {publicRooms.data?.length ? (
           <ScrollView
             horizontal
@@ -385,30 +434,6 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
         )}
 
         <MyRoomsStack rooms={myRooms.data ?? []} onOpen={(r) => navigation.navigate('Room', { roomId: r.id })} />
-
-        <Row style={styles.sectionHeader}>
-          <T variant="h2">{t('home.more')}</T>
-        </Row>
-        <Row gap={spacing.sm} style={{ paddingHorizontal: spacing.lg }}>
-          {(
-            [
-              ['megaphone', t('home.caller'), t('home.callerDesc'), () => navigation.navigate('Caller')],
-              ['help-circle', t('home.howToPlay'), t('home.howToPlayDesc'), () => navigation.navigate('HowToPlay')],
-            ] as [IconName, string, string, () => void][]
-          ).map(([icon, title, desc, onPress]) => (
-            <Card key={title} onPress={onPress} style={{ flex: 1, padding: spacing.md, alignItems: 'center' }}>
-              <Ionicons name={icon} size={26} color={colors.primary} />
-              <T variant="smallBold" center style={{ marginTop: 6 }}>
-                {title}
-              </T>
-              {desc ? (
-                <T variant="tiny" muted center>
-                  {desc}
-                </T>
-              ) : null}
-            </Card>
-          ))}
-        </Row>
       </ScrollView>
       <ConfirmModal
         visible={confirmRoom !== null}
@@ -461,16 +486,19 @@ const styles = StyleSheet.create({
   listHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: spacing.lg },
   hero: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
   // No elevation: Android's shadow turns into a dark smear when a system dialog dims the screen.
-  big: { borderRadius: radius.xl, padding: spacing.lg, minHeight: 136 },
+  big: { borderRadius: radius.xl, padding: spacing.md + 2, minHeight: 118 },
   greeting: { fontFamily: fonts.medium, fontSize: 15, color: '#fff', includeFontPadding: false },
   bigIcon: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
+    width: 42,
+    height: 42,
+    borderRadius: 21,
     backgroundColor: 'rgba(255,255,255,0.22)',
     alignItems: 'center',
     justifyContent: 'center',
   },
+  logoLine: { alignItems: 'center', paddingHorizontal: spacing.lg, paddingTop: spacing.sm },
+  smallTile: { flex: 1, paddingVertical: spacing.sm + 2, paddingHorizontal: spacing.md },
+  smallTileIcon: { width: 38, height: 38, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   sectionHeader: { justifyContent: 'space-between', paddingHorizontal: spacing.lg, marginTop: spacing.xl, marginBottom: spacing.sm },
   roomIcon: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
 });
