@@ -75,30 +75,87 @@ function BigAction({
 function PublicRoomCard({ room, onPress }: { room: PublicRoomSummary; onPress: () => void }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
+  const series = room.kind === 'series';
+  const live = room.gameStatus === 'running';
+  const full = room.memberCount >= room.maxPlayers;
+  const fill = Math.min(1, room.memberCount / Math.max(1, room.maxPlayers));
   return (
-    <Card onPress={onPress} style={{ width: 220, padding: spacing.md }}>
-      <Row style={{ justifyContent: 'space-between' }}>
-        <Pill label={t(`kind.${room.kind}`)} color={room.kind === 'series' ? colors.pink : colors.primary} />
-        {room.gameStatus === 'running' ? <Pill label={t('game.live')} color={colors.error} /> : null}
-      </Row>
-      <T variant="h3" numberOfLines={1} style={{ marginTop: spacing.sm }}>
-        {room.title}
-      </T>
-      <Row gap={6} style={{ marginTop: 4 }}>
-        <Avatar avatarKey={room.hostAvatar ?? 'a1'} size={18} />
-        <T variant="small" muted numberOfLines={1} style={{ flex: 1 }}>
-          {t('join.hostedBy', { name: room.hostName ?? '' })}
+    <Pressable
+      onPress={onPress}
+      style={({ pressed }) => [
+        styles.pubCard,
+        { backgroundColor: colors.surface, borderColor: colors.border, transform: [{ scale: pressed ? 0.97 : 1 }] },
+      ]}
+    >
+      {/* Coloured band: mode + status. */}
+      <LinearGradient
+        colors={series ? ['#F472B6', '#DB2777'] : ['#8B5CF6', '#6D28D9']}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+        style={styles.pubBand}
+      >
+        <Row gap={6}>
+          <View style={styles.pubBandIcon}>
+            <Ionicons name={series ? 'layers' : 'grid'} size={14} color="#fff" />
+          </View>
+          <T variant="smallBold" color="#fff">
+            {t(`kind.${room.kind}`)}
+          </T>
+        </Row>
+        <View style={[styles.pubStatus, { backgroundColor: live ? '#EF4444' : 'rgba(255,255,255,0.22)' }]}>
+          {live ? <View style={styles.pubLiveDot} /> : null}
+          <T variant="tiny" color="#fff">
+            {live ? t('game.live') : t('status.open')}
+          </T>
+        </View>
+      </LinearGradient>
+
+      <View style={{ padding: spacing.md, gap: 8 }}>
+        <T variant="h3" numberOfLines={1}>
+          {room.title}
         </T>
-      </Row>
-      <Row style={{ justifyContent: 'space-between', marginTop: spacing.sm }}>
-        <T variant="smallBold" color={colors.primary}>
-          {t('join.players', { count: room.memberCount, max: room.maxPlayers })}
-        </T>
-        <T variant="smallBold" color={colors.goldDark}>
-          🎫 {formatRupees(room.ticketPrice)}
-        </T>
-      </Row>
-    </Card>
+        <Row gap={6}>
+          <Avatar avatarKey={room.hostAvatar ?? 'a1'} size={20} />
+          <T variant="small" muted numberOfLines={1} style={{ flex: 1 }}>
+            {t('join.hostedBy', { name: room.hostName ?? '' })}
+          </T>
+        </Row>
+        {/* Seats taken. */}
+        <View style={{ gap: 4 }}>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <Row gap={4}>
+              <Ionicons name="people" size={13} color={colors.textMuted} />
+              <T variant="tiny" muted>
+                {t('join.players', { count: room.memberCount, max: room.maxPlayers })}
+              </T>
+            </Row>
+            {full ? (
+              <T variant="tiny" color={colors.error}>
+                {t('join.full')}
+              </T>
+            ) : null}
+          </Row>
+          <View style={[styles.pubBar, { backgroundColor: colors.surfaceAlt }]}>
+            <View
+              style={{ width: `${fill * 100}%`, height: '100%', borderRadius: 3, backgroundColor: full ? colors.error : colors.success }}
+            />
+          </View>
+        </View>
+        <Row style={{ justifyContent: 'space-between', marginTop: 2 }}>
+          <View style={[styles.pubPrice, { backgroundColor: 'rgba(245,183,0,0.14)' }]}>
+            <T variant="smallBold" color={colors.goldDark}>
+              🎫 {formatRupees(room.ticketPrice)}
+            </T>
+          </View>
+          <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.pubJoin}>
+            <T variant="tiny" color="#fff">
+              {room.isMember ? t('join.open') : t('join.join')}
+            </T>
+            <Ionicons name="chevron-forward" size={12} color="#fff" />
+          </LinearGradient>
+        </Row>
+      </View>
+    </Pressable>
   );
 }
 
@@ -449,6 +506,27 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
+  pubCard: { width: 240, borderRadius: radius.lg + 2, borderWidth: 1, overflow: 'hidden' },
+  pubBand: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: spacing.md,
+    paddingVertical: 10,
+  },
+  pubBandIcon: {
+    width: 24,
+    height: 24,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  pubStatus: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },
+  pubLiveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#fff' },
+  pubBar: { height: 6, borderRadius: 3, overflow: 'hidden' },
+  pubPrice: { borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
+  pubJoin: { flexDirection: 'row', alignItems: 'center', gap: 2, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   roomCard: { paddingVertical: spacing.md, paddingHorizontal: spacing.md },
   roomTile: { width: 48, height: 48, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   chip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 2 },

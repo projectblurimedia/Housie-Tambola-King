@@ -73,25 +73,27 @@ function RoundButton({
   label,
   onPress,
   disabled,
-  tint = '#fff',
+  colors = ['#60A5FA', '#4F46E5'],
 }: {
   icon: keyof typeof Ionicons.glyphMap;
   label: string;
   onPress: () => void;
   disabled?: boolean;
-  tint?: string;
+  colors?: [string, string];
 }) {
   return (
     <Pressable
       onPress={onPress}
       disabled={disabled}
       accessibilityLabel={label}
-      style={({ pressed }) => [styles.round, { opacity: disabled ? 0.35 : pressed ? 0.7 : 1 }]}
+      style={({ pressed }) => ({ opacity: disabled ? 0.4 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] })}
     >
-      <Ionicons name={icon} size={22} color={tint} />
-      <T variant="tiny" color="rgba(255,255,255,0.85)">
-        {label}
-      </T>
+      <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.round}>
+        <Ionicons name={icon} size={20} color="#fff" style={styles.iconCentred} />
+        <T variant="tiny" color="#fff" style={{ includeFontPadding: false }}>
+          {label}
+        </T>
+      </LinearGradient>
     </Pressable>
   );
 }
@@ -213,7 +215,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       >
                         {/* Compact round button beside Settings — never crowds the title. */}
                         <LinearGradient colors={['#F472B6', '#E11D48']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.newGame}>
-                          <Ionicons name="refresh" size={19} color="#fff" />
+                          <Ionicons name="refresh" size={19} color="#fff" style={styles.iconCentred} />
                         </LinearGradient>
                       </Pressable>
                     )}
@@ -472,14 +474,17 @@ const styles = StyleSheet.create({
   },
   mainBtn: { height: 50, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   round: {
-    width: 54,
+    width: 64,
     height: 50,
     borderRadius: radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.12)',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 1,
+    gap: 2,
+    borderWidth: 1,
+    borderColor: 'rgba(255,255,255,0.3)',
   },
+  // Icon glyphs carry font padding on Android: drop it so the icon sits dead-centre.
+  iconCentred: { includeFontPadding: false, textAlign: 'center', textAlignVertical: 'center' },
   boardCard: {
     // Card corners follow the cells' corners (cell radius + padding).
     borderRadius: BOARD_CELL_RADIUS + 6,

@@ -4,12 +4,12 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { newDrawOrder } from '@/game/engine/ticket';
 import type { SupportedLanguage } from '@/localization/languages';
 
-export const CALLER_SPEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
+export const CALLER_SPEEDS = [2, 3, 4, 5, 6, 7, 8, 9, 10] as const;
 export type CallerMode = 'auto' | 'manual';
 /** English, Telugu, or both one after the other ("35… ముప్పై ఐదు"). */
 export type CallerVoice = SupportedLanguage | 'both';
 /** Saying a number in both languages takes about 4 s. */
-export const minSpeedFor = (voice: CallerVoice) => (voice === 'both' ? 4 : 1);
+export const minSpeedFor = (voice: CallerVoice) => (voice === 'both' ? 4 : 2);
 
 /**
  * Caller Mode board for a real-life game. Persisted, so closing the app mid-game
@@ -49,18 +49,26 @@ export const useCallerStore = create<CallerState>()(
       },
       undo: () => set((s) => ({ called: s.called.slice(0, -1) })),
       reset: () => set({ drawOrder: newDrawOrder(), called: [] }),
-      setInterval: (intervalSeconds) => set((s) => ({ intervalSeconds: Math.min(10, Math.max(minSpeedFor(s.voiceLanguage), intervalSeconds)) })),
-      setVoiceLanguage: (voiceLanguage) => set((s) => ({ voiceLanguage, intervalSeconds: Math.max(minSpeedFor(voiceLanguage), s.intervalSeconds) })),
+      setInterval: (intervalSeconds) =>
+        set((s) => ({ intervalSeconds: Math.min(10, Math.max(minSpeedFor(s.voiceLanguage), intervalSeconds)) })),
+      setVoiceLanguage: (voiceLanguage) =>
+        set((s) => ({ voiceLanguage, intervalSeconds: Math.max(minSpeedFor(voiceLanguage), s.intervalSeconds) })),
       setMode: (mode) => set({ mode }),
     }),
     {
       name: 'caller-storage',
       storage: createJSONStorage(() => AsyncStorage),
       // v2: speeds became 1–10 s and a voice language was added.
-      version: 3,
+      // v4: speeds start at 2 s.
+      version: 4,
       migrate: (state) => {
         const s = state as Partial<CallerState>;
-        return { ...s, intervalSeconds: Math.min(10, Math.max(1, s.intervalSeconds ?? 3)), voiceLanguage: s.voiceLanguage ?? 'en', mode: s.mode ?? 'auto' } as CallerState;
+        return {
+          ...s,
+          intervalSeconds: Math.min(10, Math.max(minSpeedFor(s.voiceLanguage ?? 'en'), s.intervalSeconds ?? 3)),
+          voiceLanguage: s.voiceLanguage ?? 'en',
+          mode: s.mode ?? 'auto',
+        } as CallerState;
       },
     },
   ),

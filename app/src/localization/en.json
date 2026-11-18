@@ -142,7 +142,8 @@
     "acceptMidGame": "Players accepted now watch this game and play from the next one.",
     "requestToast": "{{name}} wants to join",
     "confirmTitle": "Join “{{title}}”?",
-    "confirmMessage": "Host: {{host}} · Ticket {{price}} · {{count}}/{{max}} players. The host will accept your request."
+    "confirmMessage": "Host: {{host}} · Ticket {{price}} · {{count}}/{{max}} players. The host will accept your request.",
+    "full": "Full"
   },
   "room": {
     "code": "Room code",
