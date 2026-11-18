@@ -329,25 +329,18 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <LinearGradient colors={heroGradient} style={styles.hero}>
         <SafeAreaView edges={['top']}>
-          <Row
-            style={{
-              justifyContent: 'space-between',
-              alignItems: 'center',
-              paddingHorizontal: spacing.lg,
-              paddingTop: spacing.sm,
-              minHeight: 52,
-            }}
-          >
-            <Text style={[styles.greeting, { flex: 1 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
-              {t('home.greeting', { name: me.data?.displayName ?? '' })}
-            </Text>
+          {/* Title first, the greeting under it; profile photo on the right. */}
+          <Row style={{ alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.lg, paddingTop: spacing.md }}>
+            <View style={{ flex: 1, gap: 4 }}>
+              <Wordmark size="small" />
+              <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
+                {t('home.greeting', { name: me.data?.displayName ?? '' })}
+              </Text>
+            </View>
             <Pressable onPress={() => navigation.navigate('Profile')}>
-              <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={42} ring="#FDE68A" />
+              <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={44} ring="#FDE68A" />
             </Pressable>
           </Row>
-          <View style={styles.logoLine}>
-            <Wordmark size="small" />
-          </View>
         </SafeAreaView>
       </LinearGradient>
 

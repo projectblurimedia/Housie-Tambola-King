@@ -208,13 +208,12 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                           setAuto(false);
                           setConfirmReset(true);
                         }}
+                        accessibilityLabel={t('caller.newGame')}
                         style={({ pressed }) => ({ opacity: pressed ? 0.8 : 1, transform: [{ scale: pressed ? 0.96 : 1 }] })}
                       >
+                        {/* Compact round button beside Settings — never crowds the title. */}
                         <LinearGradient colors={['#F472B6', '#E11D48']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.newGame}>
-                          <Ionicons name="refresh-circle" size={16} color="#fff" />
-                          <T variant="smallBold" color="#fff" style={{ includeFontPadding: false }}>
-                            {t('caller.newGame')}
-                          </T>
+                          <Ionicons name="refresh" size={19} color="#fff" />
                         </LinearGradient>
                       </Pressable>
                     )}
@@ -280,7 +279,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                     title={t('caller.newGame')}
                     variant="gold"
                     icon="refresh"
-                    style={{ alignSelf: 'flex-start', minWidth: 200 }}
+                    style={{ alignSelf: 'stretch' }}
                     onPress={() => setConfirmReset(true)}
                   />
                 ) : (
@@ -497,12 +496,11 @@ const styles = StyleSheet.create({
   historyItem: { alignItems: 'center', gap: 2, width: 44 },
   overlayFill: { alignItems: 'flex-end', justifyContent: 'flex-start', padding: 0 },
   newGame: {
-    flexDirection: 'row',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
     alignItems: 'center',
-    gap: 6,
-    height: 32,
-    paddingHorizontal: 12,
-    borderRadius: 16,
+    justifyContent: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.35)',
   },
