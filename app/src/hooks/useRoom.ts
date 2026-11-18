@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { roomService } from '@/services/roomService';
-import type { RoomState, Winner } from '@/types/api';
+import type { ChatMessage, RoomState, Winner } from '@/types/api';
 import type { PrizeType } from '@/game/engine/ticket';
 
 export type RoomEvent =
@@ -17,13 +17,23 @@ export type RoomEvent =
   | { type: 'game'; gameId: string; gameNo: number }
   | { type: 'members'; memberCount: number; joined?: string; removed?: string }
   | { type: 'room_ended'; reason: string }
-  | { type: 'join_request'; userId: string; name: string };
+  | { type: 'join_request'; userId: string; name: string }
+  | { type: 'chat'; message: ChatMessage };
 
 /** How late a number may be before this phone nudges the server clock itself. */
 const NUDGE_GRACE_MS = 2500;
 
 export const roomKey = (roomId: string) => ['room', roomId] as const;
 export const standingsKey = (roomId: string) => ['standings', roomId] as const;
+export const chatKey = (roomId: string) => ['chat', roomId] as const;
+
+/** Append a chat message to the cached chat (deduped by id, last 100 kept). */
+export function appendChat(qc: QueryClient, roomId: string, msg: ChatMessage) {
+  qc.setQueryData<ChatMessage[]>(chatKey(roomId), (old) => {
+    if (!old || old.some((m) => m.id === msg.id)) return old;
+    return [...old, msg].slice(-100);
+  });
+}
 
 /**
  * Live room state: one get_room_state fetch + the private realtime topic "room:<id>".
@@ -142,6 +152,11 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
       .on('broadcast', { event: 'claim_check' }, ({ payload }) => {
         refetch();
         emit({ type: 'claim_check', ...(payload as Omit<Extract<RoomEvent, { type: 'claim_check' }>, 'type'>) });
+      })
+      .on('broadcast', { event: 'chat' }, ({ payload }) => {
+        const message = payload as ChatMessage;
+        appendChat(qc, roomId, message);
+        emit({ type: 'chat', message });
       })
       .on('broadcast', { event: 'room_ended' }, ({ payload }) => {
         refetch();

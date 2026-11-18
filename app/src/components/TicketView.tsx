@@ -4,7 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
 import { COLS, Cells } from '@/game/engine/ticket';
 import { fonts, goldGradient, radius } from '@/theme';
-import { STRIKE_COLORS, TICKET_THEMES, TicketTheme } from '@/theme/ticketThemes';
+import { HINT_COLORS, STRIKE_COLORS, TICKET_THEMES, TicketTheme } from '@/theme/ticketThemes';
 import { useSettingsStore } from '@/state/settingsStore';
 
 interface Props {
@@ -13,6 +13,8 @@ interface Props {
   marked: ReadonlySet<number>;
   /** Pulsing ring on the most recent call (if it's on this ticket and not struck yet). */
   lastCalled?: number | null;
+  /** Auto hint: called numbers not struck yet get a steady ring in the hint colour. */
+  hinted?: ReadonlySet<number>;
   onPressNumber?: (n: number) => void;
   /** When given, tapping a number this returns false for just shakes the cell (not called yet). */
   canStrike?: (n: number) => boolean;
@@ -29,6 +31,8 @@ function Cell({
   n,
   struck,
   isLast,
+  isHinted,
+  hint,
   fontSize,
   theme,
   strike,
@@ -38,6 +42,8 @@ function Cell({
   n: number;
   struck: boolean;
   isLast: boolean;
+  isHinted: boolean;
+  hint: string;
   fontSize: number;
   theme: TicketTheme;
   strike: Strike;
@@ -89,11 +95,19 @@ function Cell({
           onPress={press}
           disabled={!onPress}
           accessibilityLabel={`${n}${struck ? ' struck' : ''}`}
-          style={[styles.circle, { backgroundColor: theme.cell, borderColor: theme.cellBorder }]}
+          style={[
+            styles.circle,
+            { backgroundColor: theme.cell, borderColor: theme.cellBorder },
+            isHinted && !struck && { borderColor: hint, borderWidth: 2.5, backgroundColor: hint + '22' },
+          ]}
         >
           {isLast && !struck ? (
             <Animated.View
-              style={[StyleSheet.absoluteFill, styles.lastGlow, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }) }]}
+              style={[
+                StyleSheet.absoluteFill,
+                styles.lastGlow,
+                { borderColor: hint, opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 1] }) },
+              ]}
             />
           ) : null}
           <Animated.View style={[StyleSheet.absoluteFill, styles.disc, { opacity: pop, transform: [{ scale: pop }] }]}>
@@ -110,11 +124,13 @@ function Cell({
 }
 
 /** A 3×9 housie ticket of round number chips, in the player's chosen colours. */
-export const TicketView = memo(function TicketView({ cells, marked, lastCalled, onPressNumber, canStrike, label, badge, compact }: Props) {
+export const TicketView = memo(function TicketView({ cells, marked, lastCalled, hinted, onPressNumber, canStrike, label, badge, compact }: Props) {
   const themeKey = useSettingsStore((s) => s.ticketTheme);
   const strikeKey = useSettingsStore((s) => s.strikeColor);
   const theme: TicketTheme = TICKET_THEMES[themeKey] ?? TICKET_THEMES.classic;
   const strike = STRIKE_COLORS[strikeKey] ?? STRIKE_COLORS.purple;
+  const hintKey = useSettingsStore((s) => s.hintColor);
+  const hint = HINT_COLORS[hintKey] ?? HINT_COLORS.pink;
   const fontSize = compact ? 13 : 16;
   const gap = compact ? 3 : 4;
 
@@ -145,7 +161,9 @@ export const TicketView = memo(function TicketView({ cells, marked, lastCalled, 
                     const n = cells[r * COLS + c];
                     return n === 0 ? (
                       <View key={c} style={styles.slot}>
-                        <View style={[styles.blankDot, { backgroundColor: theme.blank }]} />
+                        <View style={[styles.circleWrap, styles.blankCircle, { backgroundColor: theme.blankCell }]}>
+                          <View style={[styles.blankDot, { backgroundColor: theme.blank }]} />
+                        </View>
                       </View>
                     ) : (
                       <Cell
@@ -153,6 +171,8 @@ export const TicketView = memo(function TicketView({ cells, marked, lastCalled, 
                         n={n}
                         struck={marked.has(n)}
                         isLast={lastCalled === n}
+                        isHinted={!!hinted?.has(n)}
+                        hint={hint}
                         fontSize={fontSize}
                         theme={theme}
                         strike={strike}
@@ -205,7 +225,8 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1.5 },
     elevation: 2,
   },
-  lastGlow: { borderRadius: 999, borderWidth: 2.5, borderColor: '#EC4899' },
+  lastGlow: { borderRadius: 999, borderWidth: 3 },
+  blankCircle: { borderRadius: 999, alignItems: 'center', justifyContent: 'center' },
   blankDot: { width: 6, height: 6, borderRadius: 3 },
   disc: { borderRadius: 999, overflow: 'hidden' },
   strike: { position: 'absolute', width: '80%', height: 2.5, borderRadius: 2 },

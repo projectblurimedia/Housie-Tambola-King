@@ -3,24 +3,22 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
-import { Button, Card, centeredInput, Chip, Row, Screen, Spacer, Stepper, T, TextField, Toggle } from '@/components/ui';
+import { Button, Card, centeredInput, Row, Screen, Spacer, Stepper, T, TextField, Toggle } from '@/components/ui';
 import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
-import { COLUMN_PRIZES, FAST_PRIZES, LINE_PRIZES, PrizeType } from '@/game/engine/ticket';
+import type { PrizeType } from '@/game/engine/ticket';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
-import type { ClaimMode, RoomKind, RoomVisibility } from '@/types/api';
+import type { ClaimRule, RoomKind, RoomVisibility } from '@/types/api';
 import type { ScreenProps } from '@/navigation/types';
 
 /**
- * Prize amounts are NOT asked here — nobody knows yet how many tickets people will take.
- * The host sets them in the lobby right before each game, against the real pot. These
- * hidden weights only shape the suggested split there (Full Housie gets the biggest share).
+ * Prizes are NOT chosen here: the host switches each prize on/off and sets its amount in the
+ * lobby right before every game, against the real pot. This is only the starting set and the
+ * weights for the suggested split (Fast 3 / Fast 7 start switched off).
  */
-const DEFAULT_WEIGHTS: Record<PrizeType, number> = {
-  fast_3: 5,
+const DEFAULT_PRIZES: Partial<Record<PrizeType, number>> = {
   fast_5: 10,
-  fast_7: 10,
   line_1: 10,
   line_2: 10,
   line_3: 10,
@@ -31,46 +29,34 @@ const DEFAULT_WEIGHTS: Record<PrizeType, number> = {
 };
 const PRICE_PRESETS = [5, 10, 20, 50, 100];
 
-type Group = 'fast' | 'lines' | 'columns';
-const GROUP_PRIZES: Record<Group, PrizeType[]> = { fast: FAST_PRIZES, lines: LINE_PRIZES, columns: COLUMN_PRIZES };
-
-function PrizeGroup({
+function OptionToggle({
+  icon,
   title,
   desc,
-  on,
-  onToggle,
-  prizes,
-  selected,
-  onPick,
+  value,
+  onChange,
 }: {
+  icon: keyof typeof Ionicons.glyphMap;
   title: string;
   desc: string;
-  on: boolean;
-  onToggle: (v: boolean) => void;
-  prizes: PrizeType[];
-  selected: Set<PrizeType>;
-  onPick: (p: PrizeType) => void;
+  value: boolean;
+  onChange: (v: boolean) => void;
 }) {
-  const { t } = useTranslation();
   const { colors } = useThemeColors();
   return (
-    <Card style={[styles.group, on && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}>
-      <Row>
+    <Card style={[styles.group, { marginTop: spacing.sm }, value && { borderColor: colors.primary }]}>
+      <Row gap={spacing.md}>
+        <View style={[styles.optIcon, { backgroundColor: value ? colors.primary : colors.surfaceAlt }]}>
+          <Ionicons name={icon} size={20} color={value ? '#fff' : colors.textMuted} />
+        </View>
         <View style={{ flex: 1 }}>
           <T variant="h3">{title}</T>
           <T variant="tiny" muted>
             {desc}
           </T>
         </View>
-        <Toggle value={on} onValueChange={onToggle} />
+        <Toggle value={value} onValueChange={onChange} />
       </Row>
-      {on ? (
-        <Row gap={spacing.sm} style={{ flexWrap: 'wrap', marginTop: spacing.md }}>
-          {prizes.map((p) => (
-            <Chip key={p} label={t(`prizes.${p}`)} active={selected.has(p)} onPress={() => onPick(p)} />
-          ))}
-        </Row>
-      ) : null}
     </Card>
   );
 }
@@ -87,35 +73,11 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [visibility, setVisibility] = useState<RoomVisibility>('private');
   const [maxPlayers, setMaxPlayers] = useState(10);
   const [price, setPrice] = useState('10');
-  const [claimMode, setClaimMode] = useState<ClaimMode>('fastest');
-  const [autoMark, setAutoMark] = useState(false);
-  /** Fastest finger: give everyone a few seconds to check before the winner is announced. */
-  const [checkClaims, setCheckClaims] = useState(true);
-  const [groupsOn, setGroupsOn] = useState<Record<Group, boolean>>({ fast: true, lines: true, columns: true });
-  const [selected, setSelected] = useState<Set<PrizeType>>(new Set<PrizeType>(['fast_5', ...LINE_PRIZES, ...COLUMN_PRIZES]));
+  const [rule, setRule] = useState<ClaimRule>('normal');
+  const [autoHint, setAutoHint] = useState(false);
+  const [chatEnabled, setChatEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
 
-  const pick = (group: Group) => (p: PrizeType) =>
-    setSelected((s) => {
-      const next = new Set(s);
-      if (next.has(p)) {
-        // Keep at least one choice in a group that is switched on.
-        if (GROUP_PRIZES[group].filter((x) => next.has(x)).length > 1) next.delete(p);
-      } else next.add(p);
-      return next;
-    });
-
-  const toggleGroup = (group: Group) => (v: boolean) => {
-    setGroupsOn((g) => ({ ...g, [group]: v }));
-    if (v && !GROUP_PRIZES[group].some((p) => selected.has(p))) {
-      setSelected((s) => new Set([...s, group === 'fast' ? 'fast_5' : GROUP_PRIZES[group][0]]));
-    }
-  };
-
-  const chosen: PrizeType[] = [
-    ...(Object.keys(GROUP_PRIZES) as Group[]).flatMap((g) => (groupsOn[g] ? GROUP_PRIZES[g].filter((p) => selected.has(p)) : [])),
-    'full_house',
-  ];
   const priceNum = Number(price);
   const valid = title.trim().length > 0 && Number.isFinite(priceNum) && priceNum >= 0;
 
@@ -131,10 +93,10 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         // Default 3 s; the host changes it any time from the game settings.
         callIntervalSeconds: 3,
         seriesLength: kind === 'series' ? (limitGames ? seriesLength : 0) : 1,
-        prizes: Object.fromEntries(chosen.map((p) => [p, DEFAULT_WEIGHTS[p]])),
-        claimMode,
-        autoMark,
-        checkClaims,
+        prizes: DEFAULT_PRIZES,
+        rule,
+        autoMark: autoHint,
+        chatEnabled,
       });
       qc.invalidateQueries({ queryKey: ['myRooms'] });
       navigation.replace('Room', { roomId });
@@ -241,88 +203,18 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         {t('create.claimRule')}
       </T>
       <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
-        {(['fastest', 'fair'] as ClaimMode[]).map((m) => (
-          <Card key={m} onPress={() => setClaimMode(m)} style={[styles.option, claimMode === m && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}>
-            <Ionicons name={m === 'fastest' ? 'flash' : 'shield-checkmark'} size={24} color={claimMode === m ? colors.primary : colors.textMuted} />
-            <T variant="h3">{t(`create.claim_${m}`)}</T>
+        {(['normal', 'fastest'] as ClaimRule[]).map((m) => (
+          <Card key={m} onPress={() => setRule(m)} style={[styles.option, rule === m && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}>
+            <Ionicons name={m === 'fastest' ? 'flash' : 'shield-checkmark'} size={24} color={rule === m ? colors.primary : colors.textMuted} />
+            <T variant="h3">{t(`create.rule_${m}`)}</T>
             <T variant="tiny" muted>
-              {t(`create.claim_${m}_desc`)}
+              {t(`create.rule_${m}_desc`)}
             </T>
           </Card>
         ))}
       </Row>
-      {claimMode === 'fastest' ? (
-        <Card style={[styles.group, { marginTop: spacing.sm }]}>
-          <Row>
-            <View style={{ flex: 1 }}>
-              <T variant="h3">{t('create.checkClaims')}</T>
-              <T variant="tiny" muted>
-                {t('create.checkClaimsDesc')}
-              </T>
-            </View>
-            <Toggle value={checkClaims} onValueChange={setCheckClaims} />
-          </Row>
-        </Card>
-      ) : null}
-      <Card style={[styles.group, { marginTop: spacing.sm }]}>
-        <Row>
-          <View style={{ flex: 1 }}>
-            <T variant="h3">{t('create.autoMark')}</T>
-            <T variant="tiny" muted>
-              {t('create.autoMarkDesc')}
-            </T>
-          </View>
-          <Toggle value={autoMark} onValueChange={setAutoMark} />
-        </Row>
-      </Card>
-
-      <Spacer h={spacing.xl} />
-      <T variant="h1">{t('create.prizesTitle')}</T>
-      <T variant="small" muted style={{ marginBottom: spacing.md }}>
-        {t('create.prizesHelp')}
-      </T>
-      <View style={{ gap: spacing.sm }}>
-        <PrizeGroup
-          title={t('create.fastSection')}
-          desc={t('create.fastDesc')}
-          on={groupsOn.fast}
-          onToggle={toggleGroup('fast')}
-          prizes={FAST_PRIZES}
-          selected={selected}
-          onPick={pick('fast')}
-        />
-        <PrizeGroup
-          title={t('create.linesSection')}
-          desc={t('create.linesDesc')}
-          on={groupsOn.lines}
-          onToggle={toggleGroup('lines')}
-          prizes={LINE_PRIZES}
-          selected={selected}
-          onPick={pick('lines')}
-        />
-        <PrizeGroup
-          title={t('create.columnsSection')}
-          desc={t('create.columnsDesc')}
-          on={groupsOn.columns}
-          onToggle={toggleGroup('columns')}
-          prizes={COLUMN_PRIZES}
-          selected={selected}
-          onPick={pick('columns')}
-        />
-        <Card style={[styles.group, { borderColor: colors.gold }]}>
-          <Row>
-            <View style={{ flex: 1 }}>
-              <T variant="h3">{t('create.fullHouseSection')}</T>
-              <T variant="tiny" muted>
-                {t('prizes.desc.full_house')}
-              </T>
-            </View>
-            <T variant="tiny" color={colors.goldDark}>
-              {t('create.alwaysOn')}
-            </T>
-          </Row>
-        </Card>
-      </View>
+      <OptionToggle icon="bulb" title={t('create.autoHint')} desc={t('create.autoHintDesc')} value={autoHint} onChange={setAutoHint} />
+      <OptionToggle icon="chatbubbles" title={t('create.chat')} desc={t('create.chatDesc')} value={chatEnabled} onChange={setChatEnabled} />
 
       <Spacer h={spacing.xl} />
       <Button title={t('create.create')} variant="gold" icon="sparkles" onPress={create} loading={loading} disabled={!valid} />
@@ -336,5 +228,6 @@ const styles = StyleSheet.create({
   group: { padding: spacing.md, borderWidth: 2 },
   priceBox: { flexDirection: 'row', alignItems: 'center', borderWidth: 1.5, borderRadius: radius.sm, paddingHorizontal: 10, width: 120, height: 52 },
   priceInput: { flex: 1, fontFamily: fonts.bold, fontSize: 22, height: 52, paddingHorizontal: 4 },
+  optIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   preset: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill },
 });

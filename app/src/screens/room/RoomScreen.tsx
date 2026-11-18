@@ -21,6 +21,7 @@ import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { useWinnerStore } from '@/state/winnerStore';
 import { useClaimCheckStore } from '@/state/claimCheckStore';
+import { RoomChat } from './parts/RoomChat';
 import { APP_NAME } from '@/constants/config';
 import type { PrizeType } from '@/game/engine/ticket';
 import { gameLabel } from '@/utils/gameLabel';
@@ -284,12 +285,20 @@ function LobbyPanel({ state, me, onOpenPicker, onEndSeries }: { state: RoomState
                 <Pill
                   label={ready ? `✓ ${t('lobby.readyWithTickets', { count: m.tickets })}` : t('lobby.notReady')}
                   color={ready ? colors.success : colors.textMuted}
+                  style={styles.rowPill}
                 />
               ) : m.userId === room.hostId ? (
-                <Pill label={`👑 ${t('room.host')}`} color={colors.goldDark} />
+                <Pill label={`👑 ${t('room.host')}`} color={colors.goldDark} style={styles.rowPill} />
               ) : null}
               {isHost && m.userId !== me.id ? (
-                <IconButton icon="person-remove" size={20} color={colors.error} onPress={() => setRemoving({ userId: m.userId, name: m.name })} />
+                <Pressable
+                  onPress={() => setRemoving({ userId: m.userId, name: m.name })}
+                  accessibilityLabel={t('lobby.remove')}
+                  hitSlop={6}
+                  style={({ pressed }) => [styles.kick, { backgroundColor: colors.error, opacity: pressed ? 0.75 : 1 }]}
+                >
+                  <Ionicons name="person-remove" size={15} color="#fff" />
+                </Pressable>
               ) : null}
             </Row>
           );
@@ -559,7 +568,7 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
 
   const roomQuery = useRoom(roomId, onEvent);
   const state = roomQuery.data;
-  checkClaimsRef.current = !!state && state.room.claimMode === 'fastest' && state.room.checkClaims;
+  checkClaimsRef.current = !!state && state.room.checkClaims;
   const isHost = !!state && state.room.hostId === me.data?.id;
 
   useEffect(
@@ -636,7 +645,12 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
   }
 
   if (state.game?.status === 'running') {
-    return <LiveView state={state} me={me.data} serverNow={roomQuery.serverNow} connected={roomQuery.connected} />;
+    return (
+      <View style={{ flex: 1 }}>
+        <LiveView state={state} me={me.data} serverNow={roomQuery.serverNow} connected={roomQuery.connected} />
+        {state.room.chatEnabled ? <RoomChat state={state} meId={me.data.id} raised={isHost} /> : null}
+      </View>
+    );
   }
 
   const ended = state.room.status === 'ended';
@@ -657,7 +671,7 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
           ]}
         />
       </View>
-      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl }}>
+      <ScrollView contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl + (state.room.chatEnabled ? 72 : 0) }}>
         {tab === 'game' ? (
           ended || !state.game ? (
             <EndedPanel state={state} me={me.data} onPlayAgain={() => playAgain.mutate()} busy={playAgain.isPending} />
@@ -671,6 +685,7 @@ export function RoomScreen({ route, navigation }: ScreenProps<'Room'>) {
         {tab === 'standings' ? <StandingsList roomId={roomId} meId={me.data.id} /> : null}
       </ScrollView>
 
+      {state.room.chatEnabled && !ended ? <RoomChat state={state} meId={me.data.id} raised={false} /> : null}
       {state.game ? (
         <TicketPicker
           visible={pickerOpen && !ended && state.game.status === 'lobby' && state.game.phase === 'tickets' && state.myTickets.length === 0}
@@ -712,7 +727,20 @@ const styles = StyleSheet.create({
   potCard: { borderRadius: radius.xl, padding: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   endedBanner: { borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center' },
   waitWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },
-  readyRow: { paddingVertical: 4 },
+  readyRow: { paddingVertical: 4, alignItems: 'center' },
+  rowPill: { alignSelf: 'center', paddingVertical: 4 },
+  kick: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 3,
+    shadowColor: '#DC2626',
+    shadowOpacity: 0.35,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 2 },
+  },
   stepDot: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   stepLine: { flex: 1, height: 2, borderRadius: 1, minWidth: 8 },
 });

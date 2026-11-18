@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n, { deviceLanguage, SupportedLanguage } from '@/localization/i18n';
-import type { StrikeColorKey, TicketThemeKey } from '@/theme/ticketThemes';
+import type { HintColorKey, StrikeColorKey, TicketThemeKey } from '@/theme/ticketThemes';
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
@@ -30,10 +30,11 @@ interface SettingsState {
   sounds: boolean;
   ticketTheme: TicketThemeKey;
   strikeColor: StrikeColorKey;
+  hintColor: HintColorKey;
   isHydrated: boolean;
   setLanguage: (language: SupportedLanguage) => void;
   confirmLanguage: () => void;
-  set: (patch: Partial<Pick<SettingsState, 'themeMode' | 'voice' | 'haptics' | 'voiceStyle' | 'sounds' | 'ticketTheme' | 'strikeColor'>>) => void;
+  set: (patch: Partial<Pick<SettingsState, 'themeMode' | 'voice' | 'haptics' | 'voiceStyle' | 'sounds' | 'ticketTheme' | 'strikeColor' | 'hintColor'>>) => void;
   setVoiceFor: (language: SupportedLanguage, voiceId: string | null) => void;
 }
 
@@ -50,6 +51,7 @@ export const useSettingsStore = create<SettingsState>()(
       sounds: true,
       ticketTheme: 'classic',
       strikeColor: 'purple',
+      hintColor: 'pink',
       isHydrated: false,
       setLanguage: (language) => {
         i18n.changeLanguage(language);

@@ -449,10 +449,10 @@ export function EmptyState({ icon, title, action }: { icon: IconName; title: str
   );
 }
 
-export function Pill({ label, color, textColor }: { label: string; color: string; textColor?: string }) {
+export function Pill({ label, color, textColor, style }: { label: string; color: string; textColor?: string; style?: StyleProp<ViewStyle> }) {
   return (
-    <View style={[styles.pill, { backgroundColor: color }]}>
-      <Text style={[typography.tiny, { color: textColor ?? '#fff' }]}>{label}</Text>
+    <View style={[styles.pill, { backgroundColor: color }, style]}>
+      <Text style={[typography.tiny, { color: textColor ?? '#fff', includeFontPadding: false }]}>{label}</Text>
     </View>
   );
 }

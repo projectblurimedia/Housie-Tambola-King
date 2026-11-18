@@ -1,7 +1,8 @@
 import { supabase } from '@/lib/supabase';
 import type { PrizeType } from '@/game/engine/ticket';
 import type {
-  ClaimMode,
+  ChatMessage,
+  ClaimRule,
   GameResults,
   JoinResult,
   MyJoinStatus,
@@ -25,9 +26,10 @@ export interface CreateRoomInput {
   seriesLength: number;
   /** Enabled prizes → template amount (₹). */
   prizes: Partial<Record<PrizeType, number>>;
-  claimMode: ClaimMode;
+  rule: ClaimRule;
+  /** Auto hint (highlight called numbers). */
   autoMark: boolean;
-  checkClaims: boolean;
+  chatEnabled: boolean;
 }
 
 export type ClaimResult = 'won' | 'shared' | 'already_claimed' | 'already_yours' | 'not_complete' | 'auto';
@@ -44,9 +46,10 @@ export const roomService = {
         p_call_interval_seconds: input.callIntervalSeconds,
         p_series_length: input.seriesLength,
         p_prizes: input.prizes,
-        p_claim_mode: input.claimMode,
+        p_claim_mode: 'fastest',
         p_auto_mark: input.autoMark,
-        p_check_claims: input.checkClaims,
+        p_check_claims: input.rule === 'normal',
+        p_chat_enabled: input.chatEnabled,
       }),
     ) as { roomId: string; code: string };
   },
@@ -75,6 +78,14 @@ export const roomService = {
 
   async setPaused(gameId: string, paused: boolean): Promise<void> {
     unwrap(await supabase.rpc('set_game_paused', { p_game: gameId, p_paused: paused }));
+  },
+
+  async getChat(roomId: string): Promise<ChatMessage[]> {
+    return (unwrap(await supabase.rpc('get_chat', { p_room: roomId })) as ChatMessage[] | null) ?? [];
+  },
+
+  async sendChat(roomId: string, body: string): Promise<ChatMessage> {
+    return unwrap(await supabase.rpc('send_chat', { p_room: roomId, p_body: body })) as ChatMessage;
   },
 
   async setSpeed(roomId: string, seconds: number): Promise<void> {

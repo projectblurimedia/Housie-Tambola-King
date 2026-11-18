@@ -1,55 +1,68 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Animated, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { StatusBar } from 'expo-status-bar';
 import { useKeepAwake } from 'expo-keep-awake';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { CalledBoard } from '@/components/CalledBoard';
-import { ConfirmModal } from '@/components/ConfirmModal';
+import { Landscape } from '@/components/Landscape';
 import { MiniBall, NumberBall } from '@/components/NumberBall';
-import { VoicePicker } from '@/components/VoicePicker';
-import { Button, Chip, IconButton, Row, Screen, Spacer, T } from '@/components/ui';
+import { Button, Chip, IconButton, Row, T } from '@/components/ui';
 import { useCaller } from '@/hooks/useCaller';
 import { CALLER_SPEEDS, useCallerStore } from '@/state/callerStore';
 import { showToast } from '@/state/toastStore';
-import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
+import { fonts, goldGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
 
-function Sheet({ visible, title, onClose, children }: { visible: boolean; title: string; onClose: () => void; children: React.ReactNode }) {
+const STAGE = ['#1E0B4B', '#4C1D95', '#7C3AED'] as const;
+
+/**
+ * In-tree overlay with a smooth fade (a <Modal> would not rotate with the landscape view).
+ */
+function Overlay({ visible, onClose, children, maxHeight }: { visible: boolean; onClose: () => void; children: React.ReactNode; maxHeight: number }) {
   const { colors } = useThemeColors();
+  const fade = useRef(new Animated.Value(0)).current;
+  const [mounted, setMounted] = useState(visible);
+  useEffect(() => {
+    if (visible) setMounted(true);
+    Animated.timing(fade, { toValue: visible ? 1 : 0, duration: 220, useNativeDriver: true }).start(({ finished }) => {
+      if (finished && !visible) setMounted(false);
+    });
+  }, [visible, fade]);
+  if (!mounted) return null;
   return (
-    <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay }]} onPress={onClose}>
-        <Pressable style={[styles.sheet, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation()}>
-          <View style={[styles.handle, { backgroundColor: colors.border }]} />
-          <Row style={{ justifyContent: 'space-between', marginBottom: spacing.sm }}>
-            <T variant="h2">{title}</T>
-            <IconButton icon="close" onPress={onClose} />
-          </Row>
-          <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.lg }}>
-            {children}
-          </ScrollView>
-        </Pressable>
-      </Pressable>
-    </Modal>
+    <Animated.View style={[StyleSheet.absoluteFill, styles.overlay, { opacity: fade }]}>
+      <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+      <Animated.View
+        style={[
+          styles.overlayCard,
+          { backgroundColor: colors.surface, maxHeight, transform: [{ scale: fade.interpolate({ inputRange: [0, 1], outputRange: [0.94, 1] }) }] },
+        ]}
+      >
+        {children}
+      </Animated.View>
+    </Animated.View>
   );
 }
 
-/** Settings tile: icon + label, used for History / Undo / Reset / Print. */
-function Tile({ icon, label, onPress, disabled, danger }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; disabled?: boolean; danger?: boolean }) {
-  const { colors } = useThemeColors();
-  const tint = danger ? colors.error : colors.primary;
+function RoundButton({ icon, label, onPress, disabled, tint = '#fff' }: { icon: keyof typeof Ionicons.glyphMap; label: string; onPress: () => void; disabled?: boolean; tint?: string }) {
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [styles.tile, { backgroundColor: colors.surfaceAlt, opacity: disabled ? 0.4 : pressed ? 0.7 : 1 }]}>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityLabel={label}
+      style={({ pressed }) => [styles.round, { opacity: disabled ? 0.35 : pressed ? 0.7 : 1 }]}
+    >
       <Ionicons name={icon} size={22} color={tint} />
-      <T variant="smallBold" color={danger ? colors.error : undefined} center>
+      <T variant="tiny" color="rgba(255,255,255,0.85)">
         {label}
       </T>
     </Pressable>
   );
 }
 
-export function CallerScreen(_props: ScreenProps<'Caller'>) {
+export function CallerScreen({ navigation }: ScreenProps<'Caller'>) {
   useKeepAwake();
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -57,12 +70,11 @@ export function CallerScreen(_props: ScreenProps<'Caller'>) {
   const caller = useCaller(voiceLanguage);
   const [auto, setAuto] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const [historyOpen, setHistoryOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const calledSet = useMemo(() => new Set(called), [called]);
   const last = called.length ? called[called.length - 1] : null;
-  // Newest first.
-  const recent = called.slice(0, -1).reverse().slice(0, 8);
+  /** The last five calls, newest first (the current one is the big ball). */
+  const lastFive = called.slice(-6, -1).reverse();
   const announceRef = useRef(caller.announce);
   announceRef.current = caller.announce;
 
@@ -86,184 +98,213 @@ export function CallerScreen(_props: ScreenProps<'Caller'>) {
     next();
     if (mode === 'auto') setAuto(true);
   };
-
   const changeMode = (m: 'auto' | 'manual') => {
     setMode(m);
     if (m === 'manual') setAuto(false);
   };
 
-  const openHistory = () => {
-    setAuto(false);
-    setSettingsOpen(false);
-    setHistoryOpen(true);
-  };
-
   const done = called.length >= 90;
   const notStarted = called.length === 0;
+  const main = notStarted
+    ? { label: t('caller.start'), icon: 'play' as const, onPress: start }
+    : mode === 'auto'
+      ? { label: auto ? t('caller.pause') : t('caller.play'), icon: auto ? ('pause' as const) : ('play' as const), onPress: () => setAuto((a) => !a) }
+      : { label: t('caller.next'), icon: 'arrow-forward' as const, onPress: next };
 
   return (
-    <Screen
-      scroll
-      title={t('caller.title')}
-      right={<IconButton icon="settings-sharp" color="#fff" onPress={() => setSettingsOpen(true)} accessibilityLabel={t('caller.settings')} />}
-    >
-      <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.stage}>
-        <NumberBall number={last} size={140} />
-        <View style={styles.side}>
-          <T variant="tiny" color="#FDE68A" style={{ letterSpacing: 1 }}>
-            {t('caller.recent')}
-          </T>
-          <View style={styles.recentGrid}>
-            {recent.length ? (
-              recent.map((n) => <MiniBall key={n} n={n} size={34} />)
-            ) : (
-              <T variant="small" color="rgba(255,255,255,0.7)">
-                —
-              </T>
-            )}
-          </View>
-          <T variant="smallBold" color="#fff" style={{ marginTop: spacing.sm }}>
-            {t('game.calledCount', { count: called.length })}
-          </T>
-          <T variant="tiny" color="rgba(255,255,255,0.8)">
-            {t('caller.remaining', { count: 90 - called.length })}
-          </T>
-        </View>
-      </LinearGradient>
+    <Landscape>
+      {({ width, height, padLeft, padRight }) => {
+        const pad = 12;
+        const boardWidth = Math.min(width * 0.56, 560);
+        const cell = Math.max(20, Math.floor((height - pad * 2 - 24 - 8 * 3) / 9));
+        const ball = Math.min(Math.floor(height * 0.4), 150);
+        return (
+          <LinearGradient colors={STAGE} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={{ width, height }}>
+            <StatusBar hidden />
+            <View style={[styles.body, { paddingLeft: padLeft, paddingRight: padRight, padding: pad }]}>
+              {/* Left: the call */}
+              <View style={styles.left}>
+                <Row style={{ justifyContent: 'space-between' }}>
+                  <Row gap={4}>
+                    <IconButton icon="chevron-back" color="#fff" onPress={() => navigation.goBack()} />
+                    <T variant="h3" color="#fff">
+                      {t('caller.title')}
+                    </T>
+                  </Row>
+                  <IconButton icon="options" color="#fff" onPress={() => setSettingsOpen(true)} accessibilityLabel={t('caller.settings')} />
+                </Row>
 
-      <Spacer />
-      {notStarted ? (
-        <Button title={t('caller.start')} variant="gold" icon="play" onPress={start} />
-      ) : (
-        <Row gap={spacing.sm}>
-          {mode === 'auto' ? (
-            <Button
-              title={auto ? t('caller.pause') : t('caller.play')}
-              variant={auto ? 'danger' : 'gold'}
-              icon={auto ? 'pause' : 'play'}
-              style={{ flex: 2 }}
-              onPress={() => setAuto((a) => !a)}
-              disabled={done}
-            />
-          ) : (
-            <Button title={t('caller.next')} variant="gold" icon="arrow-forward-circle" style={{ flex: 2 }} onPress={next} disabled={done} />
-          )}
-          <Button title={t('caller.history')} variant="secondary" icon="list" style={{ flex: 1 }} onPress={openHistory} />
-        </Row>
-      )}
-      <T variant="tiny" muted center style={{ marginTop: spacing.sm }}>
-        {mode === 'auto'
-          ? t('caller.statusLine', { speed: t('common.seconds', { count: intervalSeconds }), voice: voiceLanguage === 'te' ? 'తెలుగు' : 'English' })
-          : t('caller.statusManual', { voice: voiceLanguage === 'te' ? 'తెలుగు' : 'English' })}
-      </T>
+                <Row gap={spacing.lg} style={{ flex: 1 }}>
+                  <View style={styles.ballHalo}>
+                    <NumberBall number={last} size={ball} />
+                  </View>
+                  <View style={{ flex: 1, gap: 6 }}>
+                    <T variant="h1" color="#fff">
+                      {called.length}
+                      <T variant="h3" color="rgba(255,255,255,0.6)">
+                        {' '}
+                        / 90
+                      </T>
+                    </T>
+                    <View style={styles.progress}>
+                      <LinearGradient
+                        colors={goldGradient}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 0 }}
+                        style={{ height: '100%', width: `${(called.length / 90) * 100}%`, borderRadius: 4 }}
+                      />
+                    </View>
+                    <Row gap={6} style={{ flexWrap: 'wrap' }}>
+                      <View style={styles.tag}>
+                        <Ionicons name={mode === 'auto' ? 'timer-outline' : 'hand-left-outline'} size={12} color="#FDE68A" />
+                        <T variant="tiny" color="#fff">
+                          {mode === 'auto' ? t('common.seconds', { count: intervalSeconds }) : t('caller.modeManual')}
+                        </T>
+                      </View>
+                      <View style={styles.tag}>
+                        <Ionicons name="volume-high" size={12} color="#FDE68A" />
+                        <T variant="tiny" color="#fff">
+                          {voiceLanguage === 'te' ? 'తెలుగు' : 'English'}
+                        </T>
+                      </View>
+                    </Row>
+                    <T variant="tiny" color="#FDE68A" style={{ letterSpacing: 1, marginTop: 4 }}>
+                      {t('caller.historyLast5').toUpperCase()}
+                    </T>
+                    <Row gap={6}>
+                      {lastFive.length ? (
+                        lastFive.map((n, i) => (
+                          <View key={n} style={{ opacity: 1 - i * 0.12 }}>
+                            <MiniBall n={n} size={32} />
+                          </View>
+                        ))
+                      ) : (
+                        <T variant="small" color="rgba(255,255,255,0.6)">
+                          —
+                        </T>
+                      )}
+                    </Row>
+                  </View>
+                </Row>
 
-      <Spacer h={spacing.lg} />
-      <CalledBoard called={calledSet} last={last} cellSize={32} />
+                <Row gap={spacing.sm}>
+                  <Pressable
+                    onPress={main.onPress}
+                    disabled={done && !notStarted}
+                    style={({ pressed }) => [{ flex: 1, opacity: done && !notStarted ? 0.4 : pressed ? 0.85 : 1 }]}
+                  >
+                    <LinearGradient
+                      colors={auto ? ['#F87171', '#DC2626'] : goldGradient}
+                      start={{ x: 0, y: 0 }}
+                      end={{ x: 1, y: 0 }}
+                      style={styles.mainBtn}
+                    >
+                      <Ionicons name={main.icon} size={24} color={auto ? '#fff' : '#3B1D00'} />
+                      <T variant="h3" color={auto ? '#fff' : '#3B1D00'}>
+                        {main.label}
+                      </T>
+                    </LinearGradient>
+                  </Pressable>
+                  {mode === 'auto' && !notStarted ? <RoundButton icon="play-skip-forward" label={t('caller.next')} onPress={next} disabled={done} /> : null}
+                  <RoundButton
+                    icon="arrow-undo"
+                    label={t('caller.undo')}
+                    onPress={() => {
+                      setAuto(false);
+                      undo();
+                    }}
+                    disabled={notStarted}
+                  />
+                  <RoundButton icon="refresh" label={t('caller.reset')} onPress={() => setConfirmReset(true)} disabled={notStarted} tint="#FCA5A5" />
+                </Row>
+              </View>
 
-      <Sheet visible={settingsOpen} title={t('caller.settings')} onClose={() => setSettingsOpen(false)}>
-        <T variant="smallBold" muted style={[styles.label, { marginTop: 0 }]}>
-          {t('caller.mode')}
-        </T>
-        <Row gap={spacing.sm}>
-          <Chip label={t('caller.modeAuto')} active={mode === 'auto'} onPress={() => changeMode('auto')} />
-          <Chip label={t('caller.modeManual')} active={mode === 'manual'} onPress={() => changeMode('manual')} />
-        </Row>
-        <Row gap={spacing.sm} style={{ marginTop: spacing.lg }}>
-          <Tile
-            icon="arrow-undo"
-            label={t('caller.undo')}
-            onPress={() => {
-              setAuto(false);
-              undo();
-            }}
-            disabled={!called.length}
-          />
-          <Tile
-            icon="refresh"
-            label={t('caller.reset')}
-            danger
-            onPress={() => {
-              setSettingsOpen(false);
-              setConfirmReset(true);
-            }}
-            disabled={!called.length}
-          />
-        </Row>
+              {/* Right: the board */}
+              <View style={[styles.boardCard, { width: boardWidth, backgroundColor: colors.surface }]}>
+                <CalledBoard called={calledSet} last={last} cellSize={cell} />
+              </View>
+            </View>
 
-        <T variant="smallBold" muted style={styles.label}>
-          {t('caller.speed')}
-        </T>
-        <View style={styles.wrap}>
-          {CALLER_SPEEDS.map((s) => (
-            <Chip key={s} label={t('common.seconds', { count: s })} active={intervalSeconds === s} onPress={() => setSpeed(s)} />
-          ))}
-        </View>
+            <Overlay visible={settingsOpen} onClose={() => setSettingsOpen(false)} maxHeight={height - 24}>
+              <Row style={{ justifyContent: 'space-between' }}>
+                <T variant="h2">{t('caller.settings')}</T>
+                <IconButton icon="close" onPress={() => setSettingsOpen(false)} />
+              </Row>
+              <ScrollView showsVerticalScrollIndicator={false}>
+                <T variant="smallBold" muted style={styles.label}>
+                  {t('caller.mode')}
+                </T>
+                <Row gap={spacing.sm}>
+                  <Chip label={t('caller.modeAuto')} active={mode === 'auto'} onPress={() => changeMode('auto')} />
+                  <Chip label={t('caller.modeManual')} active={mode === 'manual'} onPress={() => changeMode('manual')} />
+                </Row>
+                {mode === 'auto' ? (
+                  <>
+                    <T variant="smallBold" muted style={styles.label}>
+                      {t('caller.speed')}
+                    </T>
+                    <View style={styles.wrap}>
+                      {CALLER_SPEEDS.map((s) => (
+                        <Chip key={s} label={t('common.seconds', { count: s })} active={intervalSeconds === s} onPress={() => setSpeed(s)} />
+                      ))}
+                    </View>
+                  </>
+                ) : null}
+                <T variant="smallBold" muted style={styles.label}>
+                  {t('caller.voiceLanguage')}
+                </T>
+                <Row gap={spacing.sm}>
+                  <Chip label="English" active={voiceLanguage === 'en'} onPress={() => setVoiceLanguage('en')} />
+                  <Chip label="తెలుగు" active={voiceLanguage === 'te'} onPress={() => setVoiceLanguage('te')} />
+                </Row>
+              </ScrollView>
+            </Overlay>
 
-        <T variant="smallBold" muted style={styles.label}>
-          {t('caller.voiceLanguage')}
-        </T>
-        <Row gap={spacing.sm}>
-          <Chip label="English" active={voiceLanguage === 'en'} onPress={() => setVoiceLanguage('en')} />
-          <Chip label="తెలుగు" active={voiceLanguage === 'te'} onPress={() => setVoiceLanguage('te')} />
-        </Row>
-
-        <T variant="smallBold" muted style={styles.label}>
-          {t('caller.voice')}
-        </T>
-        <VoicePicker language={voiceLanguage} />
-      </Sheet>
-
-      <Sheet visible={historyOpen} title={t('caller.historyLast5')} onClose={() => setHistoryOpen(false)}>
-        <T variant="small" muted style={{ marginBottom: spacing.md }}>
-          {t('caller.historyHint')}
-        </T>
-        {called.length === 0 ? (
-          <T muted>{t('caller.historyEmpty')}</T>
-        ) : (
-          <View style={styles.historyGrid}>
-            {called
-              .map((n, i) => ({ n, order: i + 1 }))
-              .slice(-5)
-              .reverse()
-              .map(({ n, order }) => (
-                <View key={n} style={styles.historyItem}>
-                  <T variant="tiny" muted>
-                    #{order}
-                  </T>
-                  <MiniBall n={n} size={40} />
+            <Overlay visible={confirmReset} onClose={() => setConfirmReset(false)} maxHeight={height - 24}>
+              <View style={{ alignItems: 'center', gap: spacing.sm }}>
+                <View style={[styles.confirmIcon, { backgroundColor: colors.error }]}>
+                  <Ionicons name="refresh" size={26} color="#fff" />
                 </View>
-              ))}
-          </View>
-        )}
-      </Sheet>
-
-      <ConfirmModal
-        visible={confirmReset}
-        icon="refresh"
-        title={t('caller.resetTitle')}
-        message={t('caller.resetConfirm')}
-        confirmLabel={t('caller.reset')}
-        onCancel={() => setConfirmReset(false)}
-        onConfirm={() => {
-          setAuto(false);
-          reset();
-          setConfirmReset(false);
-        }}
-      />
-    </Screen>
+                <T variant="h2" center>
+                  {t('caller.resetTitle')}
+                </T>
+                <T muted center>
+                  {t('caller.resetConfirm')}
+                </T>
+                <Row gap={spacing.sm} style={{ marginTop: spacing.sm, alignSelf: 'stretch' }}>
+                  <Button title={t('common.cancel')} variant="secondary" style={{ flex: 1 }} onPress={() => setConfirmReset(false)} />
+                  <Button
+                    title={t('caller.reset')}
+                    variant="danger"
+                    style={{ flex: 1 }}
+                    onPress={() => {
+                      setAuto(false);
+                      reset();
+                      setConfirmReset(false);
+                    }}
+                  />
+                </Row>
+              </View>
+            </Overlay>
+          </LinearGradient>
+        );
+      }}
+    </Landscape>
   );
 }
 
 const styles = StyleSheet.create({
-  stage: { flexDirection: 'row', alignItems: 'center', gap: spacing.lg, padding: spacing.lg, borderRadius: radius.xl },
-  side: { flex: 1 },
-  recentGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 6, minHeight: 34 },
-  label: { marginTop: spacing.lg, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
+  body: { flex: 1, flexDirection: 'row', gap: 14 },
+  left: { flex: 1, justifyContent: 'space-between', gap: 8 },
+  ballHalo: { borderRadius: 999, padding: 6, backgroundColor: 'rgba(255,255,255,0.08)' },
+  progress: { height: 8, borderRadius: 4, overflow: 'hidden', backgroundColor: 'rgba(255,255,255,0.18)' },
+  tag: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: radius.pill, paddingHorizontal: 9, paddingVertical: 3 },
+  mainBtn: { height: 56, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
+  round: { width: 62, height: 56, borderRadius: radius.lg, backgroundColor: 'rgba(255,255,255,0.12)', alignItems: 'center', justifyContent: 'center', gap: 1 },
+  boardCard: { borderRadius: radius.lg, padding: 12, justifyContent: 'center', elevation: 8, shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 10, shadowOffset: { width: 0, height: 4 } },
+  overlay: { backgroundColor: 'rgba(10,4,24,0.6)', alignItems: 'center', justifyContent: 'center', padding: spacing.md },
+  overlayCard: { width: '100%', maxWidth: 440, borderRadius: radius.xl, padding: spacing.lg },
+  label: { marginTop: spacing.md, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
   wrap: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  backdrop: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, paddingTop: spacing.sm, maxHeight: '85%' },
-  handle: { width: 44, height: 5, borderRadius: 3, alignSelf: 'center', marginBottom: spacing.sm },
-  tile: { flex: 1, alignItems: 'center', gap: 6, paddingVertical: spacing.md, borderRadius: radius.md },
-  historyGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 10 },
-  historyItem: { alignItems: 'center', width: 46 },
+  confirmIcon: { width: 54, height: 54, borderRadius: 27, alignItems: 'center', justifyContent: 'center' },
 });

@@ -15,7 +15,7 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `get_me` | – | profile + stats | `PROFILE_NOT_FOUND` |
 | `update_my_profile` | `p_display_name?, p_avatar_key?, p_language?` | `get_me` | `INVALID_DISPLAY_NAME`, `INVALID_AVATAR` |
 | `delete_my_account` | – | – | – |
-| `create_room` | `p_title, p_kind (normal/series), p_visibility (public/private), p_max_players, p_ticket_price, p_call_interval_seconds, p_series_length, p_prizes {prize: ₹}, p_claim_mode (fastest/fair), p_auto_mark, p_check_claims (default true)` | `{roomId, code}` | `INVALID_PRIZES`, `INVALID_TICKET_PRICE`, `INVALID_MAX_PLAYERS`, `INVALID_SERIES_LENGTH`, `TOO_MANY_OPEN_ROOMS` |
+| `create_room` | `p_title, p_kind (normal/series), p_visibility (public/private), p_max_players, p_ticket_price, p_call_interval_seconds, p_series_length, p_prizes {prize: ₹}, p_claim_mode ('fastest' only), p_auto_mark (= auto hint), p_check_claims (true = Normal rule, false = Fastest finger), p_chat_enabled (default true)` | `{roomId, code}` | `INVALID_PRIZES`, `INVALID_TICKET_PRICE`, `INVALID_MAX_PLAYERS`, `INVALID_SERIES_LENGTH`, `TOO_MANY_OPEN_ROOMS` |
 | `join_room_by_code` | `p_code` | `{roomId, status: member/pending}` (host must accept) | `ROOM_NOT_FOUND`, `ROOM_FULL`, `ROOM_ENDED` |
 | `join_public_room` | `p_room` | same | same |
 | `my_join_status` | `p_room` | `{status: member/pending/rejected/none, title, code, hostName}` | – |
@@ -29,6 +29,8 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `set_call_speed` | `p_room, p_seconds (1–20)` (host) | – | `NOT_HOST`, `INVALID_SPEED` |
 | `remove_member` | `p_room, p_user` (host) | – | `NOT_HOST`, `CANNOT_REMOVE_SELF` |
 | `claim_prize` | `p_ticket, p_prize` | `{result: won/shared/already_claimed/already_yours/not_complete}` | `GAME_NOT_RUNNING`, `TOO_MANY_CLAIMS` |
+| `send_chat` | `p_room, p_body (1–200 chars)` | message `{id, userId, name, avatarKey, body, at}` (also broadcast `chat`) | `CHAT_OFF`, `CHAT_TOO_FAST` (5 per 10 s), `INVALID_MESSAGE`, `NOT_IN_ROOM` |
+| `get_chat` | `p_room` | last 50 messages, oldest first | `NOT_IN_ROOM` |
 | `nudge_game` | `p_game` | – (advances only if a call is overdue) | – |
 | `get_room_state` | `p_room` | room + current game + prizes + my tickets + members + previousGameId + serverTime | `NOT_IN_ROOM` |
 | `get_game_results` | `p_game` | prizes with winners, numbers, amounts + per-player tickets/spent/won/net | `NOT_IN_ROOM` |
@@ -37,7 +39,7 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `register_push_token` | `p_token, p_platform` | – | `INVALID_PUSH_TOKEN` |
 
 ## Realtime
-Private channel `room:<roomId>` (members only, receive-only). Events: `call {gameId, n, index, nextCallAt}`, `prize {gameId, prize, amount, callIndex, winners[{userId, name, avatarKey, ticketSerial, numbers}]}`, `prize_settled {gameId, prize, each, winners, amount, callIndex, winnerList[…, amount]}` (check rooms announce on this), `claim_check {gameId, prize, callIndex, winners, deadline}`, `speed {seconds}`, `paused {gameId, paused}`, `phase {gameId, phase}`, `lobby {gameId, ticketCount, playerCount, pot}`, `members {memberCount, joined?}`, `state {gameId, gameNo, status}`, `game {gameId, gameNo}` (next lobby opened), `room_ended {reason}`.
+Private channel `room:<roomId>` (members only, receive-only). Events: `call {gameId, n, index, nextCallAt}`, `prize {gameId, prize, amount, callIndex, winners[{userId, name, avatarKey, ticketSerial, numbers}]}`, `prize_settled {gameId, prize, each, winners, amount, callIndex, winnerList[…, amount]}` (check rooms announce on this), `claim_check {gameId, prize, callIndex, winners, deadline}`, `speed {seconds}`, `paused {gameId, paused}`, `phase {gameId, phase}`, `chat {id, userId, name, avatarKey, body, at}`, `lobby {gameId, ticketCount, playerCount, pot}`, `members {memberCount, joined?}`, `state {gameId, gameNo, status}`, `game {gameId, gameNo}` (next lobby opened), `room_ended {reason}`.
 
 ## Admin RPCs (`role = admin`)
 `admin_dashboard`, `admin_list_players`, `admin_get_player`, `admin_set_ban`, `admin_set_role`, `admin_list_rooms`, `admin_end_room`. `app_settings` is edited directly under admin-only RLS (audit-logged).

@@ -17,7 +17,7 @@ A series' next game starts again at step 1.
 ## Tickets & pot (casual ₹ — no real money)
 - Before **every** game each player chooses **1–4 tickets**, confirmed once — it can't be changed for that game (no re-rolling tickets).
 - Pot = tickets taken × ticket price.
-- Prizes are chosen at room creation **without amounts**. Before every game the host opens the prize setup (also shown when tapping Start): turns prizes on/off for this game and sets amounts, which must add up exactly to the pot. Auto split suggests amounts.
+- Prizes are **not** chosen at room creation. Before every game the host opens the prize setup (step 3): every Fast 3/5/7, line and column has its own switch (Full Housie always on) and an amount; amounts must add up exactly to the pot. Auto split suggests amounts.
 
 ## Ticket
 3 rows × 9 columns, 15 numbers: **5 per row and 5 per column group** (columns 1–3, 4–6, 7–9). Column 1 = 1–9, column 2 = 10–19 … column 9 = 80–90.
@@ -31,10 +31,13 @@ A series' next game starts again at step 1.
 | Full Housie | all 15 numbers |
 
 ## Room options
-- **Claim rule**: *Fastest finger* (first tap wins; anyone completing the same prize on the same number can still claim a share) or *Fair play* (the server awards everyone whose ticket completed the prize on that number — no tapping race).
-- **Check before announcing** (fastest finger only, on by default): when someone claims, every phone shows "X claimed Fast 5 — check your tickets" with a 10 s countdown and an **I have it too!** button. Anyone whose ticket completed the same prize on the same number joins the win (split equally). Only then is the winner announced (7 s pause).
-- **Auto-mark**: called numbers are circled on tickets automatically.
-- Default calling speed 3 s (set in game, 1–10 s). During a game the host has an on-screen **pause/play** button and can change the speed in settings; every phone gets a message when the speed changes or the game is paused/resumed. Every player can change their own voice, sounds and ticket colours.
+- **Claim rule** — two options:
+  - **Normal** (default): when someone claims, every phone shows "X claimed Fast 5 — check your tickets" with a 10 s countdown and an **I have it too!** button. Anyone whose ticket completed the same prize on the same number joins the win (split equally). Then the winner is announced (7 s pause).
+  - **Fastest finger**: the first claim wins it alone — no sharing.
+  (Fair play was removed on 2026-11-18; old fair rooms became Normal.)
+- **Auto hint**: called numbers glow on tickets (in the player's hint colour); players still tap to strike. Nothing is marked automatically.
+- **Room chat** (host's choice, on by default): floating chat button; each player can mute anyone for themselves. Voice chat is planned (needs a voice provider + a new app build).
+- Default calling speed 3 s (set in game, 1–10 s). During a game the host has an on-screen **pause/play** button and can change the speed in settings; every phone gets a message when the speed changes or the game is paused/resumed. Voice, sounds and ticket style (ready-made looks, ticket / strike / hint colours) are set only in Profile.
 - Numbers pause for 8 s after a prize is won (7 s after a checked claim) so everyone sees the winner announcement.
 - The host can remove a player from the room.
 

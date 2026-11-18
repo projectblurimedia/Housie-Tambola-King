@@ -14,22 +14,18 @@ interface VoiceOption {
   id: string;
   label: string;
   detail: string;
+  icon: string;
 }
 
-const MAX_VOICES = 5;
+/** Phone default + 4 others = 5 voices. */
+const MAX_OTHER_VOICES = 4;
 
 const regionOf = (v: Speech.Voice) => (v.language.split(/[-_]/)[1] ?? '').toUpperCase();
 
-/** Up to 5 voices, taken round-robin across accents (IN, US, GB, AU…) so they really sound different. */
-function pickAcrossAccents(voices: Speech.Voice[]): Speech.Voice[] {
-  const buckets = new Map<string, Speech.Voice[]>();
-  voices.forEach((v) => buckets.set(regionOf(v), [...(buckets.get(regionOf(v)) ?? []), v]));
-  const lists = [...buckets.values()];
-  const picked: Speech.Voice[] = [];
-  for (let round = 0; picked.length < MAX_VOICES && lists.some((l) => l[round]); round++) {
-    lists.forEach((l) => l[round] && picked.length < MAX_VOICES && picked.push(l[round]));
-  }
-  return picked;
+/** Flag emoji from a 2-letter region code (IN → 🇮🇳). */
+function flagOf(region: string): string {
+  if (!/^[A-Z]{2}$/.test(region)) return '🌐';
+  return String.fromCodePoint(...[...region].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
 }
 
 /**
@@ -55,14 +51,18 @@ function describe(voices: Speech.Voice[], language: SupportedLanguage, t: TFunct
       seen.add(key);
       return true;
     });
-  return pickAcrossAccents(distinct)
-    .map((v, i) => {
-      const id = `${v.identifier} ${v.name}`.toLowerCase();
-      const gender = id.includes('female') ? t('voice.female') : id.includes('male') ? t('voice.male') : null;
-      const region = v.language.split(/[-_]/)[1]?.toUpperCase();
-      const parts = [gender, region ? t('voice.region', { region }) : null, v.quality === 'Enhanced' ? t('voice.hd') : null];
-      return { id: v.identifier, label: t('voice.number', { n: i + 1 }), detail: parts.filter(Boolean).join(' · ') };
-    });
+  // Voices of the same accent sound alike: keep just one per accent (India, US, UK…).
+  const perAccent = new Map<string, Speech.Voice>();
+  distinct.forEach((v) => {
+    if (!perAccent.has(regionOf(v))) perAccent.set(regionOf(v), v);
+  });
+  return [...perAccent.values()].slice(0, MAX_OTHER_VOICES).map((v, i) => {
+    const region = regionOf(v);
+    const accent = t(`voice.accents.${region}`, { defaultValue: region || t('voice.other') });
+    const gender = /female/.test(v.identifier.toLowerCase() + v.name.toLowerCase()) ? t('voice.female') : null;
+    const parts = [accent, gender, v.quality === 'Enhanced' ? t('voice.hd') : null];
+    return { id: v.identifier, label: t('voice.number', { n: i + 2 }), detail: parts.filter(Boolean).join(' · '), icon: flagOf(region) };
+  });
 }
 
 /**
@@ -100,7 +100,7 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
 
   if (!options) return <ActivityIndicator color={colors.primary} />;
 
-  const rows: VoiceOption[] = [{ id: '', label: t('voice.default'), detail: t('voice.defaultDetail') }, ...options];
+  const rows: VoiceOption[] = [{ id: '', label: t('voice.number', { n: 1 }), detail: t('voice.defaultDetail'), icon: '📱' }, ...options];
   return (
     <View style={{ gap: spacing.sm }}>
       <T variant="tiny" muted>
@@ -124,7 +124,9 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
             onPress={() => choose(o.id || null)}
             style={[styles.row, { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.surfaceAlt : colors.surface }]}
           >
-            <Ionicons name={active ? 'radio-button-on' : 'radio-button-off'} size={20} color={active ? colors.primary : colors.textMuted} />
+            <View style={[styles.icon, { backgroundColor: active ? colors.primary : colors.surfaceAlt }]}>
+              <T style={{ fontSize: 20, lineHeight: 26 }}>{o.icon}</T>
+            </View>
             <View style={{ flex: 1 }}>
               <T variant="bodyMedium">{o.label}</T>
               {o.detail ? (
@@ -133,7 +135,7 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
                 </T>
               ) : null}
             </View>
-            <Ionicons name="volume-medium" size={18} color={colors.primary} />
+            <Ionicons name={active ? 'checkmark-circle' : 'play-circle-outline'} size={24} color={active ? colors.primary : colors.textMuted} />
           </Pressable>
         );
       })}
@@ -143,5 +145,6 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
 
 const styles = StyleSheet.create({
   styles: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginBottom: spacing.sm },
+  icon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
   row: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: radius.md, borderWidth: 1.5 },
 });

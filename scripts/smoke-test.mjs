@@ -139,7 +139,15 @@ try {
     console.log(`  🏆 ${payload.prize} @${payload.callIndex}: ${payload.winnerList.map((w) => `${w.name} ₹${w.amount}`).join(' & ')}`),
   );
   channel.on('broadcast', { event: 'prize' }, ({ payload }) => console.log(`  🏆 ${payload.prize}: ${payload.winners.map((w) => `${w.name} [${w.numbers.join(',')}]`).join(' & ')}`));
+  const chats = [];
+  channel.on('broadcast', { event: 'chat' }, ({ payload }) => chats.push(payload.body));
   await new Promise((resolve) => channel.subscribe((s) => s === 'SUBSCRIBED' && resolve()));
+
+  check(state.room.chatEnabled === true, 'room chat on by default');
+  await host.rpc('send_chat', { p_room: room.roomId, p_body: 'All the best!' });
+  await sleep(1500);
+  check(chats.includes('All the best!'), 'chat message reached the other player live');
+  check((await friend.rpc('get_chat', { p_room: room.roomId })).some((m) => m.body === 'All the best!'), 'chat history saved');
 
   await host.rpc('start_game', { p_game: game1 });
   console.log('… game 1 started; players strike & claim as numbers arrive');

@@ -94,7 +94,7 @@ export function PrizeSetupModal({
   const matches = Math.abs(total - pot) < 0.005;
 
   return (
-    <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
+    <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       {/* The modal window doesn't resize for the keyboard on Android (edge-to-edge), so pad on both. */}
       <KeyboardAvoidingView behavior="padding" style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
