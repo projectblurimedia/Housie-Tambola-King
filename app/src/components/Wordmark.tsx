@@ -1,90 +1,98 @@
 import React from 'react';
-import { StyleSheet, Text, View } from 'react-native';
-import Svg, { Circle, Defs, LinearGradient as SvgGradient, Path, Rect, Stop } from 'react-native-svg';
+import { Image, StyleSheet, View } from 'react-native';
+import Svg, { Defs, G, LinearGradient as SvgGradient, Stop, Text as SvgText, TSpan } from 'react-native-svg';
 
 /** App title font: Aquire Bold (assets/fonts, loaded in App). Non-commercial licence — see App.tsx. */
 const TITLE_FONT = 'Aquire-Bold';
+const APP_ICON = require('../../assets/icon.png');
 
-/** A jewelled gold crown (vector) — kept for other screens that may want it. */
-export function Crown({ width = 40 }: { width?: number }) {
-  return (
-    <Svg width={width} height={width * 0.72} viewBox="0 0 100 72">
-      <Defs>
-        <SvgGradient id="crownGold" x1="0" y1="0" x2="0" y2="1">
-          <Stop offset="0" stopColor="#FFF3B0" />
-          <Stop offset="0.5" stopColor="#F5C542" />
-          <Stop offset="1" stopColor="#B7791F" />
-        </SvgGradient>
-      </Defs>
-      <Path d="M8 56 L4 18 L28 38 L50 6 L72 38 L96 18 L92 56 Z" fill="url(#crownGold)" stroke="#8A5A00" strokeWidth={2} strokeLinejoin="round" />
-      <Rect x={8} y={56} width={84} height={12} rx={3} fill="url(#crownGold)" stroke="#8A5A00" strokeWidth={2} />
-    </Svg>
-  );
-}
-
-/**
- * The app icon: a white housie ticket (two numbers marked) on a purple-to-magenta tile with
- * a gold edge.
- */
+/** The app's own launcher icon (gold 90 ball with a crown), framed for headers. */
 export function AppIcon({ size = 40 }: { size?: number }) {
-  // 3 rows × 5 marks on the ticket; which ones are "struck".
-  const struck = new Set(['0-1', '1-3', '2-0']);
   return (
-    <Svg width={size} height={size} viewBox="0 0 100 100">
+    <View style={[styles.iconFrame, { width: size, height: size, borderRadius: size * 0.28 }]}>
+      <Image source={APP_ICON} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+    </View>
+  );
+}
+
+/**
+ * HOUSIE TAMBOLA KING in Aquire Bold as glossy 3-D gold lettering (deep shadow, dark outline,
+ * polished gold face) with KING in a pink-to-gold gradient. textLength stretches the line to
+ * exactly fill the width it's given, so it's never squeezed small on narrow phones.
+ */
+function GoldTitle({ width, height }: { width: number; height: number }) {
+  const size = height * 0.62;
+  const y = height * 0.72;
+  const common = {
+    x: 2,
+    fontFamily: TITLE_FONT,
+    fontSize: size,
+    textLength: width - 6,
+    lengthAdjust: 'spacingAndGlyphs' as const,
+  };
+  const words = (kingFill: string) => (
+    <>
+      HOUSIE TAMBOLA <TSpan fill={kingFill}>KING</TSpan>
+    </>
+  );
+  return (
+    <Svg width="100%" height="100%" viewBox={`0 0 ${width} ${height}`}>
       <Defs>
-        <SvgGradient id="tile" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#8B5CF6" />
-          <Stop offset="1" stopColor="#C026D3" />
+        <SvgGradient id="gold" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FFF6C8" />
+          <Stop offset="0.45" stopColor="#FFD54A" />
+          <Stop offset="0.58" stopColor="#E0A21B" />
+          <Stop offset="1" stopColor="#FFE07A" />
         </SvgGradient>
-        <SvgGradient id="edge" x1="0" y1="0" x2="1" y2="1">
-          <Stop offset="0" stopColor="#FFF1B8" />
-          <Stop offset="1" stopColor="#D99400" />
+        <SvgGradient id="king" x1="0" y1="0" x2="0" y2="1">
+          <Stop offset="0" stopColor="#FFD1E8" />
+          <Stop offset="0.5" stopColor="#FF4FA3" />
+          <Stop offset="1" stopColor="#FFB020" />
         </SvgGradient>
       </Defs>
-      <Rect x={3} y={3} width={94} height={94} rx={24} fill="url(#tile)" stroke="url(#edge)" strokeWidth={5} />
-      {/* Ticket with notched sides. */}
-      <Path
-        d="M20 30 H80 A4 4 0 0 1 84 34 V44 A6 6 0 0 0 84 56 V66 A4 4 0 0 1 80 70 H20 A4 4 0 0 1 16 66 V56 A6 6 0 0 0 16 44 V34 A4 4 0 0 1 20 30 Z"
-        fill="#FFFFFF"
-      />
-      {[0, 1, 2].map((r) =>
-        [0, 1, 2, 3, 4].map((c) => {
-          const on = struck.has(`${r}-${c}`);
-          return <Circle key={`${r}-${c}`} cx={28 + c * 11} cy={39 + r * 11} r={on ? 4.2 : 3} fill={on ? '#EC4899' : '#DDD6FE'} />;
-        }),
-      )}
+      <G>
+        {/* Depth shadow */}
+        <SvgText {...common} y={y + size * 0.1} fill="#2E0A5A" opacity={0.75}>
+          {words('#2E0A5A')}
+        </SvgText>
+        {/* Gold face with a dark outline */}
+        <SvgText {...common} y={y} fill="url(#gold)" stroke="#6B3E00" strokeWidth={size * 0.05} strokeLinejoin="round">
+          {words('url(#king)')}
+        </SvgText>
+      </G>
     </Svg>
   );
 }
 
 /**
- * The app title: icon · HOUSIE TAMBOLA KING in Aquire Bold (KING in gold) — one line,
- * shrinking to fit narrow phones.
- *  - "large": Welcome screen, centred   ·   "small": Home header
+ * The app title: launcher icon · HOUSIE TAMBOLA KING (gold, Aquire) on one line.
+ *  - "large": Welcome screen  ·  "small": Home header
  */
 export function Wordmark({ size = 'large' }: { size?: 'large' | 'small' }) {
-  const font = size === 'large' ? 22 : 17;
+  const large = size === 'large';
+  // The title's drawing box: a fixed shape that scales to the space left after the icon.
+  const W = 420;
+  const H = large ? 52 : 44;
   return (
-    <View style={[styles.row, size === 'large' && { justifyContent: 'center' }]}>
-      <AppIcon size={size === 'large' ? 44 : 34} />
-      <Text style={[styles.title, { fontSize: font, lineHeight: font * 1.3 }]} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.65}>
-        HOUSIE TAMBOLA <Text style={styles.king}>KING</Text>
-      </Text>
+    <View style={styles.row}>
+      <AppIcon size={large ? 48 : 40} />
+      <View style={{ flex: 1, aspectRatio: W / H, maxHeight: large ? 56 : 46 }}>
+        <GoldTitle width={W} height={H} />
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  title: {
-    flexShrink: 1,
-    fontFamily: TITLE_FONT,
-    color: '#FFFFFF',
-    letterSpacing: 1,
-    includeFontPadding: false,
-    textShadowColor: 'rgba(30,0,60,0.4)',
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 4,
+  row: { flexDirection: 'row', alignItems: 'center', gap: 10, width: '100%' },
+  iconFrame: {
+    overflow: 'hidden',
+    borderWidth: 2,
+    borderColor: '#FCD34D',
+    shadowColor: '#000',
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 5,
   },
-  king: { color: '#FCD34D' },
 });
