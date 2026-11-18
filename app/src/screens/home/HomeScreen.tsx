@@ -386,9 +386,11 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
     <View style={{ flex: 1, backgroundColor: colors.background }}>
       <LinearGradient colors={heroGradient} style={styles.hero}>
         <SafeAreaView edges={['top']}>
-          {/* Logo + the title lettered like the logo (Housie / Tambola / King); photo on the right. */}
+          {/* One icon + "Housie Tambola King" on one line; photo on the right. */}
           <Row style={{ alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
-            <Wordmark size="small" />
+            <View style={{ flex: 1, marginRight: spacing.md }}>
+              <Wordmark size="small" />
+            </View>
             <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={46} ring="#FDE68A" />
             </Pressable>
