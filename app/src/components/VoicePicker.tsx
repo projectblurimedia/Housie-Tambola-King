@@ -4,7 +4,7 @@ import * as Speech from 'expo-speech';
 import { Ionicons } from '@expo/vector-icons';
 import { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
-import { useSettingsStore, VOICE_STYLES, VoiceStyle } from '@/state/settingsStore';
+import { useSettingsStore } from '@/state/settingsStore';
 import { speakNumber } from '@/hooks/useCaller';
 import type { SupportedLanguage } from '@/localization/languages';
 import { radius, spacing, useThemeColors } from '@/theme';
@@ -95,7 +95,6 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const selected = useSettingsStore((s) => s.voiceByLanguage[language] ?? null);
-  const voiceStyle = useSettingsStore((s) => s.voiceStyle);
   const setVoiceFor = useSettingsStore((s) => s.setVoiceFor);
   const setSettings = useSettingsStore((s) => s.set);
   const [options, setOptions] = useState<VoiceOption[] | null>(null);
@@ -112,12 +111,7 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
 
   const choose = (id: string | null) => {
     setVoiceFor(language, id);
-    speakNumber(35, language, id, voiceStyle);
-  };
-
-  const chooseStyle = (style: VoiceStyle) => {
-    setSettings({ voiceStyle: style });
-    speakNumber(35, language, selected, style);
+    speakNumber(35, language, id);
   };
 
   if (!options) return <ActivityIndicator color={colors.primary} />;
@@ -125,14 +119,6 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
   const rows: VoiceOption[] = [{ id: '', label: t('voice.number', { n: 1 }), detail: t('voice.defaultDetail'), icon: '📱' }, ...options];
   return (
     <View style={{ gap: spacing.sm }}>
-      <T variant="tiny" muted>
-        {t('voice.style')}
-      </T>
-      <View style={styles.styles}>
-        {(Object.keys(VOICE_STYLES) as VoiceStyle[]).map((s) => (
-          <Chip key={s} label={t(`voice.styles.${s}`)} active={voiceStyle === s} onPress={() => chooseStyle(s)} />
-        ))}
-      </View>
       {options.length === 0 ? (
         <T variant="small" color={colors.warning}>
           {language === 'te' ? t('voice.noTelugu') : t('voice.none')}

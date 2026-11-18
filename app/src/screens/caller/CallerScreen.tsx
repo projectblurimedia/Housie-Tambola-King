@@ -89,8 +89,8 @@ function RoundButton({
       style={({ pressed }) => ({ opacity: disabled ? 0.4 : 1, transform: [{ scale: pressed ? 0.95 : 1 }] })}
     >
       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.round}>
-        <Ionicons name={icon} size={20} color="#fff" style={styles.iconCentred} />
-        <T variant="tiny" color="#fff" style={{ includeFontPadding: false }}>
+        <Ionicons name={icon} size={22} color="#fff" style={styles.iconCentred} />
+        <T variant="smallBold" color="#fff" style={{ includeFontPadding: false }}>
           {label}
         </T>
       </LinearGradient>
@@ -363,9 +363,9 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                     onPress={() => {
                       setVoiceLanguage('both');
                       // A sample: 35 in English, then in Telugu.
-                      const { voiceByLanguage, voiceStyle } = useSettingsStore.getState();
-                      speakNumber(35, 'en', voiceByLanguage.en, voiceStyle);
-                      speakNumber(35, 'te', voiceByLanguage.te, voiceStyle, true);
+                      const { voiceByLanguage } = useSettingsStore.getState();
+                      speakNumber(35, 'en', voiceByLanguage.en);
+                      speakNumber(35, 'te', voiceByLanguage.te, 'normal', true);
                     }}
                   />
                 </Row>
@@ -475,8 +475,8 @@ const styles = StyleSheet.create({
   },
   mainBtn: { height: 50, borderRadius: radius.lg, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8 },
   round: {
-    width: 64,
-    height: 50,
+    width: 76,
+    height: 54,
     borderRadius: radius.lg,
     alignItems: 'center',
     justifyContent: 'center',

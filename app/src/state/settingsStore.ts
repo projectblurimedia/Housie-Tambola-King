@@ -55,7 +55,7 @@ export const useSettingsStore = create<SettingsState>()(
       voiceStyle: 'normal',
       sounds: true,
       strikeSound: true,
-      ticketShape: 'round',
+      ticketShape: 'box',
       ticketTheme: 'purple',
       strikeColor: 'purple',
       hintColor: 'pink',
@@ -72,12 +72,14 @@ export const useSettingsStore = create<SettingsState>()(
       name: 'settings-storage',
       // v1: ticket / strike / hint colours share one palette (old theme names are mapped).
       // v2: vibration off by default — switched off once for everyone (they can turn it back on).
-      version: 2,
+      // v3: Box is the default number shape (switched once for everyone).
+      version: 3,
       migrate: (persisted, version) => {
         const s = (persisted ?? {}) as Record<string, unknown>;
         return {
           ...s,
           ...(version < 2 ? { haptics: false } : {}),
+          ...(version < 3 ? { ticketShape: 'box' } : {}),
           ticketTheme: toPalette(s.ticketTheme as string | undefined, 'purple'),
           strikeColor: toPalette(s.strikeColor as string | undefined, 'purple'),
           hintColor: toPalette(s.hintColor as string | undefined, 'pink'),

@@ -293,9 +293,11 @@
     "notCheckedYet": "Not checked yet (tap ✕ to remove):",
     "continueGame": "Continue the game",
     "notCheckedYetPlain": "Not checked yet:",
-    "strikeMissedFirst": "Your ticket has it — strike the numbers you missed, then tap Claim.",
+    "strikeMissedFirst": "Check your ticket: tap the numbers you missed to mark them, then press “I have it too” again.",
     "thisPhone": "On this phone",
-    "autoRuleHint": "Auto: numbers are struck for you and prizes are awarded automatically."
+    "autoRuleHint": "Auto: numbers are struck for you and prizes are awarded automatically.",
+    "claimedPrizes": "claimed {{prizes}}",
+    "callerVoice": "Caller voice"
   },
   "winner": {
     "title": "WINNER!",

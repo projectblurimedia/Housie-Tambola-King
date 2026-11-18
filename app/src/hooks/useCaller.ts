@@ -27,7 +27,6 @@ export function useCaller(voiceLanguage?: SupportedLanguage | 'both') {
   const appLanguage = useSettingsStore((s) => s.language);
   const haptics = useSettingsStore((s) => s.haptics);
   const voiceByLanguage = useSettingsStore((s) => s.voiceByLanguage);
-  const voiceStyle = useSettingsStore((s) => s.voiceStyle);
   const both = voiceLanguage === 'both';
   const language: SupportedLanguage = voiceLanguage && voiceLanguage !== 'both' ? voiceLanguage : appLanguage;
   const voiceId = voiceByLanguage[language];
@@ -39,11 +38,11 @@ export function useCaller(voiceLanguage?: SupportedLanguage | 'both') {
       if (haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light).catch(() => undefined);
       if (!voice) return;
       if (both) {
-        speakNumber(n, 'en', voiceByLanguage.en, voiceStyle);
-        speakNumber(n, 'te', voiceByLanguage.te, voiceStyle, true);
-      } else speakNumber(n, language, voiceId, voiceStyle);
+        speakNumber(n, 'en', voiceByLanguage.en);
+        speakNumber(n, 'te', voiceByLanguage.te, 'normal', true);
+      } else speakNumber(n, language, voiceId);
     },
-    [voice, both, language, voiceId, voiceByLanguage, voiceStyle, haptics],
+    [voice, both, language, voiceId, voiceByLanguage, haptics],
   );
 
   const celebrate = useCallback(() => {

@@ -35,35 +35,41 @@ function BigAction({
   delay: number;
 }) {
   const enter = useRef(new Animated.Value(0)).current;
-  const glow = useRef(new Animated.Value(0)).current;
+  const zoom = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(enter, { toValue: 1, delay, friction: 6, useNativeDriver: true }).start();
-    Animated.loop(
+    const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(glow, { toValue: 1, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(glow, { toValue: 0, duration: 1400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(zoom, { toValue: 1, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(zoom, { toValue: 0, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
-    ).start();
-  }, [enter, glow, delay]);
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [enter, zoom, delay]);
   return (
     <Animated.View
-      style={{
-        flex: 1,
-        opacity: enter,
-        transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [30, 0] }) }],
-      }}
+      style={{ flex: 1, opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }] }}
     >
-      <Pressable onPress={onPress} style={({ pressed }) => [pressed && { transform: [{ scale: 0.96 }] }]}>
-        <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.big}>
+      <Pressable
+        onPress={onPress}
+        style={({ pressed }) => [styles.qaTile, { opacity: pressed ? 0.9 : 1, transform: [{ scale: pressed ? 0.98 : 1 }] }]}
+      >
+        <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.qaGradient}>
+          {/* A large faded copy of the icon, gently zooming in and out. */}
           <Animated.View
-            style={[styles.bigIcon, { transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [1, 1.1] }) }] }]}
+            pointerEvents="none"
+            style={[styles.qaWatermark, { transform: [{ scale: zoom.interpolate({ inputRange: [0, 1], outputRange: [1, 1.16] }) }] }]}
           >
-            <Ionicons name={icon} size={23} color="#fff" />
+            <Ionicons name={icon} size={86} color="rgba(255,255,255,0.17)" />
           </Animated.View>
-          <T variant="h3" color="#fff" numberOfLines={1} style={{ marginTop: spacing.sm }}>
+          <View style={styles.qaIcon}>
+            <Ionicons name={icon} size={18} color="#fff" />
+          </View>
+          <T variant="bodyMedium" color="#fff" numberOfLines={1} style={styles.qaLabel}>
             {title}
           </T>
-          <T variant="tiny" color="rgba(255,255,255,0.88)" numberOfLines={2}>
+          <T variant="tiny" color="rgba(255,255,255,0.85)" numberOfLines={1}>
             {desc}
           </T>
         </LinearGradient>
@@ -422,25 +428,31 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
         <Row gap={spacing.md} style={{ paddingHorizontal: spacing.lg, marginTop: spacing.md }}>
           {(
             [
-              ['megaphone', t('home.caller'), t('home.callerDesc'), () => navigation.navigate('Caller')],
-              ['help-circle', t('home.howToPlay'), t('home.howToPlayDesc'), () => navigation.navigate('HowToPlay')],
-            ] as [IconName, string, string, () => void][]
-          ).map(([icon, title, desc, onPress]) => (
-            <Card key={title} onPress={onPress} style={styles.smallTile}>
-              <Row gap={spacing.sm}>
-                <View style={[styles.smallTileIcon, { backgroundColor: `${colors.primary}14` }]}>
-                  <Ionicons name={icon} size={20} color={colors.primary} />
-                </View>
-                <View style={{ flex: 1 }}>
-                  <T variant="smallBold" numberOfLines={1}>
-                    {title}
-                  </T>
-                  <T variant="tiny" muted numberOfLines={1}>
-                    {desc}
-                  </T>
-                </View>
-              </Row>
-            </Card>
+              ['megaphone', t('home.caller'), t('home.callerDesc'), '#DB2777', () => navigation.navigate('Caller')],
+              ['book', t('home.howToPlay'), t('home.howToPlayDesc'), '#2563EB', () => navigation.navigate('HowToPlay')],
+            ] as [IconName, string, string, string, () => void][]
+          ).map(([icon, title, desc, tint, onPress]) => (
+            <Pressable
+              key={title}
+              onPress={onPress}
+              style={({ pressed }) => [
+                styles.pickCard,
+                { backgroundColor: colors.surface, borderColor: `${tint}40`, opacity: pressed ? 0.85 : 1 },
+              ]}
+            >
+              <LinearGradient colors={[`${tint}26`, `${tint}10`]} style={styles.pickIcon}>
+                <Ionicons name={icon} size={18} color={tint} />
+              </LinearGradient>
+              <View style={{ flex: 1 }}>
+                <T variant="smallBold" numberOfLines={1}>
+                  {title}
+                </T>
+                <T variant="tiny" muted numberOfLines={1}>
+                  {desc}
+                </T>
+              </View>
+              <Ionicons name="chevron-forward" size={14} color={tint} />
+            </Pressable>
           ))}
         </Row>
 
@@ -500,6 +512,32 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
+  qaTile: { borderRadius: 20, overflow: 'hidden' },
+  qaGradient: { height: 116, padding: 14, justifyContent: 'flex-end' },
+  qaWatermark: { position: 'absolute', right: -12, bottom: -14 },
+  qaIcon: {
+    position: 'absolute',
+    top: 14,
+    left: 14,
+    width: 34,
+    height: 34,
+    borderRadius: 11,
+    backgroundColor: 'rgba(255,255,255,0.22)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  qaLabel: { fontSize: 15 },
+  pickCard: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 12,
+    borderRadius: 16,
+    borderWidth: 1.5,
+  },
+  pickIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
   pubCard: { width: 240, borderRadius: radius.lg + 2, borderWidth: 1, overflow: 'hidden' },
   pubBand: {
     flexDirection: 'row',

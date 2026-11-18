@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { IconButton, Row, T, Toggle } from '@/components/ui';
+import { VoicePicker } from '@/components/VoicePicker';
 import { roomKey } from '@/hooks/useRoom';
 import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
@@ -14,7 +15,17 @@ import type { RoomState } from '@/types/api';
 
 const SPEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
-function SettingToggle({ icon, label, value, onChange }: { icon: keyof typeof Ionicons.glyphMap; label: string; value: boolean; onChange: (v: boolean) => void }) {
+function SettingToggle({
+  icon,
+  label,
+  value,
+  onChange,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  value: boolean;
+  onChange: (v: boolean) => void;
+}) {
   const { colors } = useThemeColors();
   return (
     <Row style={styles.toggleRow}>
@@ -33,13 +44,25 @@ function SettingToggle({ icon, label, value, onChange }: { icon: keyof typeof Io
  * Game settings (gear in the game header). Host: calling speed for everyone. Everyone: prize
  * sounds, strike sound and vibration on this phone. Voices and ticket looks stay in Profile.
  */
-export function GameSettingsSheet({ visible, state, isHost, onClose }: { visible: boolean; state: RoomState; isHost: boolean; onClose: () => void }) {
+export function GameSettingsSheet({
+  visible,
+  state,
+  isHost,
+  onClose,
+}: {
+  visible: boolean;
+  state: RoomState;
+  isHost: boolean;
+  onClose: () => void;
+}) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const qc = useQueryClient();
   const sounds = useSettingsStore((s) => s.sounds);
   const strikeSound = useSettingsStore((s) => s.strikeSound);
   const haptics = useSettingsStore((s) => s.haptics);
+  const voice = useSettingsStore((s) => s.voice);
+  const language = useSettingsStore((s) => s.language);
   const set = useSettingsStore((s) => s.set);
   const current = state.room.callIntervalSeconds;
   const speed = useMutation({
@@ -76,7 +99,10 @@ export function GameSettingsSheet({ visible, state, isHost, onClose }: { visible
                         key={s}
                         disabled={speed.isPending}
                         onPress={() => speed.mutate(s)}
-                        style={({ pressed }) => [styles.speed, { backgroundColor: active ? colors.primary : colors.surfaceAlt, opacity: pressed ? 0.75 : 1 }]}
+                        style={({ pressed }) => [
+                          styles.speed,
+                          { backgroundColor: active ? colors.primary : colors.surfaceAlt, opacity: pressed ? 0.75 : 1 },
+                        ]}
                       >
                         <T variant="h2" color={active ? '#fff' : colors.text}>
                           {s}
@@ -94,8 +120,18 @@ export function GameSettingsSheet({ visible, state, isHost, onClose }: { visible
               {t('game.thisPhone')}
             </T>
             <SettingToggle icon="musical-notes" label={t('profile.sounds')} value={sounds} onChange={(v) => set({ sounds: v })} />
-            <SettingToggle icon="radio-button-on" label={t('profile.strikeSound')} value={strikeSound} onChange={(v) => set({ strikeSound: v })} />
+            <SettingToggle
+              icon="radio-button-on"
+              label={t('profile.strikeSound')}
+              value={strikeSound}
+              onChange={(v) => set({ strikeSound: v })}
+            />
             <SettingToggle icon="phone-portrait" label={t('profile.haptics')} value={haptics} onChange={(v) => set({ haptics: v })} />
+            <T variant="smallBold" muted style={styles.label}>
+              {t('game.callerVoice')}
+            </T>
+            <SettingToggle icon="volume-high" label={t('profile.voice')} value={voice} onChange={(v) => set({ voice: v })} />
+            {voice ? <VoicePicker language={language} /> : null}
           </ScrollView>
         </Pressable>
       </Pressable>

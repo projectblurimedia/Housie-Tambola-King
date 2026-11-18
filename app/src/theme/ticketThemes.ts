@@ -170,7 +170,7 @@ export function toPalette(value: string | undefined, fallback: PaletteKey): Pale
 }
 
 /** Number cell shape: round chips, rounded squares ("semi box") or square boxes. */
-export const TICKET_SHAPES = ['round', 'soft', 'box'] as const;
+export const TICKET_SHAPES = ['box', 'soft', 'round'] as const;
 export type TicketShape = (typeof TICKET_SHAPES)[number];
 /** Corner radius as a share of the cell size. */
 export const SHAPE_RADIUS: Record<TicketShape, number> = { round: 0.5, soft: 0.28, box: 0.1 };
