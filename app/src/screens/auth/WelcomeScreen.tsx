@@ -5,6 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { Button, centeredInput, T } from '@/components/ui';
 import { NumberBall } from '@/components/NumberBall';
+import { Wordmark } from '@/components/Wordmark';
 import { authService, normalizeIndianMobile } from '@/services/authService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
@@ -73,12 +74,7 @@ export function WelcomeScreen() {
                 <FloatingBall key={n} n={n} index={i} />
               ))}
             </View>
-            <T center color="#FDE68A" style={styles.crown}>
-              👑
-            </T>
-            <T center color="#fff" style={styles.brand}>
-              {APP_NAME}
-            </T>
+            <Wordmark size="large" />
             <T center color="rgba(255,255,255,0.85)" style={{ marginTop: 4 }}>
               {t('app.tagline')}
             </T>

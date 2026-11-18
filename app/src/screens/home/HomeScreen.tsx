@@ -6,6 +6,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
+import { Wordmark } from '@/components/Wordmark';
 import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { formatRupees } from '@/components/Money';
 import { Card, IconButton, Pill, Row, T } from '@/components/ui';
@@ -314,9 +315,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
         <SafeAreaView edges={['top']}>
           <Row style={{ justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
             <View style={{ flex: 1 }}>
-              <Text style={styles.brand} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.7}>
-                👑 {APP_NAME}
-              </Text>
+              <Wordmark size="small" />
               <Text style={styles.greeting} numberOfLines={1} adjustsFontSizeToFit minimumFontScale={0.75}>
                 {t('home.greeting', { name: me.data?.displayName ?? '' })}
               </Text>
