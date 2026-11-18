@@ -7,8 +7,12 @@ import type { PrizeType } from '@/game/engine/ticket';
 
 export type RoomEvent =
   | { type: 'call'; gameId: string; n: number; index: number }
-  | { type: 'prize'; gameId: string; prize: PrizeType; amount: number; winners: Winner[] }
-  | { type: 'prize_settled'; gameId: string; prize: PrizeType; each: number; winners: number }
+  | { type: 'prize'; gameId: string; prize: PrizeType; amount: number; callIndex: number; winners: Winner[] }
+  | { type: 'prize_settled'; gameId: string; prize: PrizeType; each: number; winners: number; amount: number; callIndex: number; winnerList: Winner[] }
+  | { type: 'claim_check'; gameId: string; prize: PrizeType; callIndex: number; winners: Winner[]; deadline: string }
+  | { type: 'speed'; seconds: number }
+  | { type: 'paused'; paused: boolean }
+  | { type: 'phase'; phase: 'tickets' }
   | { type: 'state'; gameId: string; gameNo: number; status: 'running' | 'finished' }
   | { type: 'game'; gameId: string; gameNo: number }
   | { type: 'members'; memberCount: number; joined?: string; removed?: string }
@@ -87,14 +91,14 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
               }
             : old,
         );
-        emit({ type: 'prize', gameId: p.gameId, prize: p.prize, amount: p.amount, winners: p.winners });
+        emit({ type: 'prize', gameId: p.gameId, prize: p.prize, amount: p.amount, callIndex: p.callIndex, winners: p.winners });
         // The clock pauses for the announcement — pick up the new nextCallAt.
         refetch();
       })
       .on('broadcast', { event: 'prize_settled' }, ({ payload }) => {
         refetch();
         refetchStandings();
-        emit({ type: 'prize_settled', ...(payload as { gameId: string; prize: PrizeType; each: number; winners: number }) });
+        emit({ type: 'prize_settled', ...(payload as Omit<Extract<RoomEvent, { type: 'prize_settled' }>, 'type'>) });
       })
       .on('broadcast', { event: 'lobby' }, ({ payload }) => {
         const p = payload as { gameId: string; ticketCount: number; playerCount: number; pot: number };
@@ -123,8 +127,22 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
         emit({ type: 'join_request', ...(payload as { userId: string; name: string }) });
       })
       .on('broadcast', { event: 'join_decided' }, () => refetch())
-      .on('broadcast', { event: 'paused' }, () => refetch())
-      .on('broadcast', { event: 'speed' }, () => refetch())
+      .on('broadcast', { event: 'paused' }, ({ payload }) => {
+        refetch();
+        emit({ type: 'paused', paused: (payload as { paused: boolean }).paused });
+      })
+      .on('broadcast', { event: 'speed' }, ({ payload }) => {
+        refetch();
+        emit({ type: 'speed', seconds: (payload as { seconds: number }).seconds });
+      })
+      .on('broadcast', { event: 'phase' }, () => {
+        refetch();
+        emit({ type: 'phase', phase: 'tickets' });
+      })
+      .on('broadcast', { event: 'claim_check' }, ({ payload }) => {
+        refetch();
+        emit({ type: 'claim_check', ...(payload as Omit<Extract<RoomEvent, { type: 'claim_check' }>, 'type'>) });
+      })
       .on('broadcast', { event: 'room_ended' }, ({ payload }) => {
         refetch();
         refetchStandings();

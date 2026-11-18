@@ -58,8 +58,6 @@
     "myRooms": "My rooms",
     "myRoomsEmpty": "Rooms you create or join appear here.",
     "more": "Practice & tools",
-    "solo": "Solo vs Bots",
-    "soloDesc": "Offline practice",
     "caller": "Caller Mode",
     "callerDesc": "For a game at home",
     "howToPlay": "How to play",
@@ -89,7 +87,6 @@
     "maxPlayers": "Max players",
     "ticketPrice": "Ticket price",
     "ticketPriceHelp": "Casual amount only — no real money. Pot = tickets taken × price.",
-    "callSpeed": "Calling speed",
     "speedFast": "Fast 4s",
     "speedNormal": "Normal 6s",
     "speedSlow": "Slow 9s",
@@ -113,7 +110,9 @@
     "claim_fair": "Fair play",
     "claim_fair_desc": "Everyone completing on the same number wins, even if they tap late",
     "autoMark": "Auto-mark numbers",
-    "autoMarkDesc": "Called numbers are circled on everyone’s tickets automatically"
+    "autoMarkDesc": "Called numbers are circled on everyone’s tickets automatically",
+    "checkClaims": "Check before announcing",
+    "checkClaimsDesc": "When someone claims, everyone gets 10 seconds to check their tickets. Anyone who finished on the same number shares the prize."
   },
   "join": {
     "title": "Join Room",
@@ -192,7 +191,20 @@
     "notReady": "Not ready",
     "removeTitle": "Remove {{name}}?",
     "removeMessage": "They will be taken out of this room. Their tickets for this game are removed.",
-    "remove": "Remove"
+    "remove": "Remove",
+    "step1": "Players",
+    "step2": "Tickets",
+    "step3": "Prizes & play",
+    "playersJoined": "Players joined ({{count}}/{{max}})",
+    "needTwoJoined": "Wait for at least 2 players to join.",
+    "nextTakeTickets": "Next: take tickets",
+    "nextTakeTicketsHint": "Everyone who has joined will now choose their tickets.",
+    "nextSetAndPlay": "Next: set prizes & play",
+    "waitingForTickets_one": "Waiting for {{count}} player to take tickets…",
+    "waitingForTickets_other": "Waiting for {{count}} players to take tickets…",
+    "waitingHostTickets": "Waiting for {{name}} to open tickets…",
+    "setAndPlay": "Set & Play",
+    "ticketsOpenToast": "Tickets are open — choose yours now!"
   },
   "game": {
     "getReady": "Get ready…",
@@ -220,7 +232,15 @@
     "speedForAll": "Calling speed (for everyone)",
     "myVoice": "My voice",
     "pause": "Pause numbers",
-    "resume": "Resume numbers"
+    "resume": "Resume numbers",
+    "speedChanged": "Host changed the speed to {{seconds}}s per number",
+    "pausedToast": "Host paused the game",
+    "resumedToast": "Game resumed",
+    "checkTitle": "{{name}} claimed {{prize}}!",
+    "checkYours": "Check your tickets — did you also complete it on number {{number}}?",
+    "checkWaitingOthers": "Everyone is checking their tickets… announcing soon.",
+    "checkHaveIt": "I have it too!",
+    "checkNotYours": "Your tickets did not complete {{prize}} on that number."
   },
   "winner": {
     "title": "WINNER!",
@@ -283,23 +303,6 @@
     "open": "Open",
     "ended": "Ended"
   },
-  "solo": {
-    "title": "Solo vs Bots",
-    "subtitle": "Offline practice against computer players.",
-    "bots": "Bot players",
-    "difficulty": "Bot speed",
-    "easy": "Easy",
-    "medium": "Medium",
-    "hard": "Hard",
-    "myTickets": "My tickets",
-    "start": "Start Game",
-    "youWin": "You won {{count}} prizes!",
-    "botsWin": "The bots won this time!",
-    "again": "Play again",
-    "wonBy": "{{name}} won {{prize}}",
-    "notComplete": "Not yet! Strike all the numbers for {{prize}} first.",
-    "claim": "Claim"
-  },
   "caller": {
     "title": "Caller Mode",
     "next": "Next number",
@@ -312,8 +315,7 @@
     "remaining": "{{count}} left",
     "stop": "Stop",
     "history": "History",
-    "historyTitle": "Called numbers ({{count}})",
-    "historyHint": "In the order they were called. Auto calling is paused.",
+    "historyHint": "Newest first. Auto calling is paused.",
     "historyEmpty": "No numbers called yet.",
     "voice": "Voice",
     "resetTitle": "Start a new game?",
@@ -327,7 +329,8 @@
     "statusManual": "Manual · tap Next for each number · {{voice}} voice",
     "mode": "Calling mode",
     "modeAuto": "Auto",
-    "modeManual": "Manual"
+    "modeManual": "Manual",
+    "historyLast5": "Last 5 numbers"
   },
   "profile": {
     "title": "Profile",
@@ -361,7 +364,9 @@
     "version": "Version {{version}}",
     "saved": "Profile saved",
     "more": "More",
-    "callerVoice": "Caller voice"
+    "callerVoice": "Caller voice",
+    "sounds": "Prize sounds",
+    "soundsDesc": "Play a sound when a prize is won"
   },
   "howToPlay": {
     "title": "How to play",
@@ -428,7 +433,8 @@
     "REQUEST_NOT_FOUND": "This request is no longer pending.",
     "INVALID_CLAIM_MODE": "Choose how winners are decided.",
     "INVALID_SPEED": "Speed must be between 3 and 20 seconds.",
-    "CANNOT_REMOVE_SELF": "You can't remove yourself."
+    "CANNOT_REMOVE_SELF": "You can't remove yourself.",
+    "TICKETS_NOT_OPEN": "Tickets are not open yet. Wait for the host."
   },
   "update": {
     "title": "Updating app…",
@@ -453,6 +459,19 @@
       "high": "High",
       "slow": "Slow",
       "fast": "Fast"
+    }
+  },
+  "ticketStyle": {
+    "title": "Ticket style",
+    "background": "Ticket colour",
+    "strike": "Strike colour",
+    "themes": {
+      "classic": "Classic",
+      "mint": "Mint",
+      "sky": "Sky",
+      "rose": "Rose",
+      "sunset": "Sunset",
+      "night": "Night"
     }
   }
 }

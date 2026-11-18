@@ -246,7 +246,6 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
         <Row gap={spacing.sm} style={{ paddingHorizontal: spacing.lg }}>
           {(
             [
-              ['hardware-chip', t('home.solo'), t('home.soloDesc'), () => navigation.navigate('SoloSetup')],
               ['megaphone', t('home.caller'), t('home.callerDesc'), () => navigation.navigate('Caller')],
               ['help-circle', t('home.howToPlay'), t('home.howToPlayDesc'), () => navigation.navigate('HowToPlay')],
             ] as [IconName, string, string, () => void][]
@@ -270,7 +269,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
-  hero: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.xl, borderBottomRightRadius: radius.xl },
+  hero: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },
   big: { borderRadius: radius.xl, padding: spacing.lg, minHeight: 136, elevation: 5 },
   greeting: { fontFamily: fonts.medium, fontSize: 15, color: '#fff', includeFontPadding: false },
   bigIcon: {

@@ -6,7 +6,7 @@ import type { PrizeType } from '@/game/engine/ticket';
 import { radius, spacing, useThemeColors } from '@/theme';
 import { Avatar } from './Avatar';
 import { formatRupees, Money } from './Money';
-import { Button, T } from './ui';
+import { T } from './ui';
 
 export interface PrizeRow {
   prize: PrizeType;
@@ -15,18 +15,14 @@ export interface PrizeRow {
   winners: { name: string; avatarKey: string; isMe?: boolean; amount?: number }[];
   /** "1 to go" hint for my best ticket. */
   remaining?: number;
-  /** Solo mode only: a manual Claim button. */
-  canClaim?: boolean;
 }
 
 export function PrizeList({
   rows,
-  onClaim,
   showAmounts = true,
   compact,
 }: {
   rows: PrizeRow[];
-  onClaim?: (prize: PrizeType) => void;
   showAmounts?: boolean;
   compact?: boolean;
 }) {
@@ -82,9 +78,6 @@ export function PrizeList({
               )}
             </View>
             {showAmounts && row.amount !== undefined ? <Money amount={row.amount} /> : null}
-            {row.canClaim && !done && onClaim ? (
-              <Button title={t('solo.claim')} small variant="gold" onPress={() => onClaim(row.prize)} />
-            ) : null}
           </View>
         );
       })}

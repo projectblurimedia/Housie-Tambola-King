@@ -16,6 +16,22 @@ interface VoiceOption {
   detail: string;
 }
 
+const MAX_VOICES = 5;
+
+const regionOf = (v: Speech.Voice) => (v.language.split(/[-_]/)[1] ?? '').toUpperCase();
+
+/** Up to 5 voices, taken round-robin across accents (IN, US, GB, AU…) so they really sound different. */
+function pickAcrossAccents(voices: Speech.Voice[]): Speech.Voice[] {
+  const buckets = new Map<string, Speech.Voice[]>();
+  voices.forEach((v) => buckets.set(regionOf(v), [...(buckets.get(regionOf(v)) ?? []), v]));
+  const lists = [...buckets.values()];
+  const picked: Speech.Voice[] = [];
+  for (let round = 0; picked.length < MAX_VOICES && lists.some((l) => l[round]); round++) {
+    lists.forEach((l) => l[round] && picked.length < MAX_VOICES && picked.push(l[round]));
+  }
+  return picked;
+}
+
 /**
  * Turns the engine's voice list into distinct, friendly rows. Android lists the same voice
  * twice ("…-local" and "…-network"), and some engines repeat names — those are merged.
@@ -23,7 +39,7 @@ interface VoiceOption {
 function describe(voices: Speech.Voice[], language: SupportedLanguage, t: TFunction): VoiceOption[] {
   const prefix = language === 'te' ? 'te' : 'en';
   const seen = new Set<string>();
-  return voices
+  const distinct = voices
     .filter((v) => v.language.toLowerCase().startsWith(prefix))
     .sort((a, b) => {
       const ai = a.language.toLowerCase().includes('in') ? 0 : 1;
@@ -38,8 +54,8 @@ function describe(voices: Speech.Voice[], language: SupportedLanguage, t: TFunct
       seen.add(base);
       seen.add(key);
       return true;
-    })
-    .slice(0, 10)
+    });
+  return pickAcrossAccents(distinct)
     .map((v, i) => {
       const id = `${v.identifier} ${v.name}`.toLowerCase();
       const gender = id.includes('female') ? t('voice.female') : id.includes('male') ? t('voice.male') : null;

@@ -27,6 +27,7 @@ export interface CreateRoomInput {
   prizes: Partial<Record<PrizeType, number>>;
   claimMode: ClaimMode;
   autoMark: boolean;
+  checkClaims: boolean;
 }
 
 export type ClaimResult = 'won' | 'shared' | 'already_claimed' | 'already_yours' | 'not_complete' | 'auto';
@@ -45,6 +46,7 @@ export const roomService = {
         p_prizes: input.prizes,
         p_claim_mode: input.claimMode,
         p_auto_mark: input.autoMark,
+        p_check_claims: input.checkClaims,
       }),
     ) as { roomId: string; code: string };
   },
@@ -64,6 +66,11 @@ export const roomService = {
 
   async respondJoin(roomId: string, userId: string, accept: boolean): Promise<void> {
     unwrap(await supabase.rpc('respond_join_request', { p_room: roomId, p_user: userId, p_accept: accept }));
+  },
+
+  /** Host: joining step → everyone picks tickets. */
+  async openTickets(gameId: string): Promise<void> {
+    unwrap(await supabase.rpc('open_tickets', { p_game: gameId }));
   },
 
   async setPaused(gameId: string, paused: boolean): Promise<void> {

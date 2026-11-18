@@ -8,6 +8,12 @@
 - Host sets max players (2–100). Numbers only start when **at least 2 players** (host + 1) have tickets.
 - If the host leaves, the room passes to the next member; the host can end the room any time.
 
+## Lobby steps (every game)
+1. **Players** — people join; the host taps **Next: take tickets** once at least 2 players are in.
+2. **Tickets** — everyone picks their tickets; the host's **Next: set prizes & play** unlocks when every player has tickets.
+3. **Prizes & play** — the host sets this game's prizes and amounts, then the numbers start.
+A series' next game starts again at step 1.
+
 ## Tickets & pot (casual ₹ — no real money)
 - Before **every** game each player chooses **1–4 tickets**, confirmed once — it can't be changed for that game (no re-rolling tickets).
 - Pot = tickets taken × ticket price.
@@ -25,10 +31,11 @@
 | Full Housie | all 15 numbers |
 
 ## Room options
-- **Claim rule**: *Fastest finger* (first tap wins; anyone completing the same prize on the same number can still claim a share while the winner announcement shows) or *Fair play* (the server awards everyone whose ticket completed the prize on that number — no tapping race).
+- **Claim rule**: *Fastest finger* (first tap wins; anyone completing the same prize on the same number can still claim a share) or *Fair play* (the server awards everyone whose ticket completed the prize on that number — no tapping race).
+- **Check before announcing** (fastest finger only, on by default): when someone claims, every phone shows "X claimed Fast 5 — check your tickets" with a 10 s countdown and an **I have it too!** button. Anyone whose ticket completed the same prize on the same number joins the win (split equally). Only then is the winner announced (7 s pause).
 - **Auto-mark**: called numbers are circled on tickets automatically.
-- Default calling speed 3 s. During a game the host can **pause/resume** and change the speed; every player can change their own voice.
-- Numbers pause for 8 s after a prize is won so everyone sees the winner announcement.
+- Default calling speed 3 s (set in game, 1–10 s). During a game the host has an on-screen **pause/play** button and can change the speed in settings; every phone gets a message when the speed changes or the game is paused/resumed. Every player can change their own voice, sounds and ticket colours.
+- Numbers pause for 8 s after a prize is won (7 s after a checked claim) so everyone sees the winner announcement.
 - The host can remove a player from the room.
 
 ## Calling, striking, winning
@@ -36,7 +43,8 @@
 - Players **tap called numbers to strike them**; tapping a number not called yet just wiggles (no message).
 - The moment a player's strikes complete a prize, the app claims it; the server verifies against the numbers it called.
 - **First claim wins.** Anyone else who completed the same prize on the **same called number** and claims before the next number is called **shares it equally**.
-- Every phone shows the winner announcement: name, prize, the winning numbers, amount (or "each" when split).
+- Every phone shows the winner announcement: name, prize, the winning numbers, amount (or "each" when split). Prizes won on the same number (e.g. Third Line + Full Housie) appear together on one card.
+- Each kind of prize has its own sound (fast / line / column / Full Housie); when several are won together one sound plays — Full Housie's if it is one of them.
 - Game ends when Full Housie is settled or all 90 numbers are called; prizes nobody claimed are *unclaimed*.
 
 ## Standings

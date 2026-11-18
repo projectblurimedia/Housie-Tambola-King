@@ -1,7 +1,7 @@
 /**
  * Housie ticket rules — the client mirror of supabase/migrations/20261117000002_rooms_games.sql
  * (_generate_ticket / _prize_numbers / _prize_completed_at / _winning_numbers). Keep both in
- * sync; the server is always the authority for online games, this copy powers solo/caller
+ * sync; the server is always the authority for online games, this copy powers caller mode
  * modes and the instant "your strikes completed a prize → claim" check.
  *
  * cells: 27 numbers, row-major 3 rows × 9 columns, 0 = blank. Each row has exactly 5
@@ -186,7 +186,7 @@ export function newDrawOrder(rng: Rng = Math.random): number[] {
   return shuffle(range(1, 90), rng);
 }
 
-/** Deterministic PRNG (mulberry32) — tests and reproducible solo games. */
+/** Deterministic PRNG (mulberry32) — tests and reproducible draws. */
 export function seededRng(seed: number): Rng {
   let a = seed >>> 0;
   return () => {

@@ -1,5 +1,4 @@
 import type { NativeStackScreenProps } from '@react-navigation/native-stack';
-import type { BotDifficulty } from '@/game/engine/solo';
 
 export type RootStackParamList = {
   LanguageSelect: undefined;
@@ -8,8 +7,6 @@ export type RootStackParamList = {
   CreateRoom: undefined;
   JoinRoom: { code?: string } | undefined;
   Room: { roomId: string };
-  SoloSetup: undefined;
-  SoloGame: { bots: number; myTickets: number; difficulty: BotDifficulty };
   Caller: undefined;
   Profile: undefined;
   EditProfile: undefined;

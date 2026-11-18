@@ -5,6 +5,8 @@
 import React from 'react';
 import {
   ActivityIndicator,
+  KeyboardAvoidingView,
+  LayoutChangeEvent,
   Pressable,
   PressableProps,
   ScrollView,
@@ -92,6 +94,8 @@ export function Screen({
       ) : (
         <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: insets.top }} />
       )}
+      {/* Edge-to-edge Android doesn't resize the window for the keyboard: pad on both platforms. */}
+      <KeyboardAvoidingView behavior="padding" style={{ flex: 1 }}>
       {scroll ? (
         <ScrollView
           contentContainerStyle={[inner, { paddingTop: spacing.lg, paddingBottom: spacing.xxl }]}
@@ -104,6 +108,7 @@ export function Screen({
       ) : (
         <View style={[{ flex: 1, paddingTop: spacing.lg }, inner]}>{children}</View>
       )}
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -250,8 +255,22 @@ export function Card({
   return <View style={cardStyle}>{children}</View>;
 }
 
-export function Row({ children, style, gap = spacing.sm }: { children: React.ReactNode; style?: StyleProp<ViewStyle>; gap?: number }) {
-  return <View style={[{ flexDirection: 'row', alignItems: 'center', gap }, style]}>{children}</View>;
+export function Row({
+  children,
+  style,
+  gap = spacing.sm,
+  onLayout,
+}: {
+  children: React.ReactNode;
+  style?: StyleProp<ViewStyle>;
+  gap?: number;
+  onLayout?: (e: LayoutChangeEvent) => void;
+}) {
+  return (
+    <View style={[{ flexDirection: 'row', alignItems: 'center', gap }, style]} onLayout={onLayout}>
+      {children}
+    </View>
+  );
 }
 
 export function Spacer({ h = spacing.md }: { h?: number }) {
@@ -444,8 +463,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: spacing.sm,
     paddingBottom: spacing.md,
-    borderBottomLeftRadius: radius.xl,
-    borderBottomRightRadius: radius.xl,
+    borderBottomLeftRadius: radius.md,
+    borderBottomRightRadius: radius.md,
   },
   chip: {
     flexDirection: 'row',

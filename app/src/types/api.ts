@@ -73,6 +73,8 @@ export interface Room {
   claimMode: ClaimMode;
   /** Called numbers are circled on tickets automatically. */
   autoMark: boolean;
+  /** Fastest finger: a claim waits ~10 s for others to check their tickets before announcing. */
+  checkClaims: boolean;
 }
 
 export type ClaimMode = 'fastest' | 'fair';
@@ -81,6 +83,8 @@ export interface Game {
   id: string;
   gameNo: number;
   status: GameStatus;
+  /** Lobby step: players joining, then everyone picks tickets. */
+  phase: 'joining' | 'tickets';
   ticketPrice: number;
   pot: number;
   prizesCustom: boolean;

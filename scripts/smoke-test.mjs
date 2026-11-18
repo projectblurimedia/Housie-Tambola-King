@@ -98,6 +98,12 @@ try {
   let state = await host.rpc('get_room_state', { p_room: room.roomId });
   const game1 = state.game.id;
   check(state.game.status === 'lobby' && state.game.gameNo === 1, 'game 1 lobby open');
+  check(state.game.phase === 'joining' && state.room.checkClaims === true, 'lobby starts at "joining"; check-before-announcing on by default');
+
+  check(await expectError(host.rpc('set_my_tickets', { p_game: game1, p_count: 2 }), 'TICKETS_NOT_OPEN'), 'no tickets before the host opens them');
+  check(await expectError(friend.rpc('open_tickets', { p_game: game1 }), 'NOT_HOST'), 'only host opens tickets');
+  await host.rpc('open_tickets', { p_game: game1 });
+  check((await friend.rpc('get_room_state', { p_room: room.roomId })).game.phase === 'tickets', 'host moved everyone to the ticket step');
 
   await host.rpc('set_my_tickets', { p_game: game1, p_count: 2 });
   check(await expectError(host.rpc('start_game', { p_game: game1 }), 'NEED_TWO_PLAYERS'), 'cannot start with one player');
@@ -127,6 +133,11 @@ try {
   await friend.client.realtime.setAuth();
   const channel = friend.client.channel(`room:${room.roomId}`, { config: { private: true } });
   channel.on('broadcast', { event: 'call' }, ({ payload }) => calls.push(payload.n));
+  const claimChecks = [];
+  channel.on('broadcast', { event: 'claim_check' }, ({ payload }) => claimChecks.push(payload.prize));
+  channel.on('broadcast', { event: 'prize_settled' }, ({ payload }) =>
+    console.log(`  🏆 ${payload.prize} @${payload.callIndex}: ${payload.winnerList.map((w) => `${w.name} ₹${w.amount}`).join(' & ')}`),
+  );
   channel.on('broadcast', { event: 'prize' }, ({ payload }) => console.log(`  🏆 ${payload.prize}: ${payload.winners.map((w) => `${w.name} [${w.numbers.join(',')}]`).join(' & ')}`));
   await new Promise((resolve) => channel.subscribe((s) => s === 'SUBSCRIBED' && resolve()));
 
@@ -161,6 +172,7 @@ try {
   const results = await friend.rpc('get_game_results', { p_game: game1 });
   check(results.status === 'finished', 'game 1 finished');
   check(calls.length > 0, `realtime calls received (${calls.length})`);
+  check(claimChecks.length > 0, `claims went through "check your tickets" first (${claimChecks.length})`);
   const fh = results.prizes.find((p) => p.prize === 'full_house');
   check(fh.status === 'settled' && fh.winners.length > 0, `Full Housie won by ${fh.winners.map((w) => w.name).join(' & ')}`);
   const paid = results.prizes.flatMap((p) => p.winners).reduce((s, w) => s + Number(w.amount), 0);
@@ -168,7 +180,7 @@ try {
   check(results.prizes.every((p) => p.winners.every((w) => w.numbers.length > 0)), 'winning numbers recorded for the announcement');
 
   state = await host.rpc('get_room_state', { p_room: room.roomId });
-  check(state.game.gameNo === 2 && state.game.status === 'lobby', 'series: game 2 lobby opened automatically');
+  check(state.game.gameNo === 2 && state.game.status === 'lobby' && state.game.phase === 'joining', 'series: game 2 lobby opened automatically (back to step 1)');
   check(state.previousGameId === game1, 'game 1 results linked from game 2 lobby');
 
   const standings = await friend.rpc('get_room_standings', { p_room: room.roomId });

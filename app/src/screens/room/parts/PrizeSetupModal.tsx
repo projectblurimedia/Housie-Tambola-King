@@ -1,5 +1,5 @@
-import React, { useEffect, useMemo, useState } from 'react';
-import { KeyboardAvoidingView, Modal, Platform, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { formatRupees } from '@/components/Money';
 import { Button, centeredInput, Row, T, Toggle } from '@/components/ui';
@@ -80,12 +80,23 @@ export function PrizeSetupModal({
     autoSplit(next);
   };
 
+  // Keep the focused amount above the keyboard: scroll its row into view once the keyboard is up.
+  const scrollRef = useRef<React.ComponentRef<typeof ScrollView>>(null);
+  const groupY = useRef<Record<string, number>>({});
+  const rowY = useRef<Partial<Record<PrizeType, { group: string; y: number }>>>({});
+  const revealRow = (p: PrizeType) => {
+    const row = rowY.current[p];
+    if (!row) return;
+    setTimeout(() => scrollRef.current?.scrollTo({ y: Math.max(0, (groupY.current[row.group] ?? 0) + row.y - 60), animated: true }), 300);
+  };
+
   const total = useMemo(() => sumAmounts([...enabled].map((p) => Number(values[p]) || 0)), [enabled, values]);
   const matches = Math.abs(total - pot) < 0.005;
 
   return (
     <Modal transparent visible={visible} animationType="slide" onRequestClose={onClose} statusBarTranslucent>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
+      {/* The modal window doesn't resize for the keyboard on Android (edge-to-edge), so pad on both. */}
+      <KeyboardAvoidingView behavior="padding" style={[styles.backdrop, { backgroundColor: colors.overlay }]}>
         <Pressable style={{ flex: 1 }} onPress={onClose} />
         <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
           <View style={[styles.handle, { backgroundColor: colors.border }]} />
@@ -102,9 +113,15 @@ export function PrizeSetupModal({
             <Button title={t('lobby.autoSplit')} small variant="secondary" icon="git-compare" onPress={() => autoSplit()} />
           </Row>
 
-          <ScrollView style={{ maxHeight: 420 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+          <ScrollView
+            ref={scrollRef}
+            style={{ flexShrink: 1 }}
+            contentContainerStyle={{ paddingBottom: spacing.sm }}
+            keyboardShouldPersistTaps="handled"
+            showsVerticalScrollIndicator={false}
+          >
             {GROUPS.map((g) => (
-              <View key={g.key} style={{ marginTop: spacing.md }}>
+              <View key={g.key} style={{ marginTop: spacing.md }} onLayout={(e) => (groupY.current[g.key] = e.nativeEvent.layout.y)}>
                 <T variant="smallBold" muted style={styles.groupLabel}>
                   {t(g.key)}
                 </T>
@@ -112,7 +129,11 @@ export function PrizeSetupModal({
                   const on = enabled.has(p);
                   const locked = p === 'full_house';
                   return (
-                    <Row key={p} style={[styles.row, { borderColor: on ? colors.primary : colors.border }]}>
+                    <Row
+                      key={p}
+                      style={[styles.row, { borderColor: on ? colors.primary : colors.border }]}
+                      onLayout={(e) => (rowY.current[p] = { group: g.key, y: e.nativeEvent.layout.y })}
+                    >
                       <View style={{ flex: 1 }}>
                         <T variant="bodyMedium">{t(`prizes.${p}`)}</T>
                         <T variant="tiny" muted numberOfLines={1}>
@@ -129,6 +150,7 @@ export function PrizeSetupModal({
                             onChangeText={(v) => setValues((s) => ({ ...s, [p]: v.replace(/[^0-9.]/g, '').slice(0, 9) }))}
                             keyboardType="decimal-pad"
                             selectTextOnFocus
+                            onFocus={() => revealRow(p)}
                             style={[styles.inputText, centeredInput, { color: colors.text }]}
                           />
                         </View>
@@ -163,7 +185,7 @@ export function PrizeSetupModal({
 
 const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl },
+  sheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, padding: spacing.lg, paddingTop: spacing.sm, paddingBottom: spacing.xl, maxHeight: '92%' },
   handle: { width: 44, height: 5, borderRadius: 3, alignSelf: 'center', marginBottom: spacing.sm },
   totalBar: { marginTop: spacing.md, padding: spacing.sm, borderRadius: radius.md, gap: spacing.sm },
   groupLabel: { textTransform: 'uppercase', letterSpacing: 0.6, marginBottom: 6 },

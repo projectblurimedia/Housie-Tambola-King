@@ -3,7 +3,8 @@ import { Modal, Pressable, ScrollView, StyleSheet, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { VoicePicker } from '@/components/VoicePicker';
-import { Button, Chip, IconButton, Row, T, Toggle } from '@/components/ui';
+import { TicketStylePicker } from '@/components/TicketStylePicker';
+import { Chip, IconButton, Row, T, Toggle } from '@/components/ui';
 import { roomKey } from '@/hooks/useRoom';
 import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
@@ -12,24 +13,23 @@ import { showToast } from '@/state/toastStore';
 import { radius, spacing, useThemeColors } from '@/theme';
 import type { RoomState } from '@/types/api';
 
-const SPEEDS = [3, 4, 5, 6, 7, 8, 9, 10];
+const SPEEDS = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10];
 
 /**
- * Settings during a live game. Host: pause/resume the numbers and change the speed for
- * everyone. Everyone: their own voice (on/off, style, which voice).
+ * Settings during a live game. Host: change the speed for everyone (pause/play is the
+ * floating button on the game screen). Everyone: voice, sounds and ticket colours.
  */
 export function GameSettingsSheet({ visible, state, isHost, onClose }: { visible: boolean; state: RoomState; isHost: boolean; onClose: () => void }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const qc = useQueryClient();
   const voice = useSettingsStore((s) => s.voice);
+  const sounds = useSettingsStore((s) => s.sounds);
   const language = useSettingsStore((s) => s.language);
   const setSettings = useSettingsStore((s) => s.set);
-  const game = state.game!;
   const refresh = () => qc.invalidateQueries({ queryKey: roomKey(state.room.id) });
   const onError = (err: unknown) => showToast({ variant: 'error', title: errorMessage(err) });
 
-  const pause = useMutation({ mutationFn: (p: boolean) => roomService.setPaused(game.id, p), onSuccess: refresh, onError });
   const speed = useMutation({ mutationFn: (s: number) => roomService.setSpeed(state.room.id, s), onSuccess: refresh, onError });
 
   return (
@@ -47,14 +47,7 @@ export function GameSettingsSheet({ visible, state, isHost, onClose }: { visible
                 <T variant="smallBold" muted style={styles.label}>
                   {t('game.hostControls')}
                 </T>
-                <Button
-                  title={game.paused ? t('game.resume') : t('game.pause')}
-                  icon={game.paused ? 'play' : 'pause'}
-                  variant={game.paused ? 'gold' : 'secondary'}
-                  loading={pause.isPending}
-                  onPress={() => pause.mutate(!game.paused)}
-                />
-                <T variant="smallBold" muted style={styles.label}>
+                <T variant="small" muted style={{ marginBottom: spacing.sm }}>
                   {t('game.speedForAll')}
                 </T>
                 <View style={styles.wrap}>
@@ -73,6 +66,20 @@ export function GameSettingsSheet({ visible, state, isHost, onClose }: { visible
               <Toggle value={voice} onValueChange={(v) => setSettings({ voice: v })} />
             </Row>
             {voice ? <VoicePicker language={language} /> : null}
+            <Row style={{ justifyContent: 'space-between', marginTop: spacing.md }}>
+              <View style={{ flex: 1 }}>
+                <T variant="bodyMedium">{t('profile.sounds')}</T>
+                <T variant="tiny" muted>
+                  {t('profile.soundsDesc')}
+                </T>
+              </View>
+              <Toggle value={sounds} onValueChange={(v) => setSettings({ sounds: v })} />
+            </Row>
+
+            <T variant="smallBold" muted style={styles.label}>
+              {t('ticketStyle.title')}
+            </T>
+            <TicketStylePicker preview={false} />
           </ScrollView>
         </Pressable>
       </Pressable>

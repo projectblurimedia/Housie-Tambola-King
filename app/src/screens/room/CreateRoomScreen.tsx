@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
@@ -30,7 +30,6 @@ const DEFAULT_WEIGHTS: Record<PrizeType, number> = {
   full_house: 30,
 };
 const PRICE_PRESETS = [5, 10, 20, 50, 100];
-const ROOM_SPEEDS = [3, 4, 5, 6, 7, 8, 9, 10];
 
 type Group = 'fast' | 'lines' | 'columns';
 const GROUP_PRIZES: Record<Group, PrizeType[]> = { fast: FAST_PRIZES, lines: LINE_PRIZES, columns: COLUMN_PRIZES };
@@ -88,9 +87,10 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [visibility, setVisibility] = useState<RoomVisibility>('private');
   const [maxPlayers, setMaxPlayers] = useState(10);
   const [price, setPrice] = useState('10');
-  const [speed, setSpeed] = useState(3);
   const [claimMode, setClaimMode] = useState<ClaimMode>('fastest');
   const [autoMark, setAutoMark] = useState(false);
+  /** Fastest finger: give everyone a few seconds to check before the winner is announced. */
+  const [checkClaims, setCheckClaims] = useState(true);
   const [groupsOn, setGroupsOn] = useState<Record<Group, boolean>>({ fast: true, lines: true, columns: true });
   const [selected, setSelected] = useState<Set<PrizeType>>(new Set<PrizeType>(['fast_5', ...LINE_PRIZES, ...COLUMN_PRIZES]));
   const [loading, setLoading] = useState(false);
@@ -128,11 +128,13 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         visibility,
         maxPlayers,
         ticketPrice: priceNum,
-        callIntervalSeconds: speed,
+        // Default 3 s; the host changes it any time from the game settings.
+        callIntervalSeconds: 3,
         seriesLength: kind === 'series' ? (limitGames ? seriesLength : 0) : 1,
         prizes: Object.fromEntries(chosen.map((p) => [p, DEFAULT_WEIGHTS[p]])),
         claimMode,
         autoMark,
+        checkClaims,
       });
       qc.invalidateQueries({ queryKey: ['myRooms'] });
       navigation.replace('Room', { roomId });
@@ -234,14 +236,6 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         {t('create.ticketPriceHelp')}
       </T>
 
-      <T variant="smallBold" muted style={styles.sectionLabel}>
-        {t('create.callSpeed')}
-      </T>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm }}>
-        {ROOM_SPEEDS.map((s) => (
-          <Chip key={s} label={t('common.seconds', { count: s })} active={speed === s} onPress={() => setSpeed(s)} />
-        ))}
-      </ScrollView>
 
       <T variant="smallBold" muted style={styles.sectionLabel}>
         {t('create.claimRule')}
@@ -257,6 +251,19 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
           </Card>
         ))}
       </Row>
+      {claimMode === 'fastest' ? (
+        <Card style={[styles.group, { marginTop: spacing.sm }]}>
+          <Row>
+            <View style={{ flex: 1 }}>
+              <T variant="h3">{t('create.checkClaims')}</T>
+              <T variant="tiny" muted>
+                {t('create.checkClaimsDesc')}
+              </T>
+            </View>
+            <Toggle value={checkClaims} onValueChange={setCheckClaims} />
+          </Row>
+        </Card>
+      ) : null}
       <Card style={[styles.group, { marginTop: spacing.sm }]}>
         <Row>
           <View style={{ flex: 1 }}>

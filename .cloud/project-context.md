@@ -1,6 +1,6 @@
 # Project Context (living memory)
 
-_Last updated: 2026-11-19_
+_Last updated: 2026-11-18_
 
 ## Product
 **Housie Tambola King** — online Housie/Tambola for India (English + Telugu). Package `com.housietambolaking.app`. (Note: "King" titles exist on Play Store — check the listing name is accepted before publishing.)
@@ -21,7 +21,11 @@ _Last updated: 2026-11-19_
 - Numbers spoken aloud on every phone. Players **tap to strike**; completing a prize auto-claims. First wins; same called number = split equally.
 - Animated winner announcement on all phones: name, prize, winning numbers, amount/split.
 - Standings per room/series saved: wins, won, spent, net, every win listed.
-- Secondary: Solo vs bots (offline), Caller Mode (printable tickets).
+- Lobby steps every game: players join → host "Next" → everyone takes tickets → host "Next" (all have tickets) → set prizes & play.
+- Fastest finger has "check before announcing" (default on): 10 s for everyone to check and share a same-number win, then the announcement.
+- Wins on the same number show on one card; prize sounds (fast/line/column/full house; full house wins). Sounds need expo-audio → only in the next APK build; the current APK falls back to haptics.
+- Players choose ticket colour + strike colour; tickets use round number chips.
+- Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
 **Testing phase (owner, 2026-11-18):** name + mobile number → logged in directly, **no OTP** (`phone_login` RPC, migration 20261118000001). Same number = same account. No guest/anonymous mode. Must be replaced by real SMS OTP before public launch (anyone can sign in as any number today).
@@ -30,7 +34,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (5 migrations) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (9 migrations, latest 20261120000001_lobby_steps_claim_check) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |

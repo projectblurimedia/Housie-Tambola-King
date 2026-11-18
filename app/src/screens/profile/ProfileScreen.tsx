@@ -8,6 +8,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { VoicePicker } from '@/components/VoicePicker';
+import { TicketStylePicker } from '@/components/TicketStylePicker';
 import { formatRupees } from '@/components/Money';
 import { Card, Row, Screen, Segmented, Spacer, T, Toggle } from '@/components/ui';
 import { useMe } from '@/hooks/useMe';
@@ -163,9 +164,19 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
           </SettingRow>
         </Pressable>
         {voicesOpen ? <VoicePicker language={settings.language} /> : null}
+        <SettingRow icon="musical-notes" label={t('profile.sounds')}>
+          <Toggle value={settings.sounds} onValueChange={(sounds) => settings.set({ sounds })} />
+        </SettingRow>
         <SettingRow icon="phone-portrait" label={t('profile.haptics')}>
           <Toggle value={settings.haptics} onValueChange={(haptics) => settings.set({ haptics })} />
         </SettingRow>
+      </Card>
+
+      <T variant="smallBold" muted style={styles.sectionLabel}>
+        {t('ticketStyle.title')}
+      </T>
+      <Card>
+        <TicketStylePicker />
       </Card>
 
       <T variant="smallBold" muted style={styles.sectionLabel}>

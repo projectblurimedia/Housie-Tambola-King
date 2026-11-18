@@ -213,7 +213,7 @@ export function CallerScreen(_props: ScreenProps<'Caller'>) {
         <VoicePicker language={voiceLanguage} />
       </Sheet>
 
-      <Sheet visible={historyOpen} title={t('caller.historyTitle', { count: called.length })} onClose={() => setHistoryOpen(false)}>
+      <Sheet visible={historyOpen} title={t('caller.historyLast5')} onClose={() => setHistoryOpen(false)}>
         <T variant="small" muted style={{ marginBottom: spacing.md }}>
           {t('caller.historyHint')}
         </T>
@@ -223,6 +223,7 @@ export function CallerScreen(_props: ScreenProps<'Caller'>) {
           <View style={styles.historyGrid}>
             {called
               .map((n, i) => ({ n, order: i + 1 }))
+              .slice(-5)
               .reverse()
               .map(({ n, order }) => (
                 <View key={n} style={styles.historyItem}>
