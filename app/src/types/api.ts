@@ -82,6 +82,11 @@ export interface Room {
   checkSeconds: number;
   /** Auto hint kind: 'next' = newest number until the next call; 'struck' = every called number until struck. */
   hintMode: HintMode;
+  /**
+   * Normal rule, "Late claim": 0 = off. K > 0 = during a check, a player who completed the prize
+   * on an earlier number and claims within K numbers of completing it wins it instead.
+   */
+  lateClaimCalls: number;
 }
 
 /**

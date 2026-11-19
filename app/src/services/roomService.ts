@@ -34,6 +34,8 @@ export interface CreateRoomInput {
   chatEnabled: boolean;
   checkSeconds: number;
   hintMode: HintMode;
+  /** Normal rule: how many numbers late an earlier-finished claim may come; 0 = off. */
+  lateClaimCalls: number;
 }
 
 export interface RoomSettingsInput {
@@ -46,9 +48,10 @@ export interface RoomSettingsInput {
   autoMark: boolean;
   chatEnabled: boolean;
   hintMode: HintMode;
+  lateClaimCalls: number;
 }
 
-export type ClaimResult = 'won' | 'shared' | 'already_claimed' | 'already_yours' | 'not_complete' | 'auto';
+export type ClaimResult = 'won' | 'shared' | 'too_late' | 'already_claimed' | 'already_yours' | 'not_complete' | 'auto';
 
 export const roomService = {
   async create(input: CreateRoomInput): Promise<{ roomId: string; code: string }> {
@@ -71,7 +74,14 @@ export const roomService = {
     ) as { roomId: string; code: string };
     // 'struck' is the default on the server.
     if (input.autoMark && input.hintMode === 'next') await this.setHintMode(created.roomId, 'next');
+    // 0 (off) is the default on the server.
+    if (input.rule === 'normal' && input.lateClaimCalls > 0) await this.setLateClaim(created.roomId, input.lateClaimCalls);
     return created;
+  },
+
+  /** Host: Normal rule "Late claim" (0 = off). */
+  async setLateClaim(roomId: string, calls: number): Promise<void> {
+    unwrap(await supabase.rpc('set_late_claim', { p_room: roomId, p_calls: calls }));
   },
 
   async setHintMode(roomId: string, mode: HintMode): Promise<void> {
@@ -123,7 +133,7 @@ export const roomService = {
     unwrap(await supabase.rpc('set_game_paused', { p_game: gameId, p_paused: paused }));
   },
 
-  async updateSettings(roomId: string, input: RoomSettingsInput): Promise<void> {
+  async updateSettings(roomId: string, input: RoomSettingsInput, previousLateClaim = 0): Promise<void> {
     unwrap(
       await supabase.rpc('update_room_settings', {
         p_room: roomId,
@@ -139,6 +149,7 @@ export const roomService = {
       }),
     );
     await this.setHintMode(roomId, input.hintMode);
+    if (input.lateClaimCalls !== previousLateClaim) await this.setLateClaim(roomId, input.lateClaimCalls);
   },
 
   async getChat(roomId: string): Promise<ChatMessage[]> {

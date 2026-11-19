@@ -47,6 +47,36 @@ export function CheckTimePicker({ value, onChange }: { value: number; onChange: 
   );
 }
 
+/**
+ * Normal rule, "Late claim" (− 0 +): a player who finished a prize on an earlier number may still
+ * claim it during the check within this many numbers, and then wins it over the later finisher.
+ */
+export function LateClaimPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+  const { t } = useTranslation();
+  const { colors } = useThemeColors();
+  return (
+    <Card style={[styles.group, { marginTop: spacing.sm }]}>
+      <Row gap={spacing.md}>
+        <View style={[styles.optIcon, { backgroundColor: value > 0 ? colors.primary : colors.surfaceAlt }]}>
+          <Ionicons name="time" size={18} color={value > 0 ? '#fff' : colors.textMuted} />
+        </View>
+        <View style={{ flex: 1 }}>
+          <T variant="h3">{t('create.lateClaim')}</T>
+          <T variant="tiny" muted>
+            {t('create.lateClaimDesc')}
+          </T>
+        </View>
+      </Row>
+      <Row style={{ justifyContent: 'center', marginTop: spacing.sm }}>
+        <Stepper value={value} min={0} max={90} onChange={onChange} width={56} />
+      </Row>
+      <T variant="tiny" muted center>
+        {value === 0 ? t('create.lateClaimOffDesc') : t('create.lateClaimOnDesc', { count: value })}
+      </T>
+    </Card>
+  );
+}
+
 const RULE_ICONS: Record<ClaimRule, keyof typeof Ionicons.glyphMap> = {
   normal: 'shield-checkmark',
   fastest: 'flash',
@@ -160,6 +190,13 @@ export function RoomSettingsCard({ state, isHost }: { state: RoomState; isHost: 
             value={room.checkSeconds === 0 ? t('create.untilReady') : t('common.seconds', { count: room.checkSeconds })}
           />
         ) : null}
+        {rule === 'normal' ? (
+          <SummaryItem
+            icon="time"
+            label={t('create.lateClaim')}
+            value={room.lateClaimCalls > 0 ? t('create.lateClaimValue', { count: room.lateClaimCalls }) : t('common.off')}
+          />
+        ) : null}
         <SummaryItem icon="pricetag" label={t('create.ticketPrice')} value={formatRupees(room.ticketPrice)} />
         <SummaryItem icon="people" label={t('create.maxPlayers')} value={String(room.maxPlayers)} />
         <SummaryItem
@@ -200,6 +237,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
   const [autoHint, setAutoHint] = useState(room.autoMark);
   const [hintMode, setHintMode] = useState<HintMode>(room.hintMode ?? 'struck');
   const [chat, setChat] = useState(room.chatEnabled);
+  const [lateClaim, setLateClaim] = useState(room.lateClaimCalls ?? 0);
 
   // Fresh values every time it opens.
   useEffect(() => {
@@ -213,6 +251,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
     setAutoHint(room.autoMark);
     setHintMode(room.hintMode ?? 'struck');
     setChat(room.chatEnabled);
+    setLateClaim(room.lateClaimCalls ?? 0);
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = useMutation({
@@ -227,7 +266,8 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
         autoMark: autoHint,
         hintMode,
         chatEnabled: chat,
-      }),
+        lateClaimCalls: rule === 'normal' ? lateClaim : 0,
+      }, room.lateClaimCalls ?? 0),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: roomKey(room.id) });
       showToast({ variant: 'success', title: t('lobby.settingsSaved') });
@@ -252,7 +292,12 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
               {t('create.claimRule')}
             </T>
             <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
-            {rule === 'normal' ? <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} /> : null}
+            {rule === 'normal' ? (
+              <>
+                <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} />
+                <LateClaimPicker value={lateClaim} onChange={setLateClaim} />
+              </>
+            ) : null}
 
             <T variant="smallBold" muted style={styles.label}>
               {t('create.ticketPrice')}

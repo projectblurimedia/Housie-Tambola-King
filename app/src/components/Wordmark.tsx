@@ -123,9 +123,9 @@ export function AppIcon({ size = 46 }: { size?: number }) {
 }
 
 /** Soft light rays fanning out from the centre, drawn in vector. */
-function Rays({ size }: { size: number }) {
+/** Light rays from the centre (opening screen, winner card). */
+export function Rays({ size, color = '#FFFFFF', opacity = 0.1, count = 18 }: { size: number; color?: string; opacity?: number; count?: number }) {
   const c = size / 2;
-  const count = 18;
   const rays = Array.from({ length: count }, (_, i) => {
     const a = (i / count) * Math.PI * 2;
     const b = a + Math.PI / count;
@@ -133,9 +133,9 @@ function Rays({ size }: { size: number }) {
   });
   return (
     <Svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
-      <G opacity={0.1}>
+      <G opacity={opacity}>
         {rays.map((d, i) => (
-          <Path key={i} d={d} fill="#FFFFFF" />
+          <Path key={i} d={d} fill={color} />
         ))}
       </G>
     </Svg>
@@ -246,7 +246,7 @@ export function Wordmark({ size = 'large', subtitle }: { size?: 'large' | 'small
  * purple outside), a glossy gold crown, the title in a clean bold font, and glossy 7 · 31 · 65
  * balls bouncing in — then it fades into the app.
  */
-export function LaunchIntro({ onDone }: { onDone: () => void }) {
+export function LaunchIntro({ onDone, ready = true }: { onDone: () => void; ready?: boolean }) {
   const { width, height } = useWindowDimensions();
   const crown = useRef(new Animated.Value(0)).current;
   const title = useRef(new Animated.Value(0)).current;
@@ -256,6 +256,8 @@ export function LaunchIntro({ onDone }: { onDone: () => void }) {
   const glow = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
+    // Before the fonts / session are in, only the still background shows (it replaces the splash).
+    if (!ready) return;
     const turning = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 14000, easing: Easing.linear, useNativeDriver: true }));
     turning.start();
     // The crown keeps glowing softly once it lands.
@@ -282,7 +284,7 @@ export function LaunchIntro({ onDone }: { onDone: () => void }) {
       turning.stop();
       glowing.stop();
     };
-  }, [crown, title, balls, fade, spin, glow, onDone]);
+  }, [ready, crown, title, balls, fade, spin, glow, onDone]);
 
   return (
     <Animated.View
@@ -341,10 +343,14 @@ export function LaunchIntro({ onDone }: { onDone: () => void }) {
             transform: [{ translateY: title.interpolate({ inputRange: [0, 1], outputRange: [16, 0] }) }],
           }}
         >
-          <Text style={styles.introTop}>HOUSIE TAMBOLA</Text>
-          <Text style={styles.introKing}>KING</Text>
+          {ready ? (
+            <>
+              <Text style={styles.introTop}>HOUSIE TAMBOLA</Text>
+              <Text style={styles.introKing}>KING</Text>
+            </>
+          ) : null}
         </Animated.View>
-        <View style={styles.ballsRow}>
+        <View style={[styles.ballsRow, !ready && { opacity: 0 }]}>
           {(
             [
               [7, 'red'],

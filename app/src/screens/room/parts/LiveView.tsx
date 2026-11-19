@@ -120,6 +120,12 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
               variant: 'info',
               title: t('game.claimTooLate', { prize: prizeName }),
             });
+          } else if (result === 'too_late') {
+            // Late claim on: finished earlier, but more numbers have passed than the room allows.
+            showToast({
+              variant: 'info',
+              title: t('game.claimTooLateCalls', { prize: prizeName, count: room.lateClaimCalls }),
+            });
           }
         } catch (err) {
           attempted.current.delete(key);
@@ -129,7 +135,7 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
         }
       }
     },
-    [state.prizes, me.id, called, caller, t, qc, room.id],
+    [state.prizes, me.id, called, caller, t, qc, room.id, room.lateClaimCalls],
   );
 
   // Uncalled numbers never reach here: the tile just wiggles (canStrike below).
@@ -508,7 +514,7 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
           }
           const r = await roomService.claim(tk.id, p.prize);
           if (r === 'won' || r === 'shared' || r === 'already_yours') best = 'shared';
-          else if (best !== 'shared' && r === 'already_claimed') best = 'late';
+          else if (best !== 'shared' && (r === 'already_claimed' || r === 'too_late')) best = 'late';
         }
       }
       return best;

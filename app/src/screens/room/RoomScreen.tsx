@@ -717,7 +717,16 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
           if (e.winners.some((w) => w.userId === meRef.current)) caller.celebrate();
           break;
         case 'claim_check': {
-          const fresh = !useClaimCheckStore.getState().checks.some((c) => c.gameId === e.gameId && c.prize === e.prize);
+          const before = useClaimCheckStore.getState().checks.find((c) => c.gameId === e.gameId && c.prize === e.prize);
+          const fresh = !before;
+          // Late claim: someone who finished on an earlier number took the prize from me.
+          const me = meRef.current;
+          if (e.earlier && me && before?.winners.some((w) => w.userId === me) && !e.winners.some((w) => w.userId === me)) {
+            showToast({
+              variant: 'info',
+              title: t('game.claimBeatenEarlier', { name: e.winners[0]?.name ?? '', prize: t(`prizes.${e.prize}`) }),
+            });
+          }
           useClaimCheckStore.getState().add(e);
           const { sounds, haptics } = useSettingsStore.getState();
           if (fresh && sounds) playPrizeSound(soundFor(e.prize), haptics);

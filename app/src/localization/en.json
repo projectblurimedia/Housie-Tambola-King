@@ -117,7 +117,12 @@
     "hintNext": "Until the next number",
     "hintStruck": "Keep until marked",
     "hintNextDesc": "Only the newest number glows, until the next one is called.",
-    "hintStruckDesc": "Every called number on your ticket glows until you strike it."
+    "hintStruckDesc": "Every called number on your ticket glows until you strike it.",
+    "lateClaim": "Late claim",
+    "lateClaimDesc": "Finished a prize but the next number came before you claimed? You can still claim it within this many numbers, and whoever finished first wins it. 0 = off",
+    "lateClaimValue": "Up to {{count}} numbers",
+    "lateClaimOffDesc": "Off: a late claim during the check just shares the prize.",
+    "lateClaimOnDesc": "Finished {{count}} number(s) before the winner and claimed in the check? You win it instead."
   },
   "join": {
     "title": "Join Room",
@@ -298,7 +303,9 @@
     "thisPhone": "On this phone",
     "autoRuleHint": "Auto: numbers are struck for you and prizes are awarded automatically.",
     "claimedPrizes": "claimed {{prizes}}",
-    "callerVoice": "Caller voice"
+    "callerVoice": "Caller voice",
+    "claimTooLateCalls": "Too late — {{prize}} was finished more than {{count}} numbers before your claim.",
+    "claimBeatenEarlier": "{{name}} finished {{prize}} on an earlier number and takes it."
   },
   "winner": {
     "title": "WINNER!",
@@ -307,7 +314,8 @@
     "ticket": "Ticket #{{serial}}",
     "each": "{{amount}} each",
     "you": "That's you! 🎉",
-    "sharedNote": "Shared with others who finished on the same number"
+    "sharedNote": "Shared with others who finished on the same number",
+    "congrats": "CONGRATULATIONS!"
   },
   "results": {
     "title": "Game {{n}} results",
@@ -513,7 +521,8 @@
     "screenCrashed": "Something went wrong",
     "screenCrashedHint": "Tap Try again — your game continues on the server.",
     "PRICE_LOCKED": "Ticket price can’t change after tickets are taken.",
-    "NOT_ALL_READY": "Not everyone is ready yet."
+    "NOT_ALL_READY": "Not everyone is ready yet.",
+    "INVALID_LATE_CLAIM": "Late claim must be between 0 and 90 numbers."
   },
   "update": {
     "title": "Updating app…",

@@ -37,6 +37,8 @@ import { hideNavigationBar } from '@/services/systemBars';
 import { toAppError } from '@/services/errors';
 import { useThemeColors } from '@/theme';
 
+// No native splash logo: the coded opening scene is drawn on the very first frame (while fonts
+// and the session load), and the native splash is hidden as soon as it is up.
 SplashScreen.preventAutoHideAsync().catch(() => undefined);
 
 Notifications.setNotificationHandler({
@@ -241,11 +243,13 @@ export default function App() {
 
   const ready = (fontsLoaded || !!fontError) && settingsHydrated && (sessionReady || !IS_CONFIGURED);
 
+  // The opening scene's background is on screen from the first render — drop the splash now.
   useEffect(() => {
-    if (ready) SplashScreen.hideAsync().catch(() => undefined);
-  }, [ready]);
+    SplashScreen.hideAsync().catch(() => undefined);
+  }, []);
 
-  if (!ready) return null;
+  // Still loading: only the opening scene (it starts animating once the fonts are in).
+  if (!ready) return <LaunchIntro onDone={finishIntro} ready={false} />;
 
   const navTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
@@ -270,7 +274,7 @@ export default function App() {
         <WinnerOverlay />
         <ToastHost />
         {showUpdateOverlay ? <UpdateOverlay progress={downloadProgress} /> : null}
-        {introDone ? null : <LaunchIntro onDone={finishIntro} />}
+        {introDone ? null : <LaunchIntro onDone={finishIntro} ready />}
       </QueryClientProvider>
     </SafeAreaProvider>
   );

@@ -9,7 +9,16 @@ export type RoomEvent =
   | { type: 'call'; gameId: string; n: number; index: number }
   | { type: 'prize'; gameId: string; prize: PrizeType; amount: number; callIndex: number; winners: Winner[] }
   | { type: 'prize_settled'; gameId: string; prize: PrizeType; each: number; winners: number; amount: number; callIndex: number; winnerList: Winner[] }
-  | { type: 'claim_check'; gameId: string; prize: PrizeType; callIndex: number; winners: Winner[]; deadline: string }
+  | {
+      type: 'claim_check';
+      gameId: string;
+      prize: PrizeType;
+      callIndex: number;
+      winners: Winner[];
+      deadline: string;
+      /** Late claim: an earlier finisher replaced the previous winner(s). */
+      earlier?: boolean;
+    }
   | { type: 'speed'; seconds: number }
   | { type: 'paused'; paused: boolean }
   | { type: 'phase'; phase: 'tickets' | 'ready' }

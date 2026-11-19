@@ -10,7 +10,7 @@ import { showToast } from '@/state/toastStore';
 import type { PrizeType } from '@/game/engine/ticket';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import type { ClaimRule, HintMode, RoomKind, RoomVisibility } from '@/types/api';
-import { CheckTimePicker, HintModePicker, RulePicker } from './parts/RoomSettingsModal';
+import { CheckTimePicker, HintModePicker, LateClaimPicker, RulePicker } from './parts/RoomSettingsModal';
 import type { ScreenProps } from '@/navigation/types';
 
 /**
@@ -79,6 +79,8 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [hintMode, setHintMode] = useState<HintMode>('struck');
   /** Normal rule: seconds everyone gets to check after a claim. */
   const [checkSeconds, setCheckSeconds] = useState(10);
+  /** Normal rule "Late claim": 0 = off. */
+  const [lateClaimCalls, setLateClaimCalls] = useState(0);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -103,6 +105,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         hintMode,
         chatEnabled,
         checkSeconds,
+        lateClaimCalls,
       });
       qc.invalidateQueries({ queryKey: ['myRooms'] });
       navigation.replace('Room', { roomId });
@@ -226,7 +229,12 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         {t('create.claimRule')}
       </T>
       <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
-      {rule === 'normal' ? <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} /> : null}
+      {rule === 'normal' ? (
+        <>
+          <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} />
+          <LateClaimPicker value={lateClaimCalls} onChange={setLateClaimCalls} />
+        </>
+      ) : null}
       {/* Auto strikes everything itself — hints make no sense there. */}
       {rule === 'auto' ? null : (
         <>

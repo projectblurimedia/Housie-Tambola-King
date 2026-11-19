@@ -100,6 +100,13 @@ try {
   check(state.game.status === 'lobby' && state.game.gameNo === 1, 'game 1 lobby open');
   check(state.game.phase === 'joining' && state.room.checkClaims === true, 'lobby starts at "joining"; check-before-announcing on by default');
 
+  // Late claim (Normal rule): off by default; host-only; 0–90 numbers.
+  check(state.room.lateClaimCalls === 0, 'late claim off by default');
+  check(await expectError(friend.rpc('set_late_claim', { p_room: room.roomId, p_calls: 2 }), 'NOT_HOST'), 'only host sets late claim');
+  check(await expectError(host.rpc('set_late_claim', { p_room: room.roomId, p_calls: 91 }), 'INVALID_LATE_CLAIM'), 'late claim max 90');
+  await host.rpc('set_late_claim', { p_room: room.roomId, p_calls: 2 });
+  check((await friend.rpc('get_room_state', { p_room: room.roomId })).room.lateClaimCalls === 2, 'late claim set to 2 (seen by players)');
+
   check(await expectError(host.rpc('set_my_tickets', { p_game: game1, p_count: 2 }), 'TICKETS_NOT_OPEN'), 'no tickets before the host opens them');
   check(await expectError(friend.rpc('open_tickets', { p_game: game1 }), 'NOT_HOST'), 'only host opens tickets');
   await host.rpc('open_tickets', { p_game: game1 });

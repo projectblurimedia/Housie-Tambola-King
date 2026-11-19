@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useWinnerStore, PrizeWin } from '@/state/winnerStore';
 import { useSettingsStore } from '@/state/settingsStore';
@@ -11,6 +12,7 @@ import { Avatar } from './Avatar';
 import { Confetti } from './Confetti';
 import { PatternTicket } from './PatternTicket';
 import { formatRupees } from './Money';
+import { Rays } from './Wordmark';
 
 const SHOW_MS = 6500;
 const EXTRA_PRIZE_MS = 2500;
@@ -99,7 +101,12 @@ export function WinnerOverlay() {
   const haptics = useSettingsStore((s) => s.haptics);
   const me = useMe();
   const card = useRef(new Animated.Value(0)).current;
-  const shine = useRef(new Animated.Value(0)).current;
+  /** Trophy / glow / sparkles breathing. */
+  const pulse = useRef(new Animated.Value(0)).current;
+  /** Light rays turning. */
+  const spin = useRef(new Animated.Value(0)).current;
+  /** Glint sweeping across the gold frame. */
+  const glint = useRef(new Animated.Value(0)).current;
   /** Sound already played for the card on screen (a later, bigger prize may upgrade it). */
   const played = useRef<{ id: string; rank: number } | null>(null);
 
@@ -118,27 +125,51 @@ export function WinnerOverlay() {
   useEffect(() => {
     if (!current) return;
     card.setValue(0);
+    glint.setValue(0);
     Animated.spring(card, { toValue: 1, friction: 6, tension: 90, useNativeDriver: true }).start();
-    const loop = Animated.loop(
-      Animated.timing(shine, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-    );
-    loop.start();
+    const loops = [
+      Animated.loop(
+        Animated.sequence([
+          Animated.timing(pulse, { toValue: 1, duration: 750, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+          Animated.timing(pulse, { toValue: 0, duration: 750, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        ]),
+      ),
+      Animated.loop(Animated.timing(spin, { toValue: 1, duration: 16000, easing: Easing.linear, useNativeDriver: true })),
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(500),
+          Animated.timing(glint, { toValue: 1, duration: 1100, easing: Easing.inOut(Easing.quad), useNativeDriver: true }),
+          Animated.timing(glint, { toValue: 0, duration: 0, useNativeDriver: true }),
+          Animated.delay(900),
+        ]),
+      ),
+    ];
+    loops.forEach((l) => l.start());
     const timer = setTimeout(dismiss, SHOW_MS + (current.items.length - 1) * EXTRA_PRIZE_MS);
     return () => {
       clearTimeout(timer);
-      loop.stop();
+      loops.forEach((l) => l.stop());
     };
     // Re-run when the card changes (incl. a prize merging in or a shared prize updating).
-  }, [current?.id, itemsKey, card, shine, dismiss]); // eslint-disable-line react-hooks/exhaustive-deps
+  }, [current?.id, itemsKey, card, pulse, spin, glint, dismiss]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!current) return null;
   const multi = current.items.length > 1;
   const iWon = current.items.some((i) => i.winners.some((w) => w.userId === me.data?.id));
   const hasFullHouse = current.items.some((i) => i.prize === 'full_house');
+  // Same radial glow as the opening screen; Full Housie burns orange-gold.
+  const glow = hasFullHouse ? ['#FBBF24', '#EA580C', '#7C2D12', '#3B0A0A'] : ['#E879F9', '#9333EA', '#4C1D95', '#24073F'];
+  const turn = spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] });
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={dismiss} statusBarTranslucent>
       <Pressable style={styles.backdrop} onPress={dismiss}>
+        {/* Big golden rays turning slowly behind the card. */}
+        <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
+          <Animated.View style={[styles.bigRays, { opacity: card, transform: [{ rotate: turn }] }]}>
+            <Rays size={1100} color="#FDE68A" opacity={0.13} count={20} />
+          </Animated.View>
+        </View>
         <Confetti burstKey={`${current.id}:${itemsKey}`} />
         <Animated.View
           style={[
@@ -152,33 +183,109 @@ export function WinnerOverlay() {
             },
           ]}
         >
+          {/* Shiny gold frame. */}
           <LinearGradient
-            colors={hasFullHouse ? ['#7C2D12', '#C2410C', '#F59E0B'] : ['#4C1D95', '#7C3AED', '#C026D3']}
-            style={styles.gradient}
+            colors={['#FFF7CC', '#F5B700', '#FFE27A', '#B87400', '#FDE68A']}
+            start={{ x: 0, y: 0 }}
+            end={{ x: 1, y: 1 }}
+            style={styles.frame}
           >
-            <Animated.Text
-              style={[styles.trophy, { transform: [{ scale: shine.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.15, 1] }) }] }]}
-            >
-              {hasFullHouse ? '👑' : '🏆'}
-            </Animated.Text>
-            <LinearGradient colors={goldGradient} style={styles.titlePill}>
-              <Text style={styles.title}>{t('winner.title')}</Text>
-            </LinearGradient>
-            <ScrollView
-              style={{ width: '100%', maxHeight: 480 }}
-              contentContainerStyle={{ alignItems: 'center', gap: spacing.md, paddingTop: spacing.md }}
-            >
-              <WinnersList items={current.items} meId={me.data?.id} />
-              <View style={styles.patterns}>
-                {current.items.map((item) => (
-                  <View key={item.prize} style={{ alignItems: 'center', gap: 4 }}>
-                    <PatternTicket prize={item.prize} width={multi ? 120 : 170} />
-                    <Text style={styles.patternLabel}>{t(`prizes.${item.prize}`)}</Text>
-                  </View>
-                ))}
+            <View style={styles.inner}>
+              <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
+                <Defs>
+                  <RadialGradient id="winGlow" cx="50%" cy="30%" r="80%">
+                    <Stop offset="0" stopColor={glow[0]} />
+                    <Stop offset="0.3" stopColor={glow[1]} />
+                    <Stop offset="0.7" stopColor={glow[2]} />
+                    <Stop offset="1" stopColor={glow[3]} />
+                  </RadialGradient>
+                </Defs>
+                <Rect x={0} y={0} width="100%" height="100%" fill="url(#winGlow)" />
+              </Svg>
+              {/* Light rays from behind the trophy, like the opening screen. */}
+              <View style={styles.innerRaysWrap} pointerEvents="none">
+                <Animated.View style={[styles.innerRays, { transform: [{ rotate: turn }] }]}>
+                  <Rays size={900} opacity={0.14} />
+                </Animated.View>
               </View>
-            </ScrollView>
-            {iWon ? <Text style={styles.me}>{t('winner.you')}</Text> : null}
+
+              <View style={styles.content}>
+                <View style={styles.center}>
+                  <Animated.View
+                    pointerEvents="none"
+                    style={[styles.trophyGlow, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.35, 0.9] }) }]}
+                  >
+                    <Svg width={150} height={150}>
+                      <Defs>
+                        <RadialGradient id="trophyGlow" cx="50%" cy="50%" r="50%">
+                          <Stop offset="0" stopColor="#FFE27A" stopOpacity={0.95} />
+                          <Stop offset="0.55" stopColor="#FFB020" stopOpacity={0.3} />
+                          <Stop offset="1" stopColor="#FFB020" stopOpacity={0} />
+                        </RadialGradient>
+                      </Defs>
+                      <Circle cx={75} cy={75} r={75} fill="url(#trophyGlow)" />
+                    </Svg>
+                  </Animated.View>
+                  <Animated.Text
+                    style={[styles.trophy, { transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.14] }) }] }]}
+                  >
+                    {hasFullHouse ? '👑' : '🏆'}
+                  </Animated.Text>
+                </View>
+                <Text style={[styles.title, iWon && styles.titleCongrats]} numberOfLines={1} adjustsFontSizeToFit>
+                  {iWon ? t('winner.congrats') : t('winner.title')}
+                </Text>
+                <ScrollView
+                  style={{ width: '100%', maxHeight: 440 }}
+                  contentContainerStyle={{ alignItems: 'center', gap: spacing.md, paddingTop: spacing.md }}
+                >
+                  <WinnersList items={current.items} meId={me.data?.id} />
+                  <View style={styles.patterns}>
+                    {current.items.map((item) => (
+                      <View key={item.prize} style={{ alignItems: 'center', gap: 4 }}>
+                        <PatternTicket prize={item.prize} width={multi ? 120 : 170} />
+                        <Text style={styles.patternLabel}>{t(`prizes.${item.prize}`)}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </ScrollView>
+                {iWon ? <Text style={styles.me}>{t('winner.you')}</Text> : null}
+              </View>
+
+              {/* Twinkling sparkles in the corners. */}
+              {SPARKLES.map((s, i) => (
+                <Animated.Text
+                  key={i}
+                  pointerEvents="none"
+                  style={[
+                    styles.sparkle,
+                    s.pos,
+                    {
+                      fontSize: s.size,
+                      opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: i % 2 ? [1, 0.2] : [0.2, 1] }),
+                    },
+                  ]}
+                >
+                  ✦
+                </Animated.Text>
+              ))}
+            </View>
+
+            {/* A glint sweeping across the frame and card. */}
+            <Animated.View
+              pointerEvents="none"
+              style={[
+                styles.glint,
+                { transform: [{ translateX: glint.interpolate({ inputRange: [0, 1], outputRange: [-160, 560] }) }, { rotate: '18deg' }] },
+              ]}
+            >
+              <LinearGradient
+                colors={['rgba(255,255,255,0)', 'rgba(255,255,255,0.38)', 'rgba(255,255,255,0)']}
+                start={{ x: 0, y: 0.5 }}
+                end={{ x: 1, y: 0.5 }}
+                style={{ flex: 1 }}
+              />
+            </Animated.View>
           </LinearGradient>
         </Animated.View>
       </Pressable>
@@ -186,13 +293,50 @@ export function WinnerOverlay() {
   );
 }
 
+const SPARKLES = [
+  { pos: { top: 14, left: 16 }, size: 18 },
+  { pos: { top: 40, right: 22 }, size: 14 },
+  { pos: { top: 96, left: 34 }, size: 11 },
+  { pos: { top: 18, right: 64 }, size: 10 },
+  { pos: { bottom: 18, left: 20 }, size: 13 },
+  { pos: { bottom: 26, right: 18 }, size: 17 },
+];
+
 const styles = StyleSheet.create({
-  backdrop: { flex: 1, backgroundColor: 'rgba(10,4,24,0.72)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
-  card: { width: '100%', maxWidth: 420, borderRadius: radius.xl, overflow: 'hidden', elevation: 20 },
-  gradient: { alignItems: 'center', padding: spacing.xl, paddingTop: spacing.lg },
+  backdrop: { flex: 1, backgroundColor: 'rgba(10,4,24,0.78)', alignItems: 'center', justifyContent: 'center', padding: spacing.lg },
+  center: { alignItems: 'center', justifyContent: 'center' },
+  bigRays: { width: 1100, height: 1100 },
+  card: {
+    width: '100%',
+    maxWidth: 420,
+    borderRadius: radius.xl + 4,
+    elevation: 24,
+    shadowColor: '#FFC400',
+    shadowOpacity: 0.7,
+    shadowRadius: 24,
+    shadowOffset: { width: 0, height: 0 },
+  },
+  frame: { borderRadius: radius.xl + 4, padding: 4, overflow: 'hidden' },
+  inner: { borderRadius: radius.xl, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,248,204,0.7)' },
+  innerRaysWrap: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, alignItems: 'center' },
+  innerRays: { width: 900, height: 900, marginTop: -390 },
+  content: { alignItems: 'center', padding: spacing.xl, paddingTop: spacing.lg },
+  trophyGlow: { position: 'absolute', width: 150, height: 150 },
   trophy: { fontSize: 64 },
-  titlePill: { borderRadius: radius.pill, paddingHorizontal: 22, paddingVertical: 4, marginTop: 4 },
-  title: { fontFamily: fonts.display, fontSize: 28, color: '#3B1D00', letterSpacing: 2 },
+  title: {
+    fontFamily: 'LuckiestGuy_400Regular',
+    fontSize: 38,
+    color: '#FFD43B',
+    letterSpacing: 2,
+    marginTop: 2,
+    includeFontPadding: false,
+    textShadowColor: 'rgba(255,196,0,0.75)',
+    textShadowOffset: { width: 0, height: 0 },
+    textShadowRadius: 14,
+  },
+  titleCongrats: { fontSize: 32 },
+  sparkle: { position: 'absolute', color: '#FFF3B0', textShadowColor: '#FFC400', textShadowRadius: 8 },
+  glint: { position: 'absolute', top: -80, bottom: -80, width: 90 },
   prize: { fontFamily: fonts.display, fontSize: 26, color: '#fff', marginTop: spacing.sm },
   block: { backgroundColor: 'rgba(0,0,0,0.16)', borderRadius: radius.lg, padding: spacing.md },
   winnerRow: {

@@ -1,6 +1,6 @@
 # Project Context (living memory)
 
-_Last updated: 2026-11-18_
+_Last updated: 2026-11-19_
 
 ## Product
 **Housie Tambola King** — online Housie/Tambola for India (English + Telugu). Package `com.housietambolaking.app`. (Note: "King" titles exist on Play Store — check the listing name is accepted before publishing.)
@@ -32,6 +32,8 @@ _Last updated: 2026-11-18_
 - Voice, sounds and ticket style live only in Profile. Caller Mode is landscape (real rotation needs expo-screen-orientation → next build; current APK draws it rotated).
 - Wins on the same number show on one card; prize sounds (fast/line/column/full house; full house wins). Sounds need expo-audio → only in the next APK build; the current APK falls back to haptics.
 - Players choose ticket colour + strike colour; tickets use round number chips.
+- **Late claim** (Normal rule, 2026-11-19): host sets 0–90 numbers (− 0 +, default 0 = off). During a check, a player who finished the prize on an earlier number and claims within that many numbers wins it instead of the later finisher (`set_late_claim`, migration 20261128000001).
+- Opening: no native splash logo — the coded opening scene shows from the first frame (JS part is live via OTA; the blank native splash needs the next APK build). Winner card: shiny gold frame with a sweeping glint, radial glow + turning light rays like the opening, "CONGRATULATIONS!" when you won.
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
@@ -41,12 +43,12 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (16 migrations, latest 20261127000001_more_avatars) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (17 migrations, latest 20261128000001_late_claim) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |
 | GitHub | https://github.com/projectblurimedia/Housie-Tambola-King (`main`) |
-| E2E `scripts/smoke-test.mjs` | **Passes live** against the hosted project (2026-11-18) |
+| E2E `scripts/smoke-test.mjs` | **Passes live** against the hosted project (2026-11-19, incl. late claim) |
 
 All accounts for this project belong to projectblurimedia@gmail.com (owner's rule). This PC's default Vercel/GitHub logins are NearbyU's — use `--global-config C:/Users/MANIKANTA/.vercel-projectblurimedia` for Vercel and the `projectblurimedia@` remote URL for git.
 
