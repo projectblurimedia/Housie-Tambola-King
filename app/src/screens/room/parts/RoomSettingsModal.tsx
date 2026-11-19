@@ -94,25 +94,44 @@ export function RuleOptions({
   const checkLabel = checkSeconds === 0 ? t('create.untilReady') : t('common.seconds', { count: checkSeconds });
   const lateLabel = lateClaim > 0 ? t('create.lateClaimValue', { count: lateClaim }) : t('common.off');
   const hintLabel = !autoHint ? t('common.off') : hintMode === 'next' ? t('create.hintNext') : t('create.hintStruck');
-  const summary = [
-    ...(normal ? [`${t('create.checkTime')}: ${checkLabel}`, `${t('create.lateClaim')}: ${lateLabel}`] : []),
-    `${t('create.autoHint')}: ${hintLabel}`,
-  ].join('  ·  ');
+  // Current values as small chips while closed.
+  const chips: { icon: keyof typeof Ionicons.glyphMap; label: string }[] = [
+    ...(normal
+      ? [
+          { icon: 'hourglass' as const, label: checkLabel },
+          { icon: 'time' as const, label: `${t('create.lateClaim')}: ${lateClaim > 0 ? lateClaim : lateLabel}` },
+        ]
+      : []),
+    { icon: 'bulb' as const, label: `${t('create.autoHint')}: ${hintLabel}` },
+  ];
+  // Drawn joined to the selected rule card (RulePicker's `options`).
   return (
-    <Card style={[styles.group, { marginTop: spacing.sm, borderColor: open ? colors.primary : colors.border, backgroundColor: colors.surfaceAlt }]}>
+    <View style={[styles.attached, { backgroundColor: colors.surfaceAlt }]}>
       <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }}>
-        <Row gap={spacing.md}>
-          <View style={[styles.optIcon, { backgroundColor: colors.primary }]}>
-            <Ionicons name="options" size={18} color="#fff" />
-          </View>
-          <View style={{ flex: 1 }}>
-            <T variant="h3">{t('create.ruleOptions', { rule: t(`create.rule_${rule}`) })}</T>
-            <T variant="tiny" muted numberOfLines={open ? undefined : 2}>
-              {summary}
+        <Row gap={spacing.sm}>
+          <Ionicons name="settings" size={18} color={colors.primary} />
+          <T variant="h3" style={{ flex: 1 }}>
+            {t('create.ruleOptions', { rule: t(`create.rule_${rule}`) })}
+          </T>
+          <View style={[styles.openBtn, { backgroundColor: colors.primary }]}>
+            <T variant="smallBold" color="#fff">
+              {open ? t('create.closeSettings') : t('create.openSettings')}
             </T>
+            <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={16} color="#fff" />
           </View>
-          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={22} color={colors.primary} />
         </Row>
+        {open ? null : (
+          <View style={styles.chips}>
+            {chips.map((c) => (
+              <View key={c.icon} style={[styles.valueChip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+                <Ionicons name={c.icon} size={12} color={colors.primary} />
+                <T variant="tiny" numberOfLines={1}>
+                  {c.label}
+                </T>
+              </View>
+            ))}
+          </View>
+        )}
       </Pressable>
       {open ? (
         <View style={{ marginTop: spacing.sm }}>
@@ -159,7 +178,7 @@ export function RuleOptions({
           </View>
         </View>
       ) : null}
-    </Card>
+    </View>
   );
 }
 
@@ -174,10 +193,13 @@ export function RulePicker({
   value,
   onChange,
   checkSeconds,
+  options,
 }: {
   value: ClaimRule;
   onChange: (r: ClaimRule) => void;
   checkSeconds: number;
+  /** The chosen rule's settings, drawn joined under its card (Auto has none). */
+  options?: React.ReactNode;
 }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -187,6 +209,8 @@ export function RulePicker({
     <View style={{ gap: spacing.sm }}>
       {(['normal', 'fastest', 'auto'] as ClaimRule[]).map((m) => {
         const active = value === m;
+        const hasSettings = m !== 'auto';
+        const joined = active && hasSettings && !!options;
         const body = (
           <Row gap={spacing.md}>
             <View style={[styles.optIcon, { backgroundColor: active ? 'rgba(255,255,255,0.22)' : colors.surface }]}>
@@ -208,11 +232,19 @@ export function RulePicker({
               <T variant="tiny" color={active ? 'rgba(255,255,255,0.88)' : colors.textMuted}>
                 {m === 'normal' ? t('create.rule_normal_desc', { time }) : t(`create.rule_${m}_desc`)}
               </T>
+              {hasSettings && !active ? (
+                <Row gap={4} style={{ marginTop: 4 }}>
+                  <Ionicons name="settings-outline" size={12} color={colors.primary} />
+                  <T variant="tiny" color={colors.primary}>
+                    {t('create.hasSettings')}
+                  </T>
+                </Row>
+              ) : null}
             </View>
             <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={active ? '#FDE68A' : colors.textMuted} />
           </Row>
         );
-        return (
+        const card = (
           <Pressable
             key={m}
             onPress={() => onChange(m)}
@@ -221,13 +253,27 @@ export function RulePicker({
             style={({ pressed }) => pressed && { opacity: 0.85 }}
           >
             {active ? (
-              <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.ruleCard, { borderColor: '#FDE68A' }]}>
+              <LinearGradient
+                colors={heroGradient}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={[styles.ruleCard, { borderColor: '#FDE68A' }, joined && styles.ruleCardJoined]}
+              >
                 {body}
               </LinearGradient>
             ) : (
               <View style={[styles.ruleCard, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}>{body}</View>
             )}
           </Pressable>
+        );
+        // The selected rule and its settings form one joined block.
+        return joined ? (
+          <View key={m}>
+            {card}
+            {options}
+          </View>
+        ) : (
+          card
         );
       })}
     </View>
@@ -395,17 +441,23 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
             <T variant="smallBold" muted style={styles.label}>
               {t('create.claimRule')}
             </T>
-            <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
-            <RuleOptions
-              rule={rule}
+            <RulePicker
+              value={rule}
+              onChange={setRule}
               checkSeconds={checkSeconds}
-              onCheckSeconds={setCheckSeconds}
-              lateClaim={lateClaim}
-              onLateClaim={setLateClaim}
-              autoHint={autoHint}
-              onAutoHint={setAutoHint}
-              hintMode={hintMode}
-              onHintMode={setHintMode}
+              options={
+                <RuleOptions
+                  rule={rule}
+                  checkSeconds={checkSeconds}
+                  onCheckSeconds={setCheckSeconds}
+                  lateClaim={lateClaim}
+                  onLateClaim={setLateClaim}
+                  autoHint={autoHint}
+                  onAutoHint={setAutoHint}
+                  hintMode={hintMode}
+                  onHintMode={setHintMode}
+                />
+              }
             />
 
             <T variant="smallBold" muted style={styles.label}>
@@ -466,6 +518,18 @@ const styles = StyleSheet.create({
   group: { padding: spacing.md, borderWidth: 2 },
   // Every rule card the same size, side by side.
   ruleCard: { padding: spacing.md, borderWidth: 2, borderRadius: radius.lg },
+  ruleCardJoined: { borderBottomLeftRadius: 0, borderBottomRightRadius: 0, borderBottomWidth: 0 },
+  attached: {
+    borderWidth: 2,
+    borderTopWidth: 0,
+    borderColor: '#FDE68A',
+    borderBottomLeftRadius: radius.lg,
+    borderBottomRightRadius: radius.lg,
+    padding: spacing.md,
+  },
+  openBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
+  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing.sm },
+  valueChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderWidth: 1, borderRadius: 999, paddingHorizontal: 8, paddingVertical: 3 },
   recommended: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 1 },
   optIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   optIconSm: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },

@@ -133,7 +133,12 @@
     "extras": "Extras",
     "extrasHint": "Optional things for your room",
     "recommended": "Recommended",
-    "nameNeeded": "Give your room a name to create it"
+    "nameNeeded": "Give your room a name to create it",
+    "hasSettings": "Has settings",
+    "openSettings": "Open",
+    "closeSettings": "Close",
+    "perTicket": "per ticket — tap to type any amount",
+    "quickPick": "Quick pick"
   },
   "join": {
     "title": "Join Room",

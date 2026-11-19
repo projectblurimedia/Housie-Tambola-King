@@ -10,7 +10,7 @@ import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import type { PrizeType } from '@/game/engine/ticket';
-import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
+import { fonts, goldGradient, heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { ClaimRule, HintMode, RoomKind, RoomVisibility } from '@/types/api';
 import { RuleOptions, RulePicker } from './parts/RoomSettingsModal';
 import type { ScreenProps } from '@/navigation/types';
@@ -255,50 +255,70 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
       </Step>
 
       <Step n={4} title={t('create.ticketPrice')} hint={t('create.ticketPriceHelp')}>
-        <Row gap={spacing.sm}>
-          <View style={[styles.priceBox, { borderColor: colors.gold, backgroundColor: colors.surfaceAlt }]}>
-            <T variant="h2" color={colors.goldDark}>
-              ₹
+        {/* Big amount in a gold frame; type any amount… */}
+        <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.priceFrame}>
+          <View style={[styles.priceInner, { backgroundColor: colors.surfaceAlt }]}>
+            <Row gap={4} style={{ justifyContent: 'center' }}>
+              <T style={[styles.rupee, { color: colors.goldDark }]}>₹</T>
+              <TextInput
+                value={price}
+                onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, '').slice(0, 8))}
+                keyboardType="decimal-pad"
+                placeholder="0"
+                placeholderTextColor={colors.textMuted}
+                style={[styles.priceInput, centeredInput, { color: colors.text }]}
+              />
+            </Row>
+            <T variant="tiny" muted center>
+              {t('create.perTicket')}
             </T>
-            <TextInput
-              value={price}
-              onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, '').slice(0, 8))}
-              keyboardType="decimal-pad"
-              style={[styles.priceInput, centeredInput, { color: colors.text }]}
-            />
           </View>
-          <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-            {PRICE_PRESETS.map((p) => {
-              const on = Number(price) === p;
-              return (
-                <Pressable
-                  key={p}
-                  onPress={() => setPrice(String(p))}
-                  style={[styles.preset, { backgroundColor: on ? colors.primary : colors.surfaceAlt, borderColor: on ? colors.gold : colors.border }]}
-                >
-                  <T variant="smallBold" color={on ? '#fff' : colors.text}>
-                    ₹{p}
-                  </T>
-                </Pressable>
-              );
-            })}
-          </View>
+        </LinearGradient>
+        {/* …or pick one: five equal buttons in a row. */}
+        <T variant="tiny" muted style={{ marginTop: spacing.md, marginBottom: 6 }}>
+          {t('create.quickPick')}
+        </T>
+        <Row gap={6}>
+          {PRICE_PRESETS.map((p) => {
+            const on = Number(price) === p;
+            return (
+              <Pressable key={p} onPress={() => setPrice(String(p))} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.8 }]}>
+                {on ? (
+                  <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.preset, { borderColor: '#FDE68A' }]}>
+                    <T variant="bodyMedium" color="#fff">
+                      ₹{p}
+                    </T>
+                  </LinearGradient>
+                ) : (
+                  <View style={[styles.preset, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
+                    <T variant="bodyMedium">₹{p}</T>
+                  </View>
+                )}
+              </Pressable>
+            );
+          })}
         </Row>
       </Step>
 
       <Step n={5} title={t('create.claimRule')} hint={t('create.ruleHint')}>
-        <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
-        {/* The rule's options in one dropdown (Auto strikes everything itself — it has none). */}
-        <RuleOptions
-          rule={rule}
+        {/* The selected rule's settings open right under its card (Auto has none). */}
+        <RulePicker
+          value={rule}
+          onChange={setRule}
           checkSeconds={checkSeconds}
-          onCheckSeconds={setCheckSeconds}
-          lateClaim={lateClaimCalls}
-          onLateClaim={setLateClaimCalls}
-          autoHint={autoHint}
-          onAutoHint={setAutoHint}
-          hintMode={hintMode}
-          onHintMode={setHintMode}
+          options={
+            <RuleOptions
+              rule={rule}
+              checkSeconds={checkSeconds}
+              onCheckSeconds={setCheckSeconds}
+              lateClaim={lateClaimCalls}
+              onLateClaim={setLateClaimCalls}
+              autoHint={autoHint}
+              onAutoHint={setAutoHint}
+              hintMode={hintMode}
+              onHintMode={setHintMode}
+            />
+          }
         />
       </Step>
 
@@ -336,15 +356,9 @@ const styles = StyleSheet.create({
   tileIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
   line: { paddingVertical: 6 },
   lineIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  priceBox: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    borderWidth: 1.5,
-    borderRadius: radius.sm,
-    paddingHorizontal: 10,
-    width: 120,
-    height: 52,
-  },
-  priceInput: { flex: 1, fontFamily: fonts.bold, fontSize: 22, height: 52, paddingHorizontal: 4 },
-  preset: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5 },
+  priceFrame: { borderRadius: radius.lg, padding: 2.5 },
+  priceInner: { borderRadius: radius.lg - 2, paddingVertical: spacing.sm, paddingHorizontal: spacing.md },
+  rupee: { fontFamily: fonts.display, fontSize: 34, lineHeight: 44 },
+  priceInput: { minWidth: 80, fontFamily: fonts.display, fontSize: 36, height: 56, paddingHorizontal: 4, paddingVertical: 0 },
+  preset: { height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, borderWidth: 1.5 },
 });
