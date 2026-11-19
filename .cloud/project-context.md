@@ -49,7 +49,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 |---|---|
 | DB (20 migrations, latest 20261130000002_crash_reports) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
-| App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
+| App | typecheck clean, 24 unit tests; EAS project @projectblurimedia/housie-tambola-king; latest preview APK versionCode 5 (2026-11-19: PIN login, expo-audio, screen-orientation, blank native splash, new icon) via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |
 | GitHub | https://github.com/projectblurimedia/Housie-Tambola-King (`main`) |
 | E2E `scripts/smoke-test.mjs` | **Passes live** against the hosted project (2026-11-19, incl. late claim) |
