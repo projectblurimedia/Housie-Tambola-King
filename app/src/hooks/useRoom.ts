@@ -33,6 +33,13 @@ export type RoomEvent =
 
 /** How late a number may be before this phone nudges the server clock itself. */
 const NUDGE_GRACE_MS = 2500;
+/**
+ * Room-state refetches triggered by broadcasts are coalesced: a burst of events (50 players
+ * tapping Ready, a claim + its check ack…) becomes ONE get_room_state per phone, and the
+ * random spread keeps every phone in a big room from hitting the server in the same instant.
+ */
+const REFETCH_MIN_MS = 150;
+const REFETCH_SPREAD_MS = 450;
 
 export const roomKey = (roomId: string) => ['room', roomId] as const;
 export const standingsKey = (roomId: string) => ['standings', roomId] as const;
@@ -57,6 +64,8 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
   const [connected, setConnected] = useState(false);
+  const connectedRef = useRef(false);
+  connectedRef.current = connected;
   /** serverNow ≈ Date.now() + offset */
   const offsetRef = useRef(0);
 
@@ -69,12 +78,25 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
       offsetRef.current = new Date(state.serverTime).getTime() + rtt / 2 - Date.now();
       return state;
     },
-    refetchInterval: (q) => (q.state.data?.game?.status === 'running' ? 20000 : 8000),
+    // Safety-net poll only — realtime carries the game. Relaxed while connected, quick while
+    // the live connection is down so the game recovers fast.
+    refetchInterval: (q) =>
+      !connectedRef.current ? 5000 : q.state.data?.game?.status === 'running' ? 20000 : 15000,
   });
 
   useEffect(() => {
     let cancelled = false;
-    const refetch = () => qc.invalidateQueries({ queryKey: roomKey(roomId) });
+    let refetchTimer: ReturnType<typeof setTimeout> | null = null;
+    const refetch = () => {
+      if (refetchTimer) return; // one is already scheduled — it will pick this change up too
+      refetchTimer = setTimeout(
+        () => {
+          refetchTimer = null;
+          if (!cancelled) qc.invalidateQueries({ queryKey: roomKey(roomId) });
+        },
+        REFETCH_MIN_MS + Math.random() * REFETCH_SPREAD_MS,
+      );
+    };
     const refetchStandings = () => qc.invalidateQueries({ queryKey: standingsKey(roomId) });
     const channel = supabase.channel(`room:${roomId}`, { config: { private: true } });
     const emit = (e: RoomEvent) => onEventRef.current?.(e);
@@ -160,11 +182,17 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
         refetch();
         emit({ type: 'phase', phase: (payload as { phase?: 'tickets' | 'ready' }).phase ?? 'tickets' });
       })
-      .on('broadcast', { event: 'ready' }, () => refetch())
+      .on('broadcast', { event: 'ready' }, ({ payload }) => {
+        // The payload has the full list: no refetch needed.
+        const p = payload as { gameId: string; userIds: string[] | null };
+        qc.setQueryData<RoomState>(roomKey(roomId), (old) =>
+          old && old.game?.id === p.gameId ? { ...old, readyUserIds: p.userIds ?? [] } : old,
+        );
+      })
       .on('broadcast', { event: 'check_ack' }, ({ payload }) => {
         const p = payload as { gameId: string; userIds: string[] };
+        // The payload has the full list: no refetch needed.
         qc.setQueryData<RoomState>(roomKey(roomId), (old) => (old && old.game?.id === p.gameId ? { ...old, checkedUserIds: p.userIds } : old));
-        refetch();
       })
       .on('broadcast', { event: 'final_check' }, ({ payload }) => {
         refetch();
@@ -201,6 +229,7 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
 
     return () => {
       cancelled = true;
+      if (refetchTimer) clearTimeout(refetchTimer);
       supabase.removeChannel(channel);
     };
   }, [roomId, qc]);

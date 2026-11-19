@@ -35,6 +35,7 @@ _Last updated: 2026-11-19_
 - **Late claim** (Normal rule, 2026-11-19): host sets 0–90 numbers (− 0 +, new rooms default 2; 0 = off). During a check, a player who finished the prize on an earlier number and claims within that many numbers wins it instead of the later finisher (`set_late_claim`, migration 20261128000001).
 - Opening: no native splash logo — the coded opening scene shows from the first frame (JS part is live via OTA; the blank native splash needs the next APK build). Winner card: shiny gold frame with a sweeping glint, radial glow + turning light rays like the opening, "CONGRATULATIONS!" when you won.
 - Create Room / lobby settings: the rule's options sit in one dropdown (Time to check − + with 0 = until all ready = default, Late claim − + default 2, Auto hint). Header icon uses the same shiny crown as the opening.
+- Performance pass (2026-11-19): broadcasts coalesce into one jittered room refetch per phone (ready / check lists patched from the event); live tickets no longer redraw on the 0.5 s countdown; backup poll 5 s when realtime is down, 15–20 s when up; all Supabase performance-advisor warnings fixed (FK indexes, RLS initplan), claim_attempts pruned daily.
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
@@ -44,7 +45,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (17 migrations, latest 20261128000001_late_claim) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (18 migrations, latest 20261129000001_performance) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |

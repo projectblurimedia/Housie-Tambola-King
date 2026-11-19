@@ -139,15 +139,25 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
   );
 
   // Uncalled numbers never reach here: the tile just wiggles (canStrike below).
-  const onPressNumber = (ticket: Ticket, index: number) => (n: number) => {
-    if (struckSets[index].has(n)) return;
-    strike(ticket.id, n);
-    if (useSettingsStore.getState().strikeSound) playStrikeSound();
-    if (haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
-    const next = new Set(struckSets[index]);
-    next.add(n);
-    tryClaims(ticket, next);
-  };
+  // The handlers read the latest values through a ref, so each ticket gets ONE stable function
+  // and the memoized TicketView doesn't redraw on every countdown tick (twice a second).
+  const latest = useRef({ struckSets, tryClaims, haptics, strike });
+  latest.current = { struckSets, tryClaims, haptics, strike };
+  const pressHandlers = useMemo(
+    () =>
+      state.myTickets.map((ticket, index) => (n: number) => {
+        const cur = latest.current;
+        if (cur.struckSets[index]?.has(n)) return;
+        cur.strike(ticket.id, n);
+        if (useSettingsStore.getState().strikeSound) playStrikeSound();
+        if (cur.haptics) Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium).catch(() => undefined);
+        const next = new Set(cur.struckSets[index]);
+        next.add(n);
+        cur.tryClaims(ticket, next);
+      }),
+    [state.myTickets],
+  );
+  const canStrike = useCallback((n: number) => calledSet.has(n), [calledSet]);
 
   const prizeRows: PrizeRow[] = state.prizes.map((p) => ({
     prize: p.prize,
@@ -314,8 +324,8 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
                   // The glowing ring on the newest number is part of Auto hint — off means no rings.
                   lastCalled={autoHint ? last : null}
                   hinted={hintSets?.[i]}
-                  onPressNumber={autoRule ? undefined : onPressNumber(tk, i)}
-                  canStrike={(n) => calledSet.has(n)}
+                  onPressNumber={autoRule ? undefined : pressHandlers[i]}
+                  canStrike={canStrike}
                   label={`#${tk.serial}`}
                   badge={wonByTicket(tk.id) || undefined}
                 />
