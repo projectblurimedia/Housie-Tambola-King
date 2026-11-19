@@ -5,7 +5,6 @@ All calls go through `supabase-js` with the user's JWT. Errors are raised as a b
 ## Login (`anon`)
 | RPC | Args | Returns | Errors |
 |---|---|---|---|
-| `phone_login` | `p_phone, p_name` | `{email, password}` one-time credentials → `signInWithPassword` | `INVALID_PHONE`, `INVALID_DISPLAY_NAME`, `ACCOUNT_BANNED` |
 
 Testing phase only: no proof of owning the number. Replace with SMS OTP before launch.
 
@@ -15,6 +14,10 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `get_me` | – | profile + stats | `PROFILE_NOT_FOUND` |
 | `update_my_profile` | `p_display_name?, p_avatar_key? (a1…a50), p_language?` | `get_me` | `INVALID_DISPLAY_NAME`, `INVALID_AVATAR` |
 | `delete_my_account` | – | – | – |
+| `phone_register` | `p_phone, p_name, p_pin (4 digits)` (anon) — new account, or sets the PIN of an old no-PIN account | `{email, password}` one-time sign-in credentials | `INVALID_PHONE`, `INVALID_DISPLAY_NAME`, `INVALID_PIN`, `PHONE_TAKEN`, `ACCOUNT_BANNED` |
+| `pin_login` | `p_phone, p_pin` (anon) | `{email, password}` or `{error: WRONG_PIN, attemptsLeft}` / `{error: PIN_LOCKED, lockedUntil}` / `{error: ACCOUNT_NOT_FOUND}` / `{error: PIN_NOT_SET}` (5 wrong → 15 min lock) | `INVALID_PHONE`, `INVALID_PIN`, `ACCOUNT_BANNED` |
+| `report_crash` | `p_message, p_stack?, p_fatal?, p_source (js/boundary/promise), p_screen?, p_app_version?, p_update_id?, p_platform?, p_os_version?` (anon + authenticated; 20/h per player) | – | – |
+| `admin_list_crashes` | `p_limit, p_offset` (admin) | `{total, last24h, rows[]}` | `NOT_ADMIN` |
 | `create_room` | `p_title, p_kind (normal/series), p_visibility (public/private), p_max_players, p_ticket_price, p_call_interval_seconds, p_series_length, p_prizes {prize: ₹}, p_claim_mode ('fastest' | 'fair' = Auto), p_auto_mark (= auto hint), p_check_claims (true = Normal rule, false = Fastest finger), p_chat_enabled (default true), p_check_seconds (5–60, default 10)` | `{roomId, code}` | `INVALID_PRIZES`, `INVALID_TICKET_PRICE`, `INVALID_MAX_PLAYERS`, `INVALID_SERIES_LENGTH`, `TOO_MANY_OPEN_ROOMS` |
 | `join_room_by_code` | `p_code` | `{roomId, status: member/pending}` (host must accept) | `ROOM_NOT_FOUND`, `ROOM_FULL`, `ROOM_ENDED` |
 | `join_public_room` | `p_room` | same | same |

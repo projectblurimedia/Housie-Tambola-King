@@ -36,16 +36,18 @@ _Last updated: 2026-11-19_
 - Opening: no native splash logo — the coded opening scene shows from the first frame (JS part is live via OTA; the blank native splash needs the next APK build). Winner card: shiny gold frame with a sweeping glint, radial glow + turning light rays like the opening, "CONGRATULATIONS!" when you won.
 - Create Room / lobby settings: the rule's options sit in one dropdown (Time to check − + with 0 = until all ready = default, Late claim − + default 2, Auto hint). Header icon uses the same shiny crown as the opening.
 - Performance pass (2026-11-19): broadcasts coalesce into one jittered room refetch per phone (ready / check lists patched from the event); live tickets no longer redraw on the 0.5 s countdown; backup poll 5 s when realtime is down, 15–20 s when up; all Supabase performance-advisor warnings fixed (FK indexes, RLS initplan), claim_attempts pruned daily.
+- Crash reporting (2026-11-19): app JS crashes / screen crashes / unhandled rejections → `report_crash` → admin web "Crashes" (kept 30 days). Native crashes: Play Console Android vitals.
+- Privacy Policy + Terms: https://housie-tambola-king-admin.vercel.app/privacy.html and /terms.html (admin-web/public); contact projectblurimedia@gmail.com (owner's choice).
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
-**Testing phase (owner, 2026-11-18):** name + mobile number → logged in directly, **no OTP** (`phone_login` RPC, migration 20261118000001). Same number = same account. No guest/anonymous mode. Must be replaced by real SMS OTP before public launch (anyone can sign in as any number today).
+**Mobile + 4-digit PIN (owner, 2026-11-19):** register = name + mobile + PIN + confirm PIN (`phone_register`); login = mobile + PIN (`pin_login`, 5 wrong → 15 min lock). PINs are bcrypt hashes in `player_pins` (no client access). Old no-PIN accounts set a PIN once via register. Old `phone_login` dropped. **Forgot PIN: pending** (owner will add SMS OTP later).
 Admin web: mobile + password (temporary), admin 7093054784.
 
 ## Status
 | Area | State |
 |---|---|
-| DB (18 migrations, latest 20261129000001_performance) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (20 migrations, latest 20261130000002_crash_reports) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 23 unit tests, expo-doctor 20/20; EAS project @projectblurimedia/housie-tambola-king; preview APK via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |
@@ -58,7 +60,7 @@ Removed in the 2026-11-17 redesign (never shipped): coins/wallet, daily bonus, R
 
 ## Before public launch
 - App logo = owner's artwork (app/assets/logo.png; icon/splash/adaptive made from it). New launcher icon + splash need the next APK build.
-- Replace no-OTP mobile login with real SMS OTP.
+- Forgot PIN → SMS OTP reset (pending, owner).
 
 ## Pending from owner
-Fast2SMS key (to add real OTP), privacy/terms URLs, support email.
+Fast2SMS key (for Forgot PIN / OTP later).

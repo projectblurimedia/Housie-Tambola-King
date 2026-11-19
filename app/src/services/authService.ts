@@ -7,23 +7,50 @@ export function normalizeIndianMobile(input: string): string | null {
   return /^[6-9]\d{9}$/.test(digits) ? digits : null;
 }
 
+/** A wrong PIN: how many tries are left before the 15-minute lock. */
+export class PinError extends AppError {
+  constructor(
+    code: string,
+    readonly attemptsLeft?: number,
+    readonly lockedUntil?: string,
+  ) {
+    super(code);
+  }
+}
+
+type LoginResult = { email: string; password: string } | { error: string; attemptsLeft?: number; lockedUntil?: string };
+
+async function signInWith(result: LoginResult, language: string): Promise<void> {
+  if ('error' in result) throw new PinError(result.error, result.attemptsLeft, result.lockedUntil);
+  const { error } = await supabase.auth.signInWithPassword(result);
+  if (error) throw toAppError(error);
+  await supabase.rpc('update_my_profile', { p_language: language }).then(
+    () => undefined,
+    () => undefined,
+  );
+}
+
+/**
+ * Mobile number + 4-digit PIN (see supabase/migrations/20261130000001_pin_login.sql).
+ * The server returns one-time credentials for the account, which we sign in with.
+ * Forgot PIN: pending — to be replaced by SMS OTP later.
+ */
 export const authService = {
-  /**
-   * Name + mobile number → straight in, no OTP (testing phase; see
-   * supabase/migrations/20261118000001_phone_login.sql). The same number always opens the
-   * same account. To be replaced by SMS OTP before public launch.
-   */
-  async loginWithPhone(mobile: string, displayName: string, language: string): Promise<void> {
+  /** New account: name + mobile + PIN (the app asks for the PIN twice). */
+  async register(mobile: string, displayName: string, pin: string, language: string): Promise<void> {
     const phone = normalizeIndianMobile(mobile);
     if (!phone) throw new AppError('INVALID_PHONE');
-    const creds = await supabase.rpc('phone_login', { p_phone: phone, p_name: displayName.trim() });
-    if (creds.error) throw toAppError(creds.error);
-    const { error } = await supabase.auth.signInWithPassword(creds.data as { email: string; password: string });
-    if (error) throw toAppError(error);
-    await supabase.rpc('update_my_profile', { p_language: language }).then(
-      () => undefined,
-      () => undefined,
-    );
+    const res = await supabase.rpc('phone_register', { p_phone: phone, p_name: displayName.trim(), p_pin: pin });
+    if (res.error) throw toAppError(res.error);
+    await signInWith(res.data as LoginResult, language);
+  },
+
+  async login(mobile: string, pin: string, language: string): Promise<void> {
+    const phone = normalizeIndianMobile(mobile);
+    if (!phone) throw new AppError('INVALID_PHONE');
+    const res = await supabase.rpc('pin_login', { p_phone: phone, p_pin: pin });
+    if (res.error) throw toAppError(res.error);
+    await signInWith(res.data as LoginResult, language);
   },
 
   async signOut(): Promise<void> {

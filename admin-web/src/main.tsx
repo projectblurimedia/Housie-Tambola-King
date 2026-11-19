@@ -10,6 +10,7 @@ import { DashboardPage } from '@/pages/DashboardPage';
 import { PlayerDetailPage, PlayersPage } from '@/pages/PlayersPage';
 import { RoomsPage } from '@/pages/GamesPage';
 import { AuditPage, SettingsPage } from '@/pages/ConfigPages';
+import { CrashesPage } from '@/pages/CrashesPage';
 
 const router = createBrowserRouter([
   { path: '/login', element: <LoginPage /> },
@@ -27,6 +28,7 @@ const router = createBrowserRouter([
       { path: 'rooms', element: <RoomsPage /> },
       { path: 'settings', element: <SettingsPage /> },
       { path: 'audit', element: <AuditPage /> },
+      { path: 'crashes', element: <CrashesPage /> },
       { path: '*', element: <Navigate to="/" replace /> },
     ],
   },

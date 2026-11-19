@@ -50,12 +50,14 @@ function complete(cells, called, prize) {
   return FAST[prize] ? nums.filter((n) => set.has(n)).length >= FAST[prize] : nums.every((n) => set.has(n));
 }
 
+const PIN = '4821';
+
 async function guest(name) {
   const client = createClient(URL, KEY, { auth: { persistSession: false } });
-  // Same path as the app: mobile number + name → phone_login → sign in (no OTP yet).
+  // Same path as the app: name + mobile + PIN → phone_register → sign in.
   const mobile = '6' + String(Math.floor(Math.random() * 1e9)).padStart(9, '0');
-  const creds = await client.rpc('phone_login', { p_phone: mobile, p_name: name });
-  if (creds.error) throw new Error(`phone_login failed: ${creds.error.message}`);
+  const creds = await client.rpc('phone_register', { p_phone: mobile, p_name: name, p_pin: PIN });
+  if (creds.error) throw new Error(`phone_register failed: ${creds.error.message}`);
   const { error } = await client.auth.signInWithPassword(creds.data);
   if (error) throw new Error(`sign-in failed: ${error.message}`);
   const rpc = async (fn, args) => {
@@ -63,7 +65,28 @@ async function guest(name) {
     if (e) throw new Error(`${name}.${fn}: ${e.message}`);
     return data;
   };
-  return { client, rpc, name };
+  return { client, rpc, name, mobile };
+}
+
+/** PIN login rules, from a signed-out client (like a fresh phone). */
+async function checkPinLogin(player) {
+  const anon = createClient(URL, KEY, { auth: { persistSession: false } });
+  const login = async (pin) => (await anon.rpc('pin_login', { p_phone: player.mobile, p_pin: pin })).data;
+  const ok = await login(PIN);
+  check(!!ok?.email && !!ok?.password, 'login with mobile + correct PIN');
+  const wrong = await login('0000');
+  check(wrong?.error === 'WRONG_PIN' && wrong.attemptsLeft === 4, `wrong PIN refused (${wrong?.attemptsLeft} tries left)`);
+  check((await login(PIN))?.email !== undefined, 'correct PIN resets the wrong-try count');
+  for (let i = 0; i < 4; i++) await login('1111');
+  const locked = await login('1111');
+  check(locked?.error === 'PIN_LOCKED', '5 wrong PINs lock the account');
+  check((await login(PIN))?.error === 'PIN_LOCKED', 'even the right PIN waits while locked');
+  const again = await anon.rpc('phone_register', { p_phone: player.mobile, p_name: 'Someone Else', p_pin: '9999' });
+  check(again.error?.message === 'PHONE_TAKEN', 'a registered number cannot be registered again');
+  const none = await anon.rpc('pin_login', { p_phone: '6000000001', p_pin: PIN });
+  check(none.data?.error === 'ACCOUNT_NOT_FOUND', 'unknown number → ACCOUNT_NOT_FOUND');
+  const old = await anon.rpc('phone_login', { p_phone: player.mobile, p_name: 'x' });
+  check(!!old.error, 'old number-only login is gone');
 }
 
 const expectError = async (p, code) => {
@@ -78,6 +101,14 @@ const expectError = async (p, code) => {
 const host = await guest('Smoke Host');
 const friend = await guest('Manikanta Yerraguntla');
 try {
+  // Uses a third throwaway account so the lock doesn't affect the game below.
+  const pinTester = await guest('Pin Tester');
+  try {
+    await checkPinLogin(pinTester);
+  } finally {
+    await pinTester.rpc('delete_my_account').catch(() => undefined);
+  }
+
   const me = await friend.rpc('get_me');
   check(me.displayName === 'Manikanta Yerraguntla', `name from signup kept (${me.displayName})`);
 

@@ -10,6 +10,8 @@ export const IS_CONFIGURED = SUPABASE_URL.startsWith('https://') && SUPABASE_ANO
 /** One place for the brand name — change it here (and app.json) when the final name is chosen. */
 export const APP_NAME = 'Housie Tambola King';
 
-export const SUPPORT_EMAIL = 'support@example.com';
-export const PRIVACY_URL = 'https://example.com/privacy';
-export const TERMS_URL = 'https://example.com/terms';
+/** Owner's choice (2026-11-19) for the public support / policy contact. */
+export const SUPPORT_EMAIL = 'projectblurimedia@gmail.com';
+/** Public pages served by the admin-web deployment (admin-web/public/*.html). */
+export const PRIVACY_URL = 'https://housie-tambola-king-admin.vercel.app/privacy.html';
+export const TERMS_URL = 'https://housie-tambola-king-admin.vercel.app/terms.html';

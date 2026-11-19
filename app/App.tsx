@@ -18,7 +18,8 @@ import {
   Poppins_800ExtraBold,
 } from '@expo-google-fonts/poppins';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import { DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { createNavigationContainerRef, DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
+import { installCrashReporting, setCurrentScreen } from '@/services/crashReporter';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase';
@@ -52,6 +53,11 @@ Notifications.setNotificationHandler({
 
 const UPDATE_CHECK_INTERVAL_MS = 5 * 60 * 1000;
 const APPLIED_UPDATE_KEY = 'ota-applied-update-id';
+
+// Crash reports (admin web → Crashes): installed before anything else can throw.
+installCrashReporting();
+const navigationRef = createNavigationContainerRef();
+const trackScreen = () => setCurrentScreen(navigationRef.getCurrentRoute()?.name);
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -266,7 +272,7 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <NavigationContainer theme={navTheme}>
+        <NavigationContainer theme={navTheme} ref={navigationRef} onReady={trackScreen} onStateChange={trackScreen}>
           {/* Always white: every screen has the purple gradient behind the status bar. */}
           <StatusBar style="light" />
           {IS_CONFIGURED ? <SessionGate /> : <NotConfigured />}

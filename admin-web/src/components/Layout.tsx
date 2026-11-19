@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faBars, faChartPie, faClockRotateLeft, faDice, faRightFromBracket, faSliders, faUsers } from '@fortawesome/free-solid-svg-icons';
+import { faBars, faBug, faChartPie, faClockRotateLeft, faDice, faRightFromBracket, faSliders, faUsers } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './Auth';
 
@@ -31,6 +31,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
     title: 'App setup',
     items: [
       { to: '/settings', label: 'Settings', sub: 'Home-screen notice and app version', icon: faSliders, gradient: 'linear-gradient(135deg,#0891b2,#7c3aed)' },
+      { to: '/crashes', label: 'Crashes', sub: 'App errors sent from player phones', icon: faBug, gradient: 'linear-gradient(135deg,#dc2626,#f97316)' },
       { to: '/audit', label: 'Audit Log', sub: 'Every admin action, append-only', icon: faClockRotateLeft, gradient: 'linear-gradient(135deg,#334155,#64748b)' },
     ],
   },

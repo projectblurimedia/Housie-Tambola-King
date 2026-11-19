@@ -39,6 +39,7 @@ export function T({
   style,
   children,
   numberOfLines,
+  onPress,
 }: {
   variant?: Variant;
   muted?: boolean;
@@ -47,11 +48,15 @@ export function T({
   style?: StyleProp<TextStyle>;
   children: React.ReactNode;
   numberOfLines?: number;
+  /** Tappable text (e.g. a link inside a sentence). */
+  onPress?: () => void;
 }) {
   const { colors } = useThemeColors();
   return (
     <Text
       numberOfLines={numberOfLines}
+      onPress={onPress}
+      suppressHighlighting
       style={[typography[variant], { color: color ?? (muted ? colors.textMuted : colors.text) }, center && { textAlign: 'center' }, style]}
     >
       {children}

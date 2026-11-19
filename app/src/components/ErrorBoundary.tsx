@@ -1,6 +1,7 @@
 import React from 'react';
 import { StyleSheet, View } from 'react-native';
 import i18n from '@/localization/i18n';
+import { reportCrash } from '@/services/crashReporter';
 import { Button, T } from './ui';
 
 /**
@@ -15,7 +16,8 @@ export class ErrorBoundary extends React.Component<{ children: React.ReactNode; 
   }
 
   componentDidCatch(error: Error) {
-    console.warn('Screen crashed:', error.message);
+    // Shown to the player as a retry card; sent to admin web → Crashes.
+    reportCrash(error, { source: 'boundary' });
   }
 
   render() {
