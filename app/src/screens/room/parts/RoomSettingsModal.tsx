@@ -13,66 +13,151 @@ import { showToast } from '@/state/toastStore';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import { claimRule, ClaimRule, HintMode, RoomState, RoomVisibility } from '@/types/api';
 
-/** 0 = no time limit: the game waits until everyone has checked (or the host continues). */
-const CHECK_TIMES = [5, 10, 15, 20, 30, 0];
-
-/** Normal rule: how long everyone gets to check their tickets after a claim. */
-export function CheckTimePicker({ value, onChange }: { value: number; onChange: (s: number) => void }) {
-  const { t } = useTranslation();
+/** One − value + line inside the rule dropdown. */
+function StepLine({
+  icon,
+  title,
+  desc,
+  caption,
+  value,
+  min,
+  max,
+  step,
+  onChange,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  desc: string;
+  caption: string;
+  value: number;
+  min: number;
+  max: number;
+  step: number;
+  onChange: (n: number) => void;
+}) {
   const { colors } = useThemeColors();
   return (
-    <Card style={[styles.group, { marginTop: spacing.sm }]}>
+    <View style={styles.optLine}>
       <Row gap={spacing.md}>
-        <View style={[styles.optIcon, { backgroundColor: colors.primary }]}>
-          <Ionicons name="hourglass" size={18} color="#fff" />
+        <View style={[styles.optIconSm, { backgroundColor: colors.primary }]}>
+          <Ionicons name={icon} size={16} color="#fff" />
         </View>
         <View style={{ flex: 1 }}>
-          <T variant="h3">{t('create.checkTime')}</T>
+          <T variant="bodyMedium">{title}</T>
           <T variant="tiny" muted>
-            {t('create.checkTimeDesc')}
+            {desc}
           </T>
         </View>
       </Row>
-      <Row gap={spacing.sm} style={{ marginTop: spacing.md, flexWrap: 'wrap' }}>
-        {CHECK_TIMES.map((s) => (
-          <Chip
-            key={s}
-            label={s === 0 ? t('create.untilReady') : t('common.seconds', { count: s })}
-            active={value === s}
-            onPress={() => onChange(s)}
-          />
-        ))}
+      <Row style={{ justifyContent: 'center', marginTop: 6 }}>
+        <Stepper value={value} min={min} max={max} step={step} onChange={onChange} width={56} />
       </Row>
-    </Card>
+      <T variant="smallBold" center color={colors.primary}>
+        {caption}
+      </T>
+    </View>
   );
 }
 
 /**
- * Normal rule, "Late claim" (− 0 +): a player who finished a prize on an earlier number may still
- * claim it during the check within this many numbers, and then wins it over the later finisher.
+ * The chosen rule's options in one neat dropdown: closed it shows a one-line summary; open it
+ * shows Time to check (− +, 0 = until all ready) and Late claim (− +) for Normal, and Auto hint
+ * for Normal / Fastest finger. Auto has no options.
  */
-export function LateClaimPicker({ value, onChange }: { value: number; onChange: (n: number) => void }) {
+export function RuleOptions({
+  rule,
+  checkSeconds,
+  onCheckSeconds,
+  lateClaim,
+  onLateClaim,
+  autoHint,
+  onAutoHint,
+  hintMode,
+  onHintMode,
+}: {
+  rule: ClaimRule;
+  checkSeconds: number;
+  onCheckSeconds: (s: number) => void;
+  lateClaim: number;
+  onLateClaim: (n: number) => void;
+  autoHint: boolean;
+  onAutoHint: (v: boolean) => void;
+  hintMode: HintMode;
+  onHintMode: (m: HintMode) => void;
+}) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
+  const [open, setOpen] = useState(false);
+  if (rule === 'auto') return null;
+  const normal = rule === 'normal';
+  const checkLabel = checkSeconds === 0 ? t('create.untilReady') : t('common.seconds', { count: checkSeconds });
+  const lateLabel = lateClaim > 0 ? t('create.lateClaimValue', { count: lateClaim }) : t('common.off');
+  const hintLabel = !autoHint ? t('common.off') : hintMode === 'next' ? t('create.hintNext') : t('create.hintStruck');
+  const summary = [
+    ...(normal ? [`${t('create.checkTime')}: ${checkLabel}`, `${t('create.lateClaim')}: ${lateLabel}`] : []),
+    `${t('create.autoHint')}: ${hintLabel}`,
+  ].join('  ·  ');
   return (
-    <Card style={[styles.group, { marginTop: spacing.sm }]}>
-      <Row gap={spacing.md}>
-        <View style={[styles.optIcon, { backgroundColor: value > 0 ? colors.primary : colors.surfaceAlt }]}>
-          <Ionicons name="time" size={18} color={value > 0 ? '#fff' : colors.textMuted} />
+    <Card style={[styles.group, { marginTop: spacing.sm, borderColor: open ? colors.primary : colors.border }]}>
+      <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }}>
+        <Row gap={spacing.md}>
+          <View style={[styles.optIcon, { backgroundColor: colors.primary }]}>
+            <Ionicons name="options" size={18} color="#fff" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <T variant="h3">{t('create.ruleOptions', { rule: t(`create.rule_${rule}`) })}</T>
+            <T variant="tiny" muted numberOfLines={open ? undefined : 2}>
+              {summary}
+            </T>
+          </View>
+          <Ionicons name={open ? 'chevron-up' : 'chevron-down'} size={22} color={colors.primary} />
+        </Row>
+      </Pressable>
+      {open ? (
+        <View style={{ marginTop: spacing.sm }}>
+          {normal ? (
+            <>
+              <StepLine
+                icon="hourglass"
+                title={t('create.checkTime')}
+                desc={t('create.checkTimeDesc')}
+                caption={checkLabel}
+                value={checkSeconds}
+                min={0}
+                max={60}
+                step={5}
+                onChange={onCheckSeconds}
+              />
+              <StepLine
+                icon="time"
+                title={t('create.lateClaim')}
+                desc={t('create.lateClaimDesc')}
+                caption={lateClaim === 0 ? t('create.lateClaimOffDesc') : t('create.lateClaimOnDesc', { count: lateClaim })}
+                value={lateClaim}
+                min={0}
+                max={90}
+                step={1}
+                onChange={onLateClaim}
+              />
+            </>
+          ) : null}
+          <View style={[styles.optLine, { borderBottomWidth: 0 }]}>
+            <Row gap={spacing.md}>
+              <View style={[styles.optIconSm, { backgroundColor: autoHint ? colors.primary : colors.surfaceAlt }]}>
+                <Ionicons name="bulb" size={16} color={autoHint ? '#fff' : colors.textMuted} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <T variant="bodyMedium">{t('create.autoHint')}</T>
+                <T variant="tiny" muted>
+                  {t('create.autoHintDesc')}
+                </T>
+              </View>
+              <Toggle value={autoHint} onValueChange={onAutoHint} />
+            </Row>
+            {autoHint ? <HintModePicker value={hintMode} onChange={onHintMode} /> : null}
+          </View>
         </View>
-        <View style={{ flex: 1 }}>
-          <T variant="h3">{t('create.lateClaim')}</T>
-          <T variant="tiny" muted>
-            {t('create.lateClaimDesc')}
-          </T>
-        </View>
-      </Row>
-      <Row style={{ justifyContent: 'center', marginTop: spacing.sm }}>
-        <Stepper value={value} min={0} max={90} onChange={onChange} width={56} />
-      </Row>
-      <T variant="tiny" muted center>
-        {value === 0 ? t('create.lateClaimOffDesc') : t('create.lateClaimOnDesc', { count: value })}
-      </T>
+      ) : null}
     </Card>
   );
 }
@@ -292,12 +377,17 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
               {t('create.claimRule')}
             </T>
             <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
-            {rule === 'normal' ? (
-              <>
-                <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} />
-                <LateClaimPicker value={lateClaim} onChange={setLateClaim} />
-              </>
-            ) : null}
+            <RuleOptions
+              rule={rule}
+              checkSeconds={checkSeconds}
+              onCheckSeconds={setCheckSeconds}
+              lateClaim={lateClaim}
+              onLateClaim={setLateClaim}
+              autoHint={autoHint}
+              onAutoHint={setAutoHint}
+              hintMode={hintMode}
+              onHintMode={setHintMode}
+            />
 
             <T variant="smallBold" muted style={styles.label}>
               {t('create.ticketPrice')}
@@ -334,16 +424,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
               ))}
             </Row>
 
-            {rule === 'auto' ? null : (
-              <>
-                <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
-                  <T variant="bodyMedium">{t('create.autoHint')}</T>
-                  <Toggle value={autoHint} onValueChange={setAutoHint} />
-                </Row>
-                {autoHint ? <HintModePicker value={hintMode} onChange={setHintMode} /> : null}
-              </>
-            )}
-            <Row style={{ justifyContent: 'space-between', marginTop: spacing.md }}>
+            <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
               <T variant="bodyMedium">{t('create.chat')}</T>
               <Toggle value={chat} onValueChange={setChat} />
             </Row>
@@ -367,6 +448,8 @@ const styles = StyleSheet.create({
   // Every rule card the same size, side by side.
   ruleCard: { width: 200, height: 172, gap: 6, padding: spacing.md, borderWidth: 2, borderRadius: radius.lg },
   optIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
+  optIconSm: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  optLine: { paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(124,58,237,0.25)' },
   grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
   item: {
     width: '48%',

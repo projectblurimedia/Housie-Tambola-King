@@ -10,7 +10,7 @@ import { showToast } from '@/state/toastStore';
 import type { PrizeType } from '@/game/engine/ticket';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import type { ClaimRule, HintMode, RoomKind, RoomVisibility } from '@/types/api';
-import { CheckTimePicker, HintModePicker, LateClaimPicker, RulePicker } from './parts/RoomSettingsModal';
+import { RuleOptions, RulePicker } from './parts/RoomSettingsModal';
 import type { ScreenProps } from '@/navigation/types';
 
 /**
@@ -78,9 +78,10 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [autoHint, setAutoHint] = useState(false);
   const [hintMode, setHintMode] = useState<HintMode>('struck');
   /** Normal rule: seconds everyone gets to check after a claim. */
-  const [checkSeconds, setCheckSeconds] = useState(10);
+  // Owner's defaults: check until everyone is ready (0); late claim 2 numbers.
+  const [checkSeconds, setCheckSeconds] = useState(0);
   /** Normal rule "Late claim": 0 = off. */
-  const [lateClaimCalls, setLateClaimCalls] = useState(0);
+  const [lateClaimCalls, setLateClaimCalls] = useState(2);
   const [chatEnabled, setChatEnabled] = useState(true);
   const [loading, setLoading] = useState(false);
 
@@ -229,19 +230,18 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         {t('create.claimRule')}
       </T>
       <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
-      {rule === 'normal' ? (
-        <>
-          <CheckTimePicker value={checkSeconds} onChange={setCheckSeconds} />
-          <LateClaimPicker value={lateClaimCalls} onChange={setLateClaimCalls} />
-        </>
-      ) : null}
-      {/* Auto strikes everything itself — hints make no sense there. */}
-      {rule === 'auto' ? null : (
-        <>
-          <OptionToggle icon="bulb" title={t('create.autoHint')} desc={t('create.autoHintDesc')} value={autoHint} onChange={setAutoHint} />
-          {autoHint ? <HintModePicker value={hintMode} onChange={setHintMode} /> : null}
-        </>
-      )}
+      {/* The rule's options in one dropdown (Auto strikes everything itself — it has none). */}
+      <RuleOptions
+        rule={rule}
+        checkSeconds={checkSeconds}
+        onCheckSeconds={setCheckSeconds}
+        lateClaim={lateClaimCalls}
+        onLateClaim={setLateClaimCalls}
+        autoHint={autoHint}
+        onAutoHint={setAutoHint}
+        hintMode={hintMode}
+        onHintMode={setHintMode}
+      />
       <OptionToggle icon="chatbubbles" title={t('create.chat')} desc={t('create.chatDesc')} value={chatEnabled} onChange={setChatEnabled} />
 
       <Spacer h={spacing.xl} />

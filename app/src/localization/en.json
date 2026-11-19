@@ -122,7 +122,8 @@
     "lateClaimDesc": "Finished a prize but the next number came before you claimed? You can still claim it within this many numbers, and whoever finished first wins it. 0 = off",
     "lateClaimValue": "Up to {{count}} numbers",
     "lateClaimOffDesc": "Off: a late claim during the check just shares the prize.",
-    "lateClaimOnDesc": "Finished {{count}} number(s) before the winner and claimed in the check? You win it instead."
+    "lateClaimOnDesc": "Finished {{count}} number(s) before the winner and claimed in the check? You win it instead.",
+    "ruleOptions": "{{rule}} settings"
   },
   "join": {
     "title": "Join Room",

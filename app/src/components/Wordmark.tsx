@@ -101,19 +101,10 @@ export function AppIcon({ size = 46 }: { size?: number }) {
         </SvgGradient>
       </Defs>
       <Rect x={3} y={3} width={94} height={94} rx={24} fill="url(#ic-tile)" stroke="url(#ic-edge)" strokeWidth={4} />
-      {/* Crown */}
-      <Path
-        d="M24 54 L20 24 L38 38 L50 14 L62 38 L80 24 L76 54 Z"
-        fill="url(#ic-gold)"
-        stroke="#8A5A00"
-        strokeWidth={2}
-        strokeLinejoin="round"
-      />
-      <Rect x={23} y={52} width={54} height={8} rx={3} fill="url(#ic-gold)" stroke="#8A5A00" strokeWidth={2} />
-      <Circle cx={20} cy={22} r={3.6} fill="url(#ic-gold)" />
-      <Circle cx={50} cy={12} r={4} fill="url(#ic-gold)" />
-      <Circle cx={80} cy={22} r={3.6} fill="url(#ic-gold)" />
-      <Path d="M50 36 L54.5 42 L50 48 L45.5 42 Z" fill="#E11D48" />
+      {/* Crown — the same shiny crown as the opening screen. */}
+      <G transform="translate(17 7) scale(0.55)">
+        <CrownArt id="ic-cr" />
+      </G>
       {/* Three balls */}
       {ball(28, 7, '#FF9A9A', '#E11D2E', '#7F0A14', 'r')}
       {ball(50, 31, '#9CCBFF', '#1D6BEB', '#0B2C7A', 'b')}
@@ -146,28 +137,37 @@ export function Rays({ size, color = '#FFFFFF', opacity = 0.1, count = 18 }: { s
 function ShinyCrown({ width }: { width: number }) {
   return (
     <Svg width={width} height={width * 0.78} viewBox="0 0 120 94">
+      <CrownArt id="cr" />
+    </Svg>
+  );
+}
+
+/** The shiny crown's shapes in a 120 × 94 box (ids prefixed so two crowns never clash). */
+function CrownArt({ id }: { id: string }) {
+  return (
+    <G>
       <Defs>
-        <SvgGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+        <SvgGradient id={`${id}-metal`} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#FFF8D6" />
           <Stop offset="0.25" stopColor="#FFD84D" />
           <Stop offset="0.5" stopColor="#E9A400" />
           <Stop offset="0.72" stopColor="#FFE27A" />
           <Stop offset="1" stopColor="#B87400" />
         </SvgGradient>
-        <SvgGradient id="band" x1="0" y1="0" x2="0" y2="1">
+        <SvgGradient id={`${id}-band`} x1="0" y1="0" x2="0" y2="1">
           <Stop offset="0" stopColor="#FFE992" />
           <Stop offset="0.5" stopColor="#D99100" />
           <Stop offset="1" stopColor="#FFD24A" />
         </SvgGradient>
-        <RadialGradient id="ruby" cx="40%" cy="35%" r="70%">
+        <RadialGradient id={`${id}-ruby`} cx="40%" cy="35%" r="70%">
           <Stop offset="0" stopColor="#FFB3C1" />
           <Stop offset="1" stopColor="#C1121F" />
         </RadialGradient>
-        <RadialGradient id="sapphire" cx="40%" cy="35%" r="70%">
+        <RadialGradient id={`${id}-sapphire`} cx="40%" cy="35%" r="70%">
           <Stop offset="0" stopColor="#B3D4FF" />
           <Stop offset="1" stopColor="#1D4ED8" />
         </RadialGradient>
-        <RadialGradient id="emerald" cx="40%" cy="35%" r="70%">
+        <RadialGradient id={`${id}-emerald`} cx="40%" cy="35%" r="70%">
           <Stop offset="0" stopColor="#B9F5D8" />
           <Stop offset="1" stopColor="#0E9F6E" />
         </RadialGradient>
@@ -177,7 +177,7 @@ function ShinyCrown({ width }: { width: number }) {
       {/* Body */}
       <Path
         d="M14 74 L8 26 L38 50 L60 12 L82 50 L112 26 L106 74 Z"
-        fill="url(#metal)"
+        fill={`url(#${id}-metal)`}
         stroke="#8A5A00"
         strokeWidth={2.2}
         strokeLinejoin="round"
@@ -186,7 +186,7 @@ function ShinyCrown({ width }: { width: number }) {
       <Path d="M16 66 L12 34 L30 50" stroke="#FFFFFF" strokeOpacity={0.7} strokeWidth={2.4} fill="none" strokeLinecap="round" />
       <Path d="M52 44 L60 24" stroke="#FFFFFF" strokeOpacity={0.75} strokeWidth={2.4} strokeLinecap="round" />
       {/* Band */}
-      <Rect x={12} y={72} width={96} height={16} rx={5} fill="url(#band)" stroke="#8A5A00" strokeWidth={2.2} />
+      <Rect x={12} y={72} width={96} height={16} rx={5} fill={`url(#${id}-band)`} stroke="#8A5A00" strokeWidth={2.2} />
       <Rect x={18} y={75} width={84} height={3.5} rx={1.8} fill="#FFFFFF" opacity={0.55} />
       {/* Ball tips */}
       {[
@@ -195,19 +195,19 @@ function ShinyCrown({ width }: { width: number }) {
         [112, 24],
       ].map(([x, y]) => (
         <G key={x}>
-          <Circle cx={x} cy={y} r={6.5} fill="url(#metal)" stroke="#8A5A00" strokeWidth={1.6} />
+          <Circle cx={x} cy={y} r={6.5} fill={`url(#${id}-metal)`} stroke="#8A5A00" strokeWidth={1.6} />
           <Circle cx={x - 2} cy={y - 2.2} r={2} fill="#FFFFFF" opacity={0.85} />
         </G>
       ))}
       {/* Jewels */}
-      <Path d="M60 48 L67 58 L60 68 L53 58 Z" fill="url(#ruby)" stroke="#7A0010" strokeWidth={1.2} />
-      <Circle cx={36} cy={80} r={4.4} fill="url(#sapphire)" />
-      <Circle cx={60} cy={80} r={4.8} fill="url(#ruby)" />
-      <Circle cx={84} cy={80} r={4.4} fill="url(#emerald)" />
+      <Path d="M60 48 L67 58 L60 68 L53 58 Z" fill={`url(#${id}-ruby)`} stroke="#7A0010" strokeWidth={1.2} />
+      <Circle cx={36} cy={80} r={4.4} fill={`url(#${id}-sapphire)`} />
+      <Circle cx={60} cy={80} r={4.8} fill={`url(#${id}-ruby)`} />
+      <Circle cx={84} cy={80} r={4.4} fill={`url(#${id}-emerald)`} />
       {/* Sparkles */}
       <Path d="M92 36 l2 -6 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 Z" fill="#FFFFFF" opacity={0.9} />
       <Path d="M24 58 l1.4 -4 l1.4 4 l4 1.4 l-4 1.4 l-1.4 4 l-1.4 -4 l-4 -1.4 Z" fill="#FFFFFF" opacity={0.85} />
-    </Svg>
+    </G>
   );
 }
 

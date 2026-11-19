@@ -32,8 +32,9 @@ _Last updated: 2026-11-19_
 - Voice, sounds and ticket style live only in Profile. Caller Mode is landscape (real rotation needs expo-screen-orientation → next build; current APK draws it rotated).
 - Wins on the same number show on one card; prize sounds (fast/line/column/full house; full house wins). Sounds need expo-audio → only in the next APK build; the current APK falls back to haptics.
 - Players choose ticket colour + strike colour; tickets use round number chips.
-- **Late claim** (Normal rule, 2026-11-19): host sets 0–90 numbers (− 0 +, default 0 = off). During a check, a player who finished the prize on an earlier number and claims within that many numbers wins it instead of the later finisher (`set_late_claim`, migration 20261128000001).
+- **Late claim** (Normal rule, 2026-11-19): host sets 0–90 numbers (− 0 +, new rooms default 2; 0 = off). During a check, a player who finished the prize on an earlier number and claims within that many numbers wins it instead of the later finisher (`set_late_claim`, migration 20261128000001).
 - Opening: no native splash logo — the coded opening scene shows from the first frame (JS part is live via OTA; the blank native splash needs the next APK build). Winner card: shiny gold frame with a sweeping glint, radial glow + turning light rays like the opening, "CONGRATULATIONS!" when you won.
+- Create Room / lobby settings: the rule's options sit in one dropdown (Time to check − + with 0 = until all ready = default, Late claim − + default 2, Auto hint). Header icon uses the same shiny crown as the opening.
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
