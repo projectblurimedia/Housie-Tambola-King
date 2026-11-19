@@ -10,7 +10,8 @@ import { roomKey } from '@/hooks/useRoom';
 import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
-import { fonts, radius, spacing, useThemeColors } from '@/theme';
+import { LinearGradient } from 'expo-linear-gradient';
+import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import { claimRule, ClaimRule, HintMode, RoomState, RoomVisibility } from '@/types/api';
 
 /** One − value + line inside the rule dropdown. */
@@ -98,7 +99,7 @@ export function RuleOptions({
     `${t('create.autoHint')}: ${hintLabel}`,
   ].join('  ·  ');
   return (
-    <Card style={[styles.group, { marginTop: spacing.sm, borderColor: open ? colors.primary : colors.border }]}>
+    <Card style={[styles.group, { marginTop: spacing.sm, borderColor: open ? colors.primary : colors.border, backgroundColor: colors.surfaceAlt }]}>
       <Pressable onPress={() => setOpen((o) => !o)} accessibilityRole="button" accessibilityState={{ expanded: open }}>
         <Row gap={spacing.md}>
           <View style={[styles.optIcon, { backgroundColor: colors.primary }]}>
@@ -181,37 +182,55 @@ export function RulePicker({
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const time = checkSeconds === 0 ? t('create.untilReadyLower') : t('common.seconds', { count: checkSeconds });
+  // All three rules one under another (nothing hidden off-screen); the chosen one glows.
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingRight: spacing.md }}>
+    <View style={{ gap: spacing.sm }}>
       {(['normal', 'fastest', 'auto'] as ClaimRule[]).map((m) => {
         const active = value === m;
+        const body = (
+          <Row gap={spacing.md}>
+            <View style={[styles.optIcon, { backgroundColor: active ? 'rgba(255,255,255,0.22)' : colors.surface }]}>
+              <Ionicons name={RULE_ICONS[m]} size={19} color={active ? '#fff' : colors.primary} />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Row gap={6}>
+                <T variant="h3" color={active ? '#fff' : colors.text}>
+                  {t(`create.rule_${m}`)}
+                </T>
+                {m === 'normal' ? (
+                  <View style={[styles.recommended, { backgroundColor: active ? 'rgba(253,230,138,0.25)' : colors.surface }]}>
+                    <T variant="tiny" color={active ? '#FDE68A' : colors.primary}>
+                      {t('create.recommended')}
+                    </T>
+                  </View>
+                ) : null}
+              </Row>
+              <T variant="tiny" color={active ? 'rgba(255,255,255,0.88)' : colors.textMuted}>
+                {m === 'normal' ? t('create.rule_normal_desc', { time }) : t(`create.rule_${m}_desc`)}
+              </T>
+            </View>
+            <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={24} color={active ? '#FDE68A' : colors.textMuted} />
+          </Row>
+        );
         return (
           <Pressable
             key={m}
             onPress={() => onChange(m)}
-            style={[
-              styles.ruleCard,
-              { borderColor: active ? colors.primary : colors.border, backgroundColor: active ? colors.surfaceAlt : colors.surface },
-            ]}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: active }}
+            style={({ pressed }) => pressed && { opacity: 0.85 }}
           >
-            <Row style={{ justifyContent: 'space-between' }}>
-              <View style={[styles.optIcon, { backgroundColor: active ? colors.primary : colors.surfaceAlt }]}>
-                <Ionicons name={RULE_ICONS[m]} size={19} color={active ? '#fff' : colors.textMuted} />
-              </View>
-              <Ionicons
-                name={active ? 'checkmark-circle' : 'ellipse-outline'}
-                size={22}
-                color={active ? colors.primary : colors.textMuted}
-              />
-            </Row>
-            <T variant="h3">{t(`create.rule_${m}`)}</T>
-            <T variant="tiny" muted>
-              {m === 'normal' ? t('create.rule_normal_desc', { time }) : t(`create.rule_${m}_desc`)}
-            </T>
+            {active ? (
+              <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.ruleCard, { borderColor: '#FDE68A' }]}>
+                {body}
+              </LinearGradient>
+            ) : (
+              <View style={[styles.ruleCard, { borderColor: colors.border, backgroundColor: colors.surfaceAlt }]}>{body}</View>
+            )}
           </Pressable>
         );
       })}
-    </ScrollView>
+    </View>
   );
 }
 
@@ -446,7 +465,8 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
 const styles = StyleSheet.create({
   group: { padding: spacing.md, borderWidth: 2 },
   // Every rule card the same size, side by side.
-  ruleCard: { width: 200, height: 172, gap: 6, padding: spacing.md, borderWidth: 2, borderRadius: radius.lg },
+  ruleCard: { padding: spacing.md, borderWidth: 2, borderRadius: radius.lg },
+  recommended: { borderRadius: 999, paddingHorizontal: 8, paddingVertical: 1 },
   optIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   optIconSm: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   optLine: { paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(124,58,237,0.25)' },

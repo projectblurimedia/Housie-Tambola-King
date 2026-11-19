@@ -1,14 +1,16 @@
 import React, { useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { Button, Card, centeredInput, Row, Screen, Spacer, Stepper, T, TextField, Toggle } from '@/components/ui';
+import { AppIcon } from '@/components/Wordmark';
 import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import type { PrizeType } from '@/game/engine/ticket';
-import { fonts, radius, spacing, useThemeColors } from '@/theme';
+import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { ClaimRule, HintMode, RoomKind, RoomVisibility } from '@/types/api';
 import { RuleOptions, RulePicker } from './parts/RoomSettingsModal';
 import type { ScreenProps } from '@/navigation/types';
@@ -30,35 +32,100 @@ const DEFAULT_PRIZES: Partial<Record<PrizeType, number>> = {
 };
 const PRICE_PRESETS = [5, 10, 20, 50, 100];
 
-function OptionToggle({
-  icon,
-  title,
-  desc,
-  value,
-  onChange,
-}: {
-  icon: keyof typeof Ionicons.glyphMap;
-  title: string;
-  desc: string;
-  value: boolean;
-  onChange: (v: boolean) => void;
-}) {
-  const { colors } = useThemeColors();
+/** One numbered step: gradient number badge, title, a one-line "what this is", then its controls. */
+function Step({ n, title, hint, children }: { n: number; title: string; hint: string; children: React.ReactNode }) {
   return (
-    <Card style={[styles.group, { marginTop: spacing.sm }, value && { borderColor: colors.primary }]}>
-      <Row gap={spacing.md}>
-        <View style={[styles.optIcon, { backgroundColor: value ? colors.primary : colors.surfaceAlt }]}>
-          <Ionicons name={icon} size={20} color={value ? '#fff' : colors.textMuted} />
-        </View>
+    <Card style={styles.step}>
+      <Row gap={spacing.md} style={{ marginBottom: spacing.md }}>
+        <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.badge}>
+          <T variant="h3" color="#fff">
+            {n}
+          </T>
+        </LinearGradient>
         <View style={{ flex: 1 }}>
           <T variant="h3">{title}</T>
           <T variant="tiny" muted>
-            {desc}
+            {hint}
           </T>
         </View>
-        <Toggle value={value} onValueChange={onChange} />
       </Row>
+      {children}
     </Card>
+  );
+}
+
+/** A choice tile: the selected one glows in the brand gradient with a tick. */
+export function ChoiceTile({
+  active,
+  icon,
+  title,
+  desc,
+  onPress,
+}: {
+  active: boolean;
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  desc: string;
+  onPress: () => void;
+}) {
+  const { colors } = useThemeColors();
+  const body = (
+    <>
+      <Row style={{ justifyContent: 'space-between' }}>
+        <View style={[styles.tileIcon, { backgroundColor: active ? 'rgba(255,255,255,0.22)' : colors.surface }]}>
+          <Ionicons name={icon} size={20} color={active ? '#fff' : colors.primary} />
+        </View>
+        <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={active ? '#FDE68A' : colors.textMuted} />
+      </Row>
+      <T variant="h3" color={active ? '#fff' : colors.text} style={{ marginTop: 8 }}>
+        {title}
+      </T>
+      <T variant="tiny" color={active ? 'rgba(255,255,255,0.85)' : colors.textMuted}>
+        {desc}
+      </T>
+    </>
+  );
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.85 }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
+      {active ? (
+        <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.tile, { borderColor: '#FDE68A' }]}>
+          {body}
+        </LinearGradient>
+      ) : (
+        <View style={[styles.tile, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>{body}</View>
+      )}
+    </Pressable>
+  );
+}
+
+/** A setting line inside a step: icon, title + description, control on the right. */
+function SettingLine({
+  icon,
+  title,
+  desc,
+  children,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  title: string;
+  desc?: string;
+  children: React.ReactNode;
+}) {
+  const { colors } = useThemeColors();
+  return (
+    <Row gap={spacing.md} style={styles.line}>
+      <View style={[styles.lineIcon, { backgroundColor: colors.surfaceAlt }]}>
+        <Ionicons name={icon} size={18} color={colors.primary} />
+      </View>
+      <View style={{ flex: 1 }}>
+        <T variant="bodyMedium">{title}</T>
+        {desc ? (
+          <T variant="tiny" muted>
+            {desc}
+          </T>
+        ) : null}
+      </View>
+      {children}
+    </Row>
   );
 }
 
@@ -77,7 +144,6 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [rule, setRule] = useState<ClaimRule>('normal');
   const [autoHint, setAutoHint] = useState(false);
   const [hintMode, setHintMode] = useState<HintMode>('struck');
-  /** Normal rule: seconds everyone gets to check after a claim. */
   // Owner's defaults: check until everyone is ready (0); late claim 2 numbers.
   const [checkSeconds, setCheckSeconds] = useState(0);
   /** Normal rule "Late claim": 0 = off. */
@@ -119,141 +185,157 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
 
   return (
     <Screen scroll title={t('create.title')}>
-      <TextField
-        label={t('create.roomName')}
-        value={title}
-        onChangeText={setTitle}
-        placeholder={t('create.roomNamePlaceholder')}
-        maxLength={40}
-      />
-
-      <T variant="smallBold" muted style={styles.sectionLabel}>
-        {t('create.type')}
-      </T>
-      <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
-        {(['normal', 'series'] as RoomKind[]).map((k) => (
-          <Card
-            key={k}
-            onPress={() => setKind(k)}
-            style={[styles.option, kind === k && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}
-          >
-            <Ionicons name={k === 'series' ? 'layers' : 'grid'} size={24} color={kind === k ? colors.primary : colors.textMuted} />
-            <T variant="h3">{t(`kind.${k}`)}</T>
-            <T variant="tiny" muted>
-              {k === 'series' ? t('create.seriesDesc') : t('create.normalDesc')}
-            </T>
-          </Card>
-        ))}
-      </Row>
-      {kind === 'series' ? (
-        <Card style={[styles.group, { marginTop: spacing.sm }]}>
-          <Row>
-            <View style={{ flex: 1 }}>
-              <T variant="h3">{t('create.limitGames')}</T>
-              <T variant="tiny" muted>
-                {limitGames ? t('create.limitGamesOn', { count: seriesLength }) : t('create.limitGamesOff')}
-              </T>
-            </View>
-            <Toggle value={limitGames} onValueChange={setLimitGames} />
-          </Row>
-          {limitGames ? (
-            <Row style={{ justifyContent: 'space-between', marginTop: spacing.md }}>
-              <T variant="bodyMedium">{t('create.seriesGames')}</T>
-              <Stepper value={seriesLength} min={2} max={50} onChange={setSeriesLength} width={44} />
-            </Row>
-          ) : null}
-        </Card>
-      ) : null}
-
-      <T variant="smallBold" muted style={styles.sectionLabel}>
-        {t('create.visibility')}
-      </T>
-      <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
-        {(['private', 'public'] as RoomVisibility[]).map((v) => (
-          <Card
-            key={v}
-            onPress={() => setVisibility(v)}
-            style={[styles.option, visibility === v && { borderColor: colors.primary, backgroundColor: colors.surfaceAlt }]}
-          >
-            <Ionicons
-              name={v === 'public' ? 'earth' : 'lock-closed'}
-              size={24}
-              color={visibility === v ? colors.primary : colors.textMuted}
-            />
-            <T variant="h3">{t(`visibility.${v}`)}</T>
-            <T variant="tiny" muted>
-              {v === 'public' ? t('create.publicDesc') : t('create.privateDesc')}
-            </T>
-          </Card>
-        ))}
-      </Row>
-
-      <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
-        <T variant="bodyMedium">{t('create.maxPlayers')}</T>
-        <Stepper value={maxPlayers} min={2} max={100} onChange={setMaxPlayers} width={44} />
-      </Row>
-
-      <T variant="smallBold" muted style={styles.sectionLabel}>
-        {t('create.ticketPrice')}
-      </T>
-      <Row gap={spacing.sm}>
-        <View style={[styles.priceBox, { borderColor: colors.gold, backgroundColor: colors.surface }]}>
-          <T variant="h2" color={colors.goldDark}>
-            ₹
+      {/* Banner: what this screen is for. */}
+      <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+        <AppIcon size={54} />
+        <View style={{ flex: 1 }}>
+          <T variant="h2" color="#fff">
+            {t('create.heroTitle')}
           </T>
-          <TextInput
-            value={price}
-            onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, '').slice(0, 8))}
-            keyboardType="decimal-pad"
-            style={[styles.priceInput, centeredInput, { color: colors.text }]}
-          />
+          <T variant="small" color="rgba(255,255,255,0.88)">
+            {t('create.heroSub')}
+          </T>
         </View>
-        <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
-          {PRICE_PRESETS.map((p) => (
-            <Pressable
-              key={p}
-              onPress={() => setPrice(String(p))}
-              style={[styles.preset, { backgroundColor: Number(price) === p ? colors.primary : colors.surfaceAlt }]}
-            >
-              <T variant="smallBold" color={Number(price) === p ? '#fff' : colors.text}>
-                {p}
-              </T>
-            </Pressable>
+      </LinearGradient>
+
+      <Step n={1} title={t('create.roomName')} hint={t('create.nameHint')}>
+        <TextField value={title} onChangeText={setTitle} placeholder={t('create.roomNamePlaceholder')} maxLength={40} />
+      </Step>
+
+      <Step n={2} title={t('create.type')} hint={t('create.typeHint')}>
+        <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
+          {(['normal', 'series'] as RoomKind[]).map((k) => (
+            <ChoiceTile
+              key={k}
+              active={kind === k}
+              icon={k === 'series' ? 'layers' : 'grid'}
+              title={t(`kind.${k}`)}
+              desc={k === 'series' ? t('create.seriesDesc') : t('create.normalDesc')}
+              onPress={() => setKind(k)}
+            />
           ))}
+        </Row>
+        {kind === 'series' ? (
+          <View style={{ marginTop: spacing.sm }}>
+            <SettingLine
+              icon="infinite"
+              title={t('create.limitGames')}
+              desc={limitGames ? t('create.limitGamesOn', { count: seriesLength }) : t('create.limitGamesOff')}
+            >
+              <Toggle value={limitGames} onValueChange={setLimitGames} />
+            </SettingLine>
+            {limitGames ? (
+              <Row style={{ justifyContent: 'space-between', marginTop: spacing.sm }}>
+                <T variant="bodyMedium">{t('create.seriesGames')}</T>
+                <Stepper value={seriesLength} min={2} max={50} onChange={setSeriesLength} width={44} />
+              </Row>
+            ) : null}
+          </View>
+        ) : null}
+      </Step>
+
+      <Step n={3} title={t('create.visibility')} hint={t('create.joinHint')}>
+        <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
+          {(['private', 'public'] as RoomVisibility[]).map((v) => (
+            <ChoiceTile
+              key={v}
+              active={visibility === v}
+              icon={v === 'public' ? 'earth' : 'lock-closed'}
+              title={t(`visibility.${v}`)}
+              desc={v === 'public' ? t('create.publicDesc') : t('create.privateDesc')}
+              onPress={() => setVisibility(v)}
+            />
+          ))}
+        </Row>
+        <View style={{ marginTop: spacing.sm }}>
+          <SettingLine icon="people" title={t('create.maxPlayers')}>
+            <Stepper value={maxPlayers} min={2} max={100} onChange={setMaxPlayers} width={44} />
+          </SettingLine>
         </View>
-      </Row>
-      <T variant="tiny" muted style={{ marginTop: 6 }}>
-        {t('create.ticketPriceHelp')}
-      </T>
+      </Step>
 
-      <T variant="smallBold" muted style={styles.sectionLabel}>
-        {t('create.claimRule')}
-      </T>
-      <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
-      {/* The rule's options in one dropdown (Auto strikes everything itself — it has none). */}
-      <RuleOptions
-        rule={rule}
-        checkSeconds={checkSeconds}
-        onCheckSeconds={setCheckSeconds}
-        lateClaim={lateClaimCalls}
-        onLateClaim={setLateClaimCalls}
-        autoHint={autoHint}
-        onAutoHint={setAutoHint}
-        hintMode={hintMode}
-        onHintMode={setHintMode}
-      />
-      <OptionToggle icon="chatbubbles" title={t('create.chat')} desc={t('create.chatDesc')} value={chatEnabled} onChange={setChatEnabled} />
+      <Step n={4} title={t('create.ticketPrice')} hint={t('create.ticketPriceHelp')}>
+        <Row gap={spacing.sm}>
+          <View style={[styles.priceBox, { borderColor: colors.gold, backgroundColor: colors.surfaceAlt }]}>
+            <T variant="h2" color={colors.goldDark}>
+              ₹
+            </T>
+            <TextInput
+              value={price}
+              onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, '').slice(0, 8))}
+              keyboardType="decimal-pad"
+              style={[styles.priceInput, centeredInput, { color: colors.text }]}
+            />
+          </View>
+          <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+            {PRICE_PRESETS.map((p) => {
+              const on = Number(price) === p;
+              return (
+                <Pressable
+                  key={p}
+                  onPress={() => setPrice(String(p))}
+                  style={[styles.preset, { backgroundColor: on ? colors.primary : colors.surfaceAlt, borderColor: on ? colors.gold : colors.border }]}
+                >
+                  <T variant="smallBold" color={on ? '#fff' : colors.text}>
+                    ₹{p}
+                  </T>
+                </Pressable>
+              );
+            })}
+          </View>
+        </Row>
+      </Step>
 
-      <Spacer h={spacing.xl} />
+      <Step n={5} title={t('create.claimRule')} hint={t('create.ruleHint')}>
+        <RulePicker value={rule} onChange={setRule} checkSeconds={checkSeconds} />
+        {/* The rule's options in one dropdown (Auto strikes everything itself — it has none). */}
+        <RuleOptions
+          rule={rule}
+          checkSeconds={checkSeconds}
+          onCheckSeconds={setCheckSeconds}
+          lateClaim={lateClaimCalls}
+          onLateClaim={setLateClaimCalls}
+          autoHint={autoHint}
+          onAutoHint={setAutoHint}
+          hintMode={hintMode}
+          onHintMode={setHintMode}
+        />
+      </Step>
+
+      <Step n={6} title={t('create.extras')} hint={t('create.extrasHint')}>
+        <SettingLine icon="chatbubbles" title={t('create.chat')} desc={t('create.chatDesc')}>
+          <Toggle value={chatEnabled} onValueChange={setChatEnabled} />
+        </SettingLine>
+      </Step>
+
+      <Spacer h={spacing.lg} />
       <Button title={t('create.create')} variant="gold" icon="sparkles" onPress={create} loading={loading} disabled={!valid} />
+      {!valid ? (
+        <T variant="tiny" muted center style={{ marginTop: 6 }}>
+          {t('create.nameNeeded')}
+        </T>
+      ) : null}
+      <Spacer h={spacing.lg} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
-  option: { flex: 1, gap: 2, padding: spacing.md, borderWidth: 2 },
-  group: { padding: spacing.md, borderWidth: 2 },
+  hero: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    borderRadius: radius.lg,
+    padding: spacing.md,
+    borderWidth: 1.5,
+    borderColor: 'rgba(253,230,138,0.6)',
+  },
+  step: { marginTop: spacing.md, padding: spacing.md, borderWidth: 1.5 },
+  badge: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  tile: { flex: 1, padding: spacing.md, borderWidth: 2, borderRadius: radius.lg, gap: 2 },
+  tileIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  line: { paddingVertical: 6 },
+  lineIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   priceBox: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -264,6 +346,5 @@ const styles = StyleSheet.create({
     height: 52,
   },
   priceInput: { flex: 1, fontFamily: fonts.bold, fontSize: 22, height: 52, paddingHorizontal: 4 },
-  optIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
-  preset: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill },
+  preset: { paddingHorizontal: 12, paddingVertical: 8, borderRadius: radius.pill, borderWidth: 1.5 },
 });

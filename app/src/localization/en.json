@@ -123,7 +123,17 @@
     "lateClaimValue": "Up to {{count}} numbers",
     "lateClaimOffDesc": "Off: a late claim during the check just shares the prize.",
     "lateClaimOnDesc": "Finished {{count}} number(s) before the winner and claimed in the check? You win it instead.",
-    "ruleOptions": "{{rule}} settings"
+    "ruleOptions": "{{rule}} settings",
+    "heroTitle": "Set up your room",
+    "heroSub": "6 quick steps. You can change most of this later in the lobby.",
+    "nameHint": "Players see this name",
+    "typeHint": "Play one game, or many games in a row",
+    "joinHint": "Who can come in, and how many",
+    "ruleHint": "How the winner is decided when someone claims",
+    "extras": "Extras",
+    "extrasHint": "Optional things for your room",
+    "recommended": "Recommended",
+    "nameNeeded": "Give your room a name to create it"
   },
   "join": {
     "title": "Join Room",
