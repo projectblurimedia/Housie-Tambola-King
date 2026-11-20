@@ -62,7 +62,7 @@ Removed in the 2026-11-17 redesign (never shipped): coins/wallet, daily bonus, R
 - Full guide + copy-paste texts: `docs/store-listing/listing.md`; icon 512 + feature graphic in the same folder.
 - Account deletion page: https://housie-tambola-king-admin.vercel.app/delete-account.html
 - Review logins: live accounts "Play Review 1" and "Play Review 2" (numbers + PIN with the owner, not in git).
-- Play AAB = `eas build -p android --profile production` (local keystore as upload key; Play app signing = Google-generated key). Play installs listen on the **production** OTA channel → publish every update to `production` and `preview`.
+- Play AAB = GitHub Actions workflow **android-aab** (Run workflow, or push tag `android-aab-*`) → artifact housie-aab-N; signed with the upload key from repo secrets (6 secrets); OTA channel production. First AAB: versionCode 6, run 44759035473 (2026-11-20). EAS free builds are shared with NearbyU and ran out; local Windows builds fail on the 260-char path limit. Bump app.json versionCode before each new AAB. Play installs listen on the **production** OTA channel → publish every update to `production` and `preview`.
 - expo-audio background playback off + FOREGROUND_SERVICE_MEDIA_PLAYBACK blocked (APK versionCode 5 still has it; the first AAB does not).
 - Content rating: simulated gambling = Yes (bingo with pretend ₹), real-money gambling = No; target audience 18+.
 
