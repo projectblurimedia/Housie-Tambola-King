@@ -58,6 +58,14 @@ All accounts for this project belong to projectblurimedia@gmail.com (owner's rul
 
 Removed in the 2026-11-17 redesign (never shipped): coins/wallet, daily bonus, Razorpay, public auto-scheduled tiers, global leaderboard.
 
+## Google Play (started 2026-11-20)
+- Full guide + copy-paste texts: `docs/store-listing/listing.md`; icon 512 + feature graphic in the same folder.
+- Account deletion page: https://housie-tambola-king-admin.vercel.app/delete-account.html
+- Review logins: live accounts "Play Review 1" and "Play Review 2" (numbers + PIN with the owner, not in git).
+- Play AAB = `eas build -p android --profile production` (local keystore as upload key; Play app signing = Google-generated key). Play installs listen on the **production** OTA channel → publish every update to `production` and `preview`.
+- expo-audio background playback off + FOREGROUND_SERVICE_MEDIA_PLAYBACK blocked (APK versionCode 5 still has it; the first AAB does not).
+- Content rating: simulated gambling = Yes (bingo with pretend ₹), real-money gambling = No; target audience 18+.
+
 ## Before public launch
 - App logo = owner's artwork (app/assets/logo.png; icon/splash/adaptive made from it). New launcher icon + splash need the next APK build.
 - Forgot PIN → SMS OTP reset (pending, owner).
