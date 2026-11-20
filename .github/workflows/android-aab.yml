@@ -1,0 +1,62 @@
+name: android-aab
+# Builds the signed Play Store bundle (.aab) on GitHub's Linux runners.
+# Start it: Actions → android-aab → Run workflow, or push a tag `android-aab-<anything>`.
+# Download: the run's page → Artifacts → housie-aab-<run number>.
+# Secrets (Settings → Secrets and variables → Actions): ANDROID_KEYSTORE_BASE64,
+# ANDROID_KEYSTORE_PASSWORD, ANDROID_KEY_ALIAS, ANDROID_KEY_PASSWORD,
+# EXPO_PUBLIC_SUPABASE_URL, EXPO_PUBLIC_SUPABASE_ANON_KEY.
+on:
+  workflow_dispatch:
+  push:
+    tags: ['android-aab-*']
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults: { run: { working-directory: app } }
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: npm, cache-dependency-path: app/package-lock.json }
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: 17 }
+      - uses: gradle/actions/setup-gradle@v4
+
+      - run: npm ci
+
+      - name: App config (.env)
+        env:
+          URL: ${{ secrets.EXPO_PUBLIC_SUPABASE_URL }}
+          KEY: ${{ secrets.EXPO_PUBLIC_SUPABASE_ANON_KEY }}
+        run: |
+          test -n "$URL" && test -n "$KEY" || { echo "Supabase secrets missing"; exit 1; }
+          printf 'EXPO_PUBLIC_SUPABASE_URL=%s\nEXPO_PUBLIC_SUPABASE_ANON_KEY=%s\n' "$URL" "$KEY" > .env
+
+      - run: npx expo prebuild --platform android --no-install
+      - run: node ../scripts/ci-android-prep.cjs
+
+      - name: Upload key
+        env:
+          KEYSTORE: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          test -n "$KEYSTORE" || { echo "ANDROID_KEYSTORE_BASE64 missing"; exit 1; }
+          echo "$KEYSTORE" | base64 -d > android/app/upload.jks
+
+      - name: Build AAB
+        working-directory: app/android
+        env:
+          NODE_ENV: production
+          HTK_STORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          HTK_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          HTK_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./gradlew bundleRelease --no-daemon
+
+      - name: Show signer
+        run: keytool -printcert -jarfile android/app/build/outputs/bundle/release/app-release.aab | head -8
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: housie-aab-${{ github.run_number }}
+          path: app/android/app/build/outputs/bundle/release/app-release.aab
+          retention-days: 14
