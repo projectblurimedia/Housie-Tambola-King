@@ -38,6 +38,7 @@ _Last updated: 2026-11-19_
 - Performance pass (2026-11-19): broadcasts coalesce into one jittered room refetch per phone (ready / check lists patched from the event); live tickets no longer redraw on the 0.5 s countdown; backup poll 5 s when realtime is down, 15–20 s when up; all Supabase performance-advisor warnings fixed (FK indexes, RLS initplan), claim_attempts pruned daily.
 - Crash reporting (2026-11-19): app JS crashes / screen crashes / unhandled rejections → `report_crash` → admin web "Crashes" (kept 30 days). Native crashes: Play Console Android vitals.
 - Privacy Policy + Terms: https://housie-tambola-king-admin.vercel.app/privacy.html and /terms.html (admin-web/public); contact projectblurimedia@gmail.com (owner's choice).
+- Large phone font sizes (2026-11-21, same as NearbyU): `src/utils/fontScaleCap.ts` (imported first in index.ts) caps text at 1.15×; text inside fixed-size shapes uses `maxFontSizeMultiplier={FIXED_SHAPE_SCALE}` (=1) — ticket numbers (also sized to their circle), balls, 1–90 board, avatars, PIN digits, steppers. New fixed-size text must do the same. Grids of % tiles use space-between + rowGap (no fixed column gap).
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
