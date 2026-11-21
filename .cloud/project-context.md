@@ -39,6 +39,7 @@ _Last updated: 2026-11-19_
 - Crash reporting (2026-11-19): app JS crashes / screen crashes / unhandled rejections → `report_crash` → admin web "Crashes" (kept 30 days). Native crashes: Play Console Android vitals.
 - Privacy Policy + Terms: https://housie-tambola-king-admin.vercel.app/privacy.html and /terms.html (admin-web/public); contact projectblurimedia@gmail.com (owner's choice).
 - Large phone font sizes (2026-11-21, same as NearbyU): `src/utils/fontScaleCap.ts` (imported first in index.ts) caps text at 1.15×; text inside fixed-size shapes uses `maxFontSizeMultiplier={FIXED_SHAPE_SCALE}` (=1) — ticket numbers (also sized to their circle), balls, 1–90 board, avatars, PIN digits, steppers. New fixed-size text must do the same. Grids of % tiles use space-between + rowGap (no fixed column gap).
+- 2026-11-21 round: host's claim header shows "Continue game" after checking (not "Checked" again); login balls 7/31/65 with smoother Poppins numerals; profile cached on the phone (no "Namaste, !"); winner names on a solid plate; speech engine warmed up on open and first number never cut by Speech.stop; "CALLED n/90" small pill; caller speed in Create + Edit; series games editable (`set_series_length`, migration 20261201000001 — **run by hand in the SQL editor until the next db push**); ledger "1." + stretched columns; prize setup keeps the host's amounts, Full Housie takes the balance, whole-rupee Auto split, pot meter.
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts

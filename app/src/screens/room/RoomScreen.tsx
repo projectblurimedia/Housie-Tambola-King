@@ -695,7 +695,7 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
   const me = useMe();
   const meRef = useRef<string | undefined>(undefined);
   meRef.current = me.data?.id;
-  const caller = useCaller();
+  const caller = useCaller(undefined, { stopOnUnmount: true });
   const announce = useWinnerStore((s) => s.announce);
   const [tab, setTab] = useState<Tab>('game');
   const [pickerOpen, setPickerOpen] = useState(false);

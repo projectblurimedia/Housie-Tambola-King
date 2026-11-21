@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Ionicons } from '@expo/vector-icons';
 import { formatRupees } from '@/components/Money';
 import { Button, centeredInput, Row, T, Toggle } from '@/components/ui';
-import { splitPot, sumAmounts } from '@/game/engine/split';
+import { balanceFullHouse, splitPotWhole, sumAmounts } from '@/game/engine/split';
 import { COLUMN_PRIZES, FAST_PRIZES, LINE_PRIZES, PrizeType } from '@/game/engine/ticket';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import type { GamePrize } from '@/types/api';
@@ -90,8 +90,9 @@ export function PrizeSetupModal({
   }, [visible, prizes]);
 
   const weightOf = (p: PrizeType) => Number(template[p] ?? prizes.find((x) => x.prize === p)?.weight ?? DEFAULT_WEIGHT[p]);
+  /** Auto split (button): whole rupees by the room's proportions, the rest to Full Housie. */
   const autoSplit = (set: Set<PrizeType> = enabled) => {
-    const split = splitPot(
+    const split = splitPotWhole(
       pot,
       [...set].map((p) => ({ prize: p, weight: weightOf(p) })),
     );
@@ -101,21 +102,50 @@ export function PrizeSetupModal({
     }));
   };
 
+  /**
+   * Switching prizes on/off keeps every amount the host set: a prize switched off gives its
+   * amount back to Full Housie; one switched on gets a whole-rupee share taken from Full Housie.
+   */
+  const applyEnabled = (next: Set<PrizeType>) => {
+    const suggested = splitPotWhole(
+      pot,
+      [...next].map((p) => ({ prize: p, weight: weightOf(p) })),
+    );
+    const amounts: Partial<Record<PrizeType, number>> = {};
+    next.forEach((p) => {
+      amounts[p] = enabled.has(p) ? Number(values[p]) || 0 : (suggested[p] ?? 0);
+    });
+    const balanced = balanceFullHouse(pot, amounts);
+    setEnabled(next);
+    setValues((v) => ({ ...v, ...Object.fromEntries(Object.entries(balanced).map(([k, a]) => [k, String(a)])) }));
+  };
+
   /** Section switch: off removes the whole section; on brings back its usual prizes. */
   const toggleGroup = (g: (typeof GROUPS)[number], on: boolean) => {
     const next = new Set(enabled);
     g.prizes.forEach((p) => next.delete(p));
     if (on) g.firstOn.forEach((p) => next.add(p));
-    setEnabled(next);
-    autoSplit(next);
+    applyEnabled(next);
   };
 
   const toggle = (p: PrizeType, on: boolean) => {
     const next = new Set(enabled);
     if (on) next.add(p);
     else next.delete(p);
-    setEnabled(next);
-    autoSplit(next);
+    applyEnabled(next);
+  };
+
+  /** Typing a prize's amount: Full Housie takes the balance (typing Full Housie itself just sets it). */
+  const setAmount = (p: PrizeType, text: string) => {
+    const clean = text.replace(/[^0-9.]/g, '').slice(0, 9);
+    setValues((cur) => {
+      const nextValues = { ...cur, [p]: clean };
+      if (p === 'full_house' || !enabled.has('full_house')) return nextValues;
+      const amounts = Object.fromEntries([...enabled].map((x) => [x, Number(nextValues[x]) || 0])) as Partial<
+        Record<PrizeType, number>
+      >;
+      return { ...nextValues, full_house: String(balanceFullHouse(pot, amounts).full_house ?? 0) };
+    });
   };
 
   // Keep the focused amount above the keyboard: scroll its row into view once the keyboard is up.
@@ -138,6 +168,9 @@ export function PrizeSetupModal({
 
   const total = useMemo(() => sumAmounts([...enabled].map((p) => Number(values[p]) || 0)), [enabled, values]);
   const matches = Math.abs(total - pot) < 0.005;
+  const over = !matches && total > pot;
+  const diff = Math.round(Math.abs(total - pot) * 100) / 100;
+  const meterColor = matches ? colors.success : over ? colors.error : '#D97706';
 
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
@@ -160,22 +193,47 @@ export function PrizeSetupModal({
               {hint}
             </T>
           ) : null}
-          <Row
-            style={[
-              styles.totalBar,
-              {
-                backgroundColor: matches ? 'rgba(22,163,74,0.1)' : 'rgba(220,38,38,0.08)',
-              },
-            ]}
-          >
-            <T variant="smallBold" color={matches ? colors.success : colors.error} style={{ flex: 1 }}>
-              {t('lobby.amountsTotal', {
-                total: formatRupees(total),
-                pot: formatRupees(pot),
-              })}
+          {/* Pot meter: prizes vs pot, with a bar and a plain-words status. */}
+          <View style={[styles.meter, { borderColor: meterColor, backgroundColor: colors.surfaceAlt }]}>
+            <Row style={{ justifyContent: 'space-between', alignItems: 'flex-end' }}>
+              <View style={{ flexShrink: 1 }}>
+                <T variant="tiny" muted style={{ letterSpacing: 1 }}>
+                  {t('lobby.prizesLabel').toUpperCase()}
+                </T>
+                <T variant="h2" color={meterColor}>
+                  {formatRupees(total)}
+                  <T variant="h3" muted>
+                    {'  /  '}
+                    {formatRupees(pot)}
+                  </T>
+                </T>
+              </View>
+              <Button title={t('lobby.autoSplit')} small variant="secondary" icon="git-compare" onPress={() => autoSplit()} />
+            </Row>
+            <View style={[styles.meterTrack, { backgroundColor: colors.border }]}>
+              <View
+                style={{
+                  height: '100%',
+                  borderRadius: 4,
+                  backgroundColor: meterColor,
+                  width: `${pot > 0 ? Math.min(100, (total / pot) * 100) : 0}%`,
+                }}
+              />
+            </View>
+            <Row gap={6}>
+              <Ionicons name={matches ? 'checkmark-circle' : over ? 'alert-circle' : 'information-circle'} size={16} color={meterColor} />
+              <T variant="smallBold" color={meterColor} style={{ flex: 1 }}>
+                {matches
+                  ? t('lobby.potMatched')
+                  : over
+                    ? t('lobby.potOver', { amount: formatRupees(diff) })
+                    : t('lobby.potUnder', { amount: formatRupees(diff) })}
+              </T>
+            </Row>
+            <T variant="tiny" muted>
+              {t('lobby.fullHouseBalanceNote')}
             </T>
-            <Button title={t('lobby.autoSplit')} small variant="secondary" icon="git-compare" onPress={() => autoSplit()} />
-          </Row>
+          </View>
 
           <ScrollView
             ref={scrollRef}
@@ -261,12 +319,7 @@ export function PrizeSetupModal({
                                 </T>
                                 <TextInput
                                   value={values[p] ?? '0'}
-                                  onChangeText={(v) =>
-                                    setValues((s) => ({
-                                      ...s,
-                                      [p]: v.replace(/[^0-9.]/g, '').slice(0, 9),
-                                    }))
-                                  }
+                                  onChangeText={(v) => setAmount(p, v)}
                                   keyboardType="decimal-pad"
                                   selectTextOnFocus
                                   onFocus={() => revealRow(p)}
@@ -286,7 +339,7 @@ export function PrizeSetupModal({
           </ScrollView>
 
           {!matches ? (
-            <T variant="small" color={colors.error} style={{ marginTop: spacing.sm }}>
+            <T variant="small" color={meterColor} style={{ marginTop: spacing.sm }}>
               {t('lobby.amountsMustMatch', { pot: formatRupees(pot) })}
             </T>
           ) : null}
@@ -322,12 +375,14 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     marginBottom: spacing.sm,
   },
-  totalBar: {
+  meter: {
     marginTop: spacing.md,
-    padding: spacing.sm,
-    borderRadius: radius.md,
-    gap: spacing.sm,
+    padding: spacing.md,
+    borderRadius: radius.lg,
+    borderWidth: 2,
+    gap: 8,
   },
+  meterTrack: { height: 8, borderRadius: 4, overflow: 'hidden' },
   group: {
     marginTop: spacing.md,
     borderWidth: 1.5,

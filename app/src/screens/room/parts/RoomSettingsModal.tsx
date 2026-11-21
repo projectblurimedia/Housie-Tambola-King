@@ -363,6 +363,13 @@ export function RoomSettingsCard({ state, isHost }: { state: RoomState; isHost: 
         )}
         <SummaryItem icon="chatbubbles" label={t('create.chat')} value={room.chatEnabled ? t('common.on') : t('common.off')} />
         <SummaryItem icon="timer-outline" label={t('game.speedTitle')} value={t('common.seconds', { count: room.callIntervalSeconds })} />
+        {room.kind === 'series' ? (
+          <SummaryItem
+            icon="layers"
+            label={t('create.seriesGames')}
+            value={room.seriesLength > 0 ? String(room.seriesLength) : t('create.noLimit')}
+          />
+        ) : null}
       </View>
       {canEdit ? <RoomSettingsModal visible={editing} state={state} onClose={() => setEditing(false)} /> : null}
     </Card>
@@ -388,6 +395,12 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
   const [hintMode, setHintMode] = useState<HintMode>(room.hintMode ?? 'struck');
   const [chat, setChat] = useState(room.chatEnabled);
   const [lateClaim, setLateClaim] = useState(room.lateClaimCalls ?? 0);
+  const [speed, setSpeed] = useState(room.callIntervalSeconds);
+  const isSeries = room.kind === 'series';
+  /** Series: 0 = no limit; the game in the lobby is number gamesPlayed + 1. */
+  const [limitGames, setLimitGames] = useState(room.seriesLength > 0);
+  const minGames = Math.max(2, room.gamesPlayed + 1);
+  const [seriesGames, setSeriesGames] = useState(Math.max(minGames, room.seriesLength || 5));
 
   // Fresh values every time it opens.
   useEffect(() => {
@@ -402,6 +415,9 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
     setHintMode(room.hintMode ?? 'struck');
     setChat(room.chatEnabled);
     setLateClaim(room.lateClaimCalls ?? 0);
+    setSpeed(room.callIntervalSeconds);
+    setLimitGames(room.seriesLength > 0);
+    setSeriesGames(Math.max(minGames, room.seriesLength || 5));
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const save = useMutation({
@@ -417,7 +433,9 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
         hintMode,
         chatEnabled: chat,
         lateClaimCalls: rule === 'normal' ? lateClaim : 0,
-      }, room.lateClaimCalls ?? 0),
+        callIntervalSeconds: speed,
+        seriesLength: isSeries ? (limitGames ? seriesGames : 0) : undefined,
+      }, { lateClaimCalls: room.lateClaimCalls ?? 0, callIntervalSeconds: room.callIntervalSeconds, seriesLength: room.seriesLength }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: roomKey(room.id) });
       showToast({ variant: 'success', title: t('lobby.settingsSaved') });
@@ -485,6 +503,37 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
               <T variant="bodyMedium">{t('create.maxPlayers')}</T>
               <Stepper value={maxPlayers} min={Math.max(2, room.memberCount)} max={100} onChange={setMaxPlayers} width={44} />
             </Row>
+
+            {/* Caller speed: seconds between numbers (the host can also change it during a game). */}
+            <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
+              <View style={{ flex: 1 }}>
+                <T variant="bodyMedium">{t('game.speedTitle')}</T>
+                <T variant="tiny" muted>
+                  {t('create.speedDesc', { count: speed })}
+                </T>
+              </View>
+              <Stepper value={speed} min={1} max={10} onChange={setSpeed} width={44} />
+            </Row>
+
+            {isSeries ? (
+              <>
+                <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
+                  <View style={{ flex: 1 }}>
+                    <T variant="bodyMedium">{t('create.limitGames')}</T>
+                    <T variant="tiny" muted>
+                      {limitGames ? t('create.limitGamesOn', { count: seriesGames }) : t('create.limitGamesOff')}
+                    </T>
+                  </View>
+                  <Toggle value={limitGames} onValueChange={setLimitGames} />
+                </Row>
+                {limitGames ? (
+                  <Row style={{ justifyContent: 'space-between', marginTop: spacing.sm }}>
+                    <T variant="bodyMedium">{t('create.seriesGames')}</T>
+                    <Stepper value={seriesGames} min={minGames} max={50} onChange={setSeriesGames} width={44} />
+                  </Row>
+                ) : null}
+              </>
+            ) : null}
 
             <T variant="smallBold" muted style={styles.label}>
               {t('create.visibility')}

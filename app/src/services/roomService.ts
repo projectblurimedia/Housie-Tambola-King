@@ -49,6 +49,17 @@ export interface RoomSettingsInput {
   chatEnabled: boolean;
   hintMode: HintMode;
   lateClaimCalls: number;
+  /** Seconds between called numbers (1–10). */
+  callIntervalSeconds: number;
+  /** Series rooms only: 0 = no limit, else 2–50 games. */
+  seriesLength?: number;
+}
+
+/** The room's values before editing — only what changed is sent. */
+export interface RoomSettingsBefore {
+  lateClaimCalls: number;
+  callIntervalSeconds: number;
+  seriesLength: number;
 }
 
 export type ClaimResult = 'won' | 'shared' | 'too_late' | 'already_claimed' | 'already_yours' | 'not_complete' | 'auto';
@@ -77,6 +88,11 @@ export const roomService = {
     // 0 (off) is the default on the server.
     if (input.rule === 'normal' && input.lateClaimCalls > 0) await this.setLateClaim(created.roomId, input.lateClaimCalls);
     return created;
+  },
+
+  /** Host, lobby: a series' number of games (0 = no limit). */
+  async setSeriesLength(roomId: string, len: number): Promise<void> {
+    unwrap(await supabase.rpc('set_series_length', { p_room: roomId, p_len: len }));
   },
 
   /** Host: Normal rule "Late claim" (0 = off). */
@@ -133,7 +149,7 @@ export const roomService = {
     unwrap(await supabase.rpc('set_game_paused', { p_game: gameId, p_paused: paused }));
   },
 
-  async updateSettings(roomId: string, input: RoomSettingsInput, previousLateClaim = 0): Promise<void> {
+  async updateSettings(roomId: string, input: RoomSettingsInput, before: RoomSettingsBefore): Promise<void> {
     unwrap(
       await supabase.rpc('update_room_settings', {
         p_room: roomId,
@@ -149,7 +165,11 @@ export const roomService = {
       }),
     );
     await this.setHintMode(roomId, input.hintMode);
-    if (input.lateClaimCalls !== previousLateClaim) await this.setLateClaim(roomId, input.lateClaimCalls);
+    if (input.lateClaimCalls !== before.lateClaimCalls) await this.setLateClaim(roomId, input.lateClaimCalls);
+    if (input.callIntervalSeconds !== before.callIntervalSeconds) await this.setSpeed(roomId, input.callIntervalSeconds);
+    if (input.seriesLength !== undefined && input.seriesLength !== before.seriesLength) {
+      await this.setSeriesLength(roomId, input.seriesLength);
+    }
   },
 
   async getChat(roomId: string): Promise<ChatMessage[]> {

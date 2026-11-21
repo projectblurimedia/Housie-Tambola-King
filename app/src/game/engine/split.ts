@@ -23,3 +23,37 @@ export function splitPot(pot: number, prizes: { prize: PrizeType; weight: number
 export function sumAmounts(values: number[]): number {
   return Math.round(values.reduce((s, v) => s + v * 100, 0)) / 100;
 }
+
+const round2 = (n: number) => Math.round(n * 100) / 100;
+
+/**
+ * Like splitPot, but every prize except Full Housie gets WHOLE rupees (no ₹14.65 style
+ * amounts); Full Housie (or the last prize) takes whatever is left so the total equals the pot.
+ */
+export function splitPotWhole(pot: number, prizes: { prize: PrizeType; weight: number }[]): Record<string, number> {
+  const out: Record<string, number> = {};
+  if (!prizes.length) return out;
+  const target = prizes.some((p) => p.prize === 'full_house') ? 'full_house' : prizes[prizes.length - 1].prize;
+  const totalWeight = prizes.reduce((s, p) => s + Math.max(0, p.weight), 0);
+  for (const p of prizes) {
+    if (p.prize === target) continue;
+    const share = totalWeight > 0 ? (pot * Math.max(0, p.weight)) / totalWeight : pot / prizes.length;
+    out[p.prize] = Math.floor(share + 1e-6);
+  }
+  out[target] = Math.max(0, round2(pot - Object.values(out).reduce((s, v) => s + v, 0)));
+  return out;
+}
+
+/**
+ * The host's amounts stay as they are; Full Housie becomes the balance (pot − the others),
+ * never below 0. Amounts are a map prize → ₹ for the prizes that are on.
+ */
+export function balanceFullHouse(pot: number, amounts: Partial<Record<PrizeType, number>>): Partial<Record<PrizeType, number>> {
+  if (amounts.full_house === undefined) return amounts;
+  const others = sumAmounts(
+    Object.entries(amounts)
+      .filter(([k]) => k !== 'full_house')
+      .map(([, v]) => v ?? 0),
+  );
+  return { ...amounts, full_house: Math.max(0, round2(pot - others)) };
+}

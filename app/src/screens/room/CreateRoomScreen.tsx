@@ -149,6 +149,8 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   /** Normal rule "Late claim": 0 = off. */
   const [lateClaimCalls, setLateClaimCalls] = useState(2);
   const [chatEnabled, setChatEnabled] = useState(true);
+  /** Seconds between called numbers (default 3; the host can change it any time). */
+  const [speed, setSpeed] = useState(3);
   const [loading, setLoading] = useState(false);
 
   const priceNum = Number(price);
@@ -163,8 +165,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         visibility,
         maxPlayers,
         ticketPrice: priceNum,
-        // Default 3 s; the host changes it any time from the game settings.
-        callIntervalSeconds: 3,
+        callIntervalSeconds: speed,
         seriesLength: kind === 'series' ? (limitGames ? seriesLength : 0) : 1,
         prizes: DEFAULT_PRIZES,
         rule,
@@ -323,6 +324,9 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
       </Step>
 
       <Step n={6} title={t('create.extras')} hint={t('create.extrasHint')}>
+        <SettingLine icon="timer-outline" title={t('game.speedTitle')} desc={t('create.speedDesc', { count: speed })}>
+          <Stepper value={speed} min={1} max={10} onChange={setSpeed} width={40} />
+        </SettingLine>
         <SettingLine icon="chatbubbles" title={t('create.chat')} desc={t('create.chatDesc')}>
           <Toggle value={chatEnabled} onValueChange={setChatEnabled} />
         </SettingLine>

@@ -16,7 +16,8 @@ import { useSettingsStore } from '@/state/settingsStore';
 import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/constants/config';
 import { fonts, goldGradient, heroGradient, radius, spacing } from '@/theme';
 
-const FLOATING = [3, 7, 11, 31, 65];
+// Same three balls as the logo and the opening screen; the middle one is the big one.
+const FLOATING = [7, 31, 65];
 
 function FloatingBall({ n, index }: { n: number; index: number }) {
   const v = useRef(new Animated.Value(0)).current;
@@ -30,7 +31,7 @@ function FloatingBall({ n, index }: { n: number; index: number }) {
   }, [v, index]);
   return (
     <Animated.View style={{ transform: [{ translateY: v.interpolate({ inputRange: [0, 1], outputRange: [0, -14] }) }] }}>
-      <NumberBall number={n} size={index === 2 ? 92 : 58} />
+      <NumberBall number={n} size={index === 1 ? 92 : 62} />
     </Animated.View>
   );
 }

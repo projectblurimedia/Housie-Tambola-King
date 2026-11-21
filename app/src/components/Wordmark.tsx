@@ -42,15 +42,18 @@ export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string;
         <Ellipse cx={33} cy={23} rx={11} ry={5} fill="#FFFFFF" opacity={0.28} transform="rotate(-30 33 23)" />
       </Svg>
       <View style={[StyleSheet.absoluteFill, styles.center]}>
+        {/* Rounded, smooth numerals (Poppins ExtraBold) in a soft deep purple, centred in the face. */}
         <Text
           maxFontSizeMultiplier={FIXED_SHAPE_SCALE}
           style={{
-            fontFamily: BLACK,
-            fontSize: size * (String(n).length > 1 ? 0.28 : 0.34),
-            lineHeight: size * (String(n).length > 1 ? 0.34 : 0.4),
+            fontFamily: 'Poppins_800ExtraBold',
+            fontSize: size * (String(n).length > 1 ? 0.27 : 0.32),
+            lineHeight: size * (String(n).length > 1 ? 0.27 : 0.32) * 1.3,
+            marginTop: size * 0.02,
             textAlign: 'center',
             textAlignVertical: 'center',
-            color: '#111827',
+            color: '#2E1065',
+            letterSpacing: String(n).length > 1 ? -0.5 : 0,
             includeFontPadding: false,
           }}
         >

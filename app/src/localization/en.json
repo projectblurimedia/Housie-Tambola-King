@@ -90,7 +90,8 @@
     "seeAll": "See all",
     "howToPlayDesc": "Rules & prizes",
     "roomsCount_one": "{{count}} room",
-    "roomsCount_other": "{{count}} rooms"
+    "roomsCount_other": "{{count}} rooms",
+    "greetingNoName": "Namaste! 🙏"
   },
   "kind": {
     "normal": "Normal",
@@ -160,7 +161,9 @@
     "openSettings": "Open",
     "closeSettings": "Close",
     "perTicket": "per ticket — tap to type any amount",
-    "quickPick": "Quick pick"
+    "quickPick": "Quick pick",
+    "speedDesc": "A new number every {{count}} seconds",
+    "noLimit": "No limit"
   },
   "join": {
     "title": "Join Room",
@@ -283,7 +286,12 @@
     "hostStartsWhenReady": "The host starts the game once everyone is ready.",
     "waitingHostStart": "Everyone is ready — waiting for {{name}} to start.",
     "ticketsAtStart_one": "You have {{count}} ticket — you’ll see it when the game starts.",
-    "ticketsAtStart_other": "You have {{count}} tickets — you’ll see them when the game starts."
+    "ticketsAtStart_other": "You have {{count}} tickets — you’ll see them when the game starts.",
+    "prizesLabel": "Prizes / Pot",
+    "potMatched": "Matches the pot — ready to save",
+    "potOver": "{{amount}} more than the pot — lower a prize",
+    "potUnder": "{{amount}} still to give — add it to a prize",
+    "fullHouseBalanceNote": "Full Housie gets whatever is left after the other prizes."
   },
   "game": {
     "getReady": "Get ready…",
@@ -343,7 +351,8 @@
     "claimedPrizes": "claimed {{prizes}}",
     "callerVoice": "Caller voice",
     "claimTooLateCalls": "Too late — {{prize}} was finished more than {{count}} numbers before your claim.",
-    "claimBeatenEarlier": "{{name}} finished {{prize}} on an earlier number and takes it."
+    "claimBeatenEarlier": "{{name}} finished {{prize}} on an earlier number and takes it.",
+    "calledLabel": "Called"
   },
   "winner": {
     "title": "WINNER!",
@@ -372,7 +381,7 @@
     "spent": "Tickets",
     "net": "Net",
     "wins": "{{count}} wins",
-    "gameShort": "G{{n}}",
+    "gameShort": "Game {{n}}",
     "spentTickets": "Tickets ({{count}})",
     "left": "left the room",
     "gameByGame": "Game by game",
@@ -566,7 +575,8 @@
     "ACCOUNT_NOT_FOUND": "No account with this number.",
     "PIN_NOT_SET": "This number needs a PIN — create one.",
     "WRONG_PIN": "Wrong PIN.",
-    "PIN_LOCKED": "Too many wrong tries. Try again later."
+    "PIN_LOCKED": "Too many wrong tries. Try again later.",
+    "NOT_A_SERIES": "This setting is only for series rooms."
   },
   "update": {
     "title": "Updating app…",

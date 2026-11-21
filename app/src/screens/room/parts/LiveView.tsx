@@ -241,9 +241,14 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
                 ) : (
                   <>
                     <Row style={{ justifyContent: 'space-between' }}>
-                      <T variant="h1" color="#fff">
-                        {t('game.calledCount', { count: called.length })}
-                      </T>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+                        <T variant="tiny" color="rgba(255,255,255,0.75)" style={{ letterSpacing: 1 }}>
+                          {t('game.calledLabel').toUpperCase()}
+                        </T>
+                        <T variant="smallBold" color="#fff">
+                          {called.length}/90
+                        </T>
+                      </View>
                       <T variant="smallBold" color="#FDE68A">
                         {t('lobby.pot')} {formatRupees(game.pot)}
                       </T>
@@ -403,6 +408,7 @@ const styles = StyleSheet.create({
   },
   bell: { fontSize: 34 },
   checkedBtn: { height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
+  checkedDone: { backgroundColor: 'rgba(22,163,74,0.28)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 },
   notice: { marginTop: spacing.sm, backgroundColor: '#FFF7D6', borderRadius: radius.md, padding: spacing.sm },
   waitChip: { backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 999, paddingLeft: 3, paddingRight: 9, paddingVertical: 3 },
   pendingBox: { marginTop: spacing.sm, borderRadius: radius.md, padding: spacing.sm, gap: 6 },
@@ -507,7 +513,9 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
   const [notice, setNotice] = useState<'strikeFirst' | 'late' | 'none' | null>(null);
   const showClaim = state.myTickets.length > 0 && !iChecked && room.claimMode !== 'fair';
   // Host: one "Checked" that also moves the game on. Players: "Checked" until they have.
-  const showChecked = isHost || (state.myTickets.length > 0 && !iChecked);
+  const showChecked = !iChecked && (state.myTickets.length > 0 || isHost);
+  // After checking, the host doesn't see "Checked" again but a distinct "Continue game".
+  const hostContinue = isHost && !showChecked;
   const claimMine = useMutation({
     mutationFn: async () => {
       let best: 'none' | 'shared' | 'late' | 'strikeFirst' = 'none';
@@ -652,14 +660,32 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
             </Pressable>
           ) : null}
         </Row>
-      ) : state.myTickets.length ? (
-        <Row style={{ marginTop: spacing.sm }}>
-          <Ionicons name="checkmark-circle" size={18} color="#86EFAC" />
-          <T variant="small" color="#fff">
-            {t('game.checkedWaiting')}
-          </T>
-        </Row>
-      ) : null}
+      ) : (
+        <View style={{ marginTop: spacing.sm, gap: spacing.sm }}>
+          {state.myTickets.length ? (
+            <Row gap={6} style={styles.checkedDone}>
+              <Ionicons name="checkmark-circle" size={18} color="#86EFAC" />
+              <T variant="smallBold" color="#fff" style={{ flex: 1 }}>
+                {pending.length ? t('game.waitingEveryone', { count: pending.length }) : t('game.checkedWaiting')}
+              </T>
+            </Row>
+          ) : null}
+          {hostContinue ? (
+            <Pressable
+              onPress={() => endCheck.mutate()}
+              disabled={endCheck.isPending}
+              style={({ pressed }) => [{ opacity: pressed || endCheck.isPending ? 0.8 : 1 }]}
+            >
+              <LinearGradient colors={['#FDE68A', '#F5B700']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.checkedBtn}>
+                <Ionicons name="play" size={17} color="#3B1D00" />
+                <T variant="smallBold" color="#3B1D00" numberOfLines={1}>
+                  {t('game.continueGame')}
+                </T>
+              </LinearGradient>
+            </Pressable>
+          ) : null}
+        </View>
+      )}
 
       {/* Who hasn't checked yet — names with their photos. */}
       {pending.length ? (

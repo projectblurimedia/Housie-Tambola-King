@@ -389,7 +389,13 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
           {/* One icon + "Housie Tambola King" on one line; photo on the right. */}
           <Row style={{ alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: spacing.lg, paddingTop: spacing.sm }}>
             <View style={{ flex: 1, marginRight: spacing.md }}>
-              <Wordmark size="small" subtitle={t('home.greeting', { name: (me.data?.displayName ?? '').trim().split(/\s+/)[0] })} />
+              <Wordmark
+                size="small"
+                subtitle={(() => {
+                  const first = (me.data?.displayName ?? '').trim().split(/\s+/)[0];
+                  return first ? t('home.greeting', { name: first }) : t('home.greetingNoName');
+                })()}
+              />
             </View>
             <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={46} ring="#FDE68A" />

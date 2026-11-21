@@ -120,7 +120,7 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const { called, intervalSeconds, voiceLanguage, mode, reset, setInterval: setSpeed, setVoiceLanguage, setMode } = useCallerStore();
-  const caller = useCaller(voiceLanguage);
+  const caller = useCaller(voiceLanguage, { stopOnUnmount: true });
   const [auto, setAuto] = useState(false);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
@@ -230,13 +230,14 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                     <NumberBall number={last} size={ball} />
                   </View>
                   <View style={{ flex: 1, gap: 6 }}>
-                    <T variant="h1" color="#fff">
-                      {called.length}
-                      <T variant="h3" color="rgba(255,255,255,0.6)">
-                        {' '}
-                        / 90
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, alignSelf: 'flex-start', backgroundColor: 'rgba(0,0,0,0.22)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 }}>
+                      <T variant="tiny" color="rgba(255,255,255,0.75)" style={{ letterSpacing: 1 }}>
+                        {t('game.calledLabel').toUpperCase()}
                       </T>
-                    </T>
+                      <T variant="smallBold" color="#fff">
+                        {called.length}/90
+                      </T>
+                    </View>
                     <View style={styles.progress}>
                       <LinearGradient
                         colors={goldGradient}

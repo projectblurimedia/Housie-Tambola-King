@@ -154,7 +154,11 @@ export default function App() {
     supabase.auth.getSession().then(({ data }) => setSession(data.session));
     const { data } = supabase.auth.onAuthStateChange((_event, session) => {
       setSession(session);
-      if (!session) queryClient.clear();
+      if (!session) {
+        queryClient.clear();
+        // The saved profile belongs to whoever just logged out.
+        useSettingsStore.getState().setLastMe(null);
+      }
       else queryClient.invalidateQueries({ queryKey: ['me'] });
     });
     return () => data.subscription.unsubscribe();

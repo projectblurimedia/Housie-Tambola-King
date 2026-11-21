@@ -122,8 +122,10 @@ export function StandingsList({ roomId, meId }: { roomId: string; meId?: string 
   );
 }
 
-const COL_GAME = 66;
-const COL_PLAYER = 84;
+/** Game column: just "1.", "2." and the pot under it. */
+const COL_GAME = 52;
+/** Player columns are at least this wide; with few players they stretch to fill the card. */
+const COL_PLAYER_MIN = 76;
 
 /**
  * Game-by-game table: rows = games in order (Game 1, 2, …), columns = players (best first),
@@ -137,6 +139,9 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
   const totals = new Map<string, number>();
   games.forEach((g) => g.rows.forEach((r) => totals.set(r.userId, (totals.get(r.userId) ?? 0) + Number(r.won))));
   const line = colors.border;
+  // Spread the table over the card's full width; scroll sideways only when it can't fit.
+  const [avail, setAvail] = useState(0);
+  const colPlayer = Math.max(COL_PLAYER_MIN, Math.floor((avail - COL_GAME - 2) / Math.max(1, players.length)));
 
   const head = (label: React.ReactNode, width: number, key: string) => (
     <View key={key} style={[styles.th, { width, borderColor: line, backgroundColor: colors.surfaceAlt }]}>
@@ -158,7 +163,7 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
           {t('standings.tapBox')}
         </T>
       </Row>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false} onLayout={(e) => setAvail(e.nativeEvent.layout.width)}>
         <View style={[styles.table, { borderColor: line }]}>
           <View style={styles.tr}>
             {head(
@@ -176,7 +181,7 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
                     {p.userId === meId ? t('common.you') : p.name.split(' ')[0]}
                   </T>
                 </>,
-                COL_PLAYER,
+                colPlayer,
                 p.userId,
               ),
             )}
@@ -184,7 +189,7 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
           {games.map((g, gi) => (
             <View key={g.gameId} style={[styles.tr, gi % 2 === 1 && { backgroundColor: colors.surfaceAlt }]}>
               <View style={[styles.td, { width: COL_GAME, borderColor: line, alignItems: 'flex-start' }]}>
-                <T variant="smallBold">{t('standings.gameShort', { n: g.gameNo })}</T>
+                <T variant="smallBold">{g.gameNo}.</T>
                 <T variant="tiny" muted>
                   {formatRupees(g.pot)}
                 </T>
@@ -197,7 +202,7 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
                     key={p.userId}
                     disabled={!r}
                     onPress={() => setPicked({ game: g, player: p })}
-                    style={({ pressed }) => [styles.td, { width: COL_PLAYER, borderColor: line, opacity: pressed ? 0.6 : 1 }]}
+                    style={({ pressed }) => [styles.td, { width: colPlayer, borderColor: line, opacity: pressed ? 0.6 : 1 }]}
                   >
                     {won === null ? (
                       <T variant="small" muted>
@@ -218,7 +223,7 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
               <T variant="smallBold">{t('standings.total')}</T>
             </View>
             {players.map((p) => (
-              <View key={p.userId} style={[styles.td, { width: COL_PLAYER, borderColor: line }]}>
+              <View key={p.userId} style={[styles.td, { width: colPlayer, borderColor: line }]}>
                 <T
                   style={{
                     fontFamily: fonts.bold,

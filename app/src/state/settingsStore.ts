@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
+import type { Me } from '@/types/api';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import i18n, { deviceLanguage, SupportedLanguage } from '@/localization/i18n';
 import { toPalette, type HintColorKey, type StrikeColorKey, type TicketShape, type TicketThemeKey } from '@/theme/ticketThemes';
@@ -35,6 +36,9 @@ interface SettingsState {
   ticketTheme: TicketThemeKey;
   strikeColor: StrikeColorKey;
   hintColor: HintColorKey;
+  /** Last loaded profile, shown at once (name, avatar) while a fresh one loads or the network lags. */
+  lastMe: Me | null;
+  setLastMe: (me: Me | null) => void;
   isHydrated: boolean;
   setLanguage: (language: SupportedLanguage) => void;
   confirmLanguage: () => void;
@@ -59,6 +63,8 @@ export const useSettingsStore = create<SettingsState>()(
       ticketTheme: 'purple',
       strikeColor: 'purple',
       hintColor: 'pink',
+      lastMe: null,
+      setLastMe: (lastMe) => set({ lastMe }),
       isHydrated: false,
       setLanguage: (language) => {
         i18n.changeLanguage(language);
@@ -86,7 +92,7 @@ export const useSettingsStore = create<SettingsState>()(
         } as never;
       },
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ isHydrated: _h, setLanguage: _a, confirmLanguage: _b, set: _c, setVoiceFor: _d, ...rest }) => rest,
+      partialize: ({ isHydrated: _h, setLanguage: _a, confirmLanguage: _b, set: _c, setVoiceFor: _d, setLastMe: _e, ...rest }) => rest,
       onRehydrateStorage: () => (state) => {
         if (state) i18n.changeLanguage(state.language);
         useSettingsStore.setState({ isHydrated: true });
