@@ -20,6 +20,9 @@ const BALL_COLORS: Record<string, [string, string, string]> = {
  * A glossy bingo ball like the logo's: coloured sphere (lit from the top-left), a white
  * centre with a bold black number, and a soft white reflection.
  */
+/** Number size on a BingoBall: a bit smaller for two digits so they fit the white face. */
+const ballFont = (n: number | string, size: number) => size * (String(n).length > 1 ? 0.3 : 0.36);
+
 export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string; size?: number; color?: keyof typeof BALL_COLORS }) {
   const [light, mid, dark] = BALL_COLORS[color];
   const id = `ball-${color}`;
@@ -52,9 +55,13 @@ export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string;
           style={{
             width: size * 0.56,
             fontFamily: GAME,
-            fontSize: size * (String(n).length > 1 ? 0.3 : 0.36),
-            lineHeight: size * (String(n).length > 1 ? 0.3 : 0.36) * 1.15,
-            paddingTop: size * 0.03,
+            fontSize: ballFont(n, size),
+            // Luckiest Guy's line box (ascent 1440 + descent 608 of 2048) is exactly 1 em; its
+            // digits are drawn from about 0 to 1470 above the baseline, so their middle sits
+            // 0.153 em above the line's middle. Measured from the font file — shift them down
+            // by that so the number is truly centred in the ball.
+            lineHeight: ballFont(n, size),
+            transform: [{ translateY: ballFont(n, size) * 0.153 }],
             textAlign: 'center',
             textAlignVertical: 'center',
             color: '#2E1065',
