@@ -786,6 +786,13 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
   checkClaimsRef.current = !!state && state.room.checkClaims;
   const isHost = !!state && state.room.hostId === me.data?.id;
   isHostRef.current = isHost;
+  // Home's "My rooms" shows status / game number: mark it stale whenever those change here.
+  const roomStatus = state?.room.status;
+  const gamesPlayed = state?.room.gamesPlayed;
+  const gameStatus = state?.game?.status;
+  useEffect(() => {
+    if (roomStatus) qc.invalidateQueries({ queryKey: ['myRooms'] });
+  }, [roomStatus, gamesPlayed, gameStatus, qc]);
 
   useEffect(
     () => () => {
@@ -893,6 +900,12 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
             { value: 'standings', label: t('room.tabStandings') },
           ]}
         />
+        {/* Host: dismiss a room made by mistake (or end it) right here on the Play tab. */}
+        {isHost && !ended && tab === 'game' ? (
+          <Row style={{ justifyContent: 'flex-end', marginTop: spacing.sm }}>
+            <Button title={endLabel} small variant="danger" icon="close-circle" onPress={() => setConfirm('end')} />
+          </Row>
+        ) : null}
       </View>
       <ScrollView
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl + insets.bottom + (state.room.chatEnabled ? 72 : 0) }}

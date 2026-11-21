@@ -352,7 +352,11 @@
     "callerVoice": "Caller voice",
     "claimTooLateCalls": "Too late — {{prize}} was finished more than {{count}} numbers before your claim.",
     "claimBeatenEarlier": "{{name}} finished {{prize}} on an earlier number and takes it.",
-    "calledLabel": "Called"
+    "calledLabel": "Called",
+    "playTab": "Play",
+    "calledOf": "{{count}} / 90 called",
+    "stillToWin": "Still to win",
+    "alreadyWon": "Already won"
   },
   "winner": {
     "title": "WINNER!",

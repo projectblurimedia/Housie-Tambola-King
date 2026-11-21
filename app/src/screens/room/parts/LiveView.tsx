@@ -34,8 +34,29 @@ import { StandingsList } from './StandingsList';
 import { GameSettingsSheet } from './GameSettingsSheet';
 import { gameLabel } from '@/utils/gameLabel';
 
-type Tab = 'tickets' | 'board' | 'prizes' | 'standings';
+type Tab = 'tickets' | 'standings';
 const NO_STRIKES: number[] = [];
+
+function SectionTitle({ icon, title, note }: { icon: keyof typeof Ionicons.glyphMap; title: string; note?: string }) {
+  const { colors } = useThemeColors();
+  return (
+    <Row gap={8} style={{ marginTop: spacing.xs }}>
+      <View style={{ width: 26, height: 26, borderRadius: 13, backgroundColor: colors.primary, alignItems: 'center', justifyContent: 'center' }}>
+        <Ionicons name={icon} size={14} color="#fff" />
+      </View>
+      <T variant="h3" style={{ flex: 1 }}>
+        {title}
+      </T>
+      {note ? (
+        <View style={{ backgroundColor: colors.surfaceAlt, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 2 }}>
+          <T variant="smallBold" color={colors.primary}>
+            {note}
+          </T>
+        </View>
+      ) : null}
+    </Row>
+  );
+}
 
 export function LiveView({ state, me, serverNow, connected }: { state: RoomState; me: Me; serverNow: () => number; connected: boolean }) {
   useKeepAwake();
@@ -173,6 +194,9 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
       : undefined,
   }));
 
+  const stillToWin = prizeRows.filter((p) => p.status === 'open');
+  const alreadyWon = prizeRows.filter((p) => p.status !== 'open');
+
   const wonByTicket = (ticketId: string) =>
     state.prizes
       .filter((p) =>
@@ -292,9 +316,7 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
           value={tab}
           onChange={setTab}
           options={[
-            { value: 'tickets', label: t('game.tickets') },
-            { value: 'board', label: t('game.board') },
-            { value: 'prizes', label: t('game.prizes') },
+            { value: 'tickets', label: t('game.playTab') },
             { value: 'standings', label: t('room.tabStandings') },
           ]}
         />
@@ -338,8 +360,25 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
             </>
           )
         ) : null}
-        {tab === 'board' ? <CalledBoard called={calledSet} last={last} /> : null}
-        {tab === 'prizes' ? <PrizeList rows={prizeRows} /> : null}
+        {/* Board and prizes sit right under the tickets: no switching tabs while numbers are called. */}
+        {tab === 'tickets' ? (
+          <View style={{ gap: spacing.md, paddingHorizontal: spacing.xs }}>
+            <SectionTitle icon="grid" title={t('game.board')} note={t('game.calledOf', { count: called.length })} />
+            <CalledBoard called={calledSet} last={last} />
+            {stillToWin.length ? (
+              <>
+                <SectionTitle icon="gift" title={t('game.stillToWin')} note={String(stillToWin.length)} />
+                <PrizeList rows={stillToWin} />
+              </>
+            ) : null}
+            {alreadyWon.length ? (
+              <>
+                <SectionTitle icon="trophy" title={t('game.alreadyWon')} note={String(alreadyWon.length)} />
+                <PrizeList rows={alreadyWon} />
+              </>
+            ) : null}
+          </View>
+        ) : null}
         {tab === 'standings' ? <StandingsList roomId={room.id} meId={me.id} /> : null}
       </ScrollView>
       {isHost ? (

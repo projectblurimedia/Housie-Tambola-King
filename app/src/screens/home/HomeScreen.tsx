@@ -1,4 +1,5 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import { useFocusEffect } from '@react-navigation/native';
 import { Animated, Easing, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -360,6 +361,14 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
   const settings = useAppSettings();
   const publicRooms = useQuery({ queryKey: ['publicRooms'], queryFn: roomService.listPublic, refetchInterval: 15000 });
   const myRooms = useQuery({ queryKey: ['myRooms'], queryFn: roomService.myRooms });
+  // Home stays loaded behind a room: refresh "My rooms" every time we come back to it
+  // (a series restarted, moved on or ended while we were inside).
+  const refetchMyRooms = myRooms.refetch;
+  useFocusEffect(
+    React.useCallback(() => {
+      refetchMyRooms();
+    }, [refetchMyRooms]),
+  );
 
   const refresh = () => {
     me.refetch();

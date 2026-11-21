@@ -352,7 +352,11 @@
     "callerVoice": "పిలుపు గొంతు",
     "claimTooLateCalls": "ఆలస్యమైంది — మీ క్లెయిమ్‌కు {{count}} నంబర్ల కంటే ముందే {{prize}} పూర్తయింది.",
     "claimBeatenEarlier": "{{name}} {{prize}}ను ముందు నంబర్‌లోనే పూర్తి చేశారు, బహుమతి వారిదే.",
-    "calledLabel": "పిలిచినవి"
+    "calledLabel": "పిలిచినవి",
+    "playTab": "ఆట",
+    "calledOf": "{{count}} / 90 పిలిచారు",
+    "stillToWin": "ఇంకా గెలవాల్సినవి",
+    "alreadyWon": "ఇప్పటికే గెలిచినవి"
   },
   "winner": {
     "title": "విజేత!",

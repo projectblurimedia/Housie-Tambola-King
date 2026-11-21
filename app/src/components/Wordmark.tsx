@@ -42,18 +42,22 @@ export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string;
         <Ellipse cx={33} cy={23} rx={11} ry={5} fill="#FFFFFF" opacity={0.28} transform="rotate(-30 33 23)" />
       </Svg>
       <View style={[StyleSheet.absoluteFill, styles.center]}>
-        {/* Rounded, smooth numerals (Poppins ExtraBold) in a soft deep purple, centred in the face. */}
+        {/* The opening title's rounded game font, always on ONE line inside the white face
+            (it shrinks to fit rather than wrapping — "65" must never show as "6"). */}
         <Text
           maxFontSizeMultiplier={FIXED_SHAPE_SCALE}
+          numberOfLines={1}
+          adjustsFontSizeToFit
+          minimumFontScale={0.6}
           style={{
-            fontFamily: 'Poppins_800ExtraBold',
-            fontSize: size * (String(n).length > 1 ? 0.27 : 0.32),
-            lineHeight: size * (String(n).length > 1 ? 0.27 : 0.32) * 1.3,
-            marginTop: size * 0.02,
+            width: size * 0.56,
+            fontFamily: GAME,
+            fontSize: size * (String(n).length > 1 ? 0.3 : 0.36),
+            lineHeight: size * (String(n).length > 1 ? 0.3 : 0.36) * 1.15,
+            paddingTop: size * 0.03,
             textAlign: 'center',
             textAlignVertical: 'center',
             color: '#2E1065',
-            letterSpacing: String(n).length > 1 ? -0.5 : 0,
             includeFontPadding: false,
           }}
         >
