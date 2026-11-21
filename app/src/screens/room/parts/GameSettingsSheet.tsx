@@ -143,7 +143,8 @@ const styles = StyleSheet.create({
   backdrop: { flex: 1, justifyContent: 'center', padding: spacing.lg },
   card: { borderRadius: radius.xl, padding: spacing.lg, maxHeight: '88%' },
   label: { marginTop: spacing.md, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, justifyContent: 'space-between' },
+  // Even spacing (no fixed column gap): 5 boxes always fit in a row, even on narrow / zoomed screens.
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, justifyContent: 'space-between' },
   speed: { width: '18%', aspectRatio: 0.9, borderRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
   toggleRow: { paddingVertical: 6, gap: spacing.md },
   toggleIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },

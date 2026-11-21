@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { fonts } from '@/theme';
+import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
 /** Ball colour by decade, like a real tambola set. */
 const DECADE_COLORS: [string, string][] = [
@@ -67,6 +68,7 @@ export function NumberBall({ number, size = 120, subtitle }: { number: number | 
         >
           <View style={[styles.inner, { width: size * 0.66, height: size * 0.66, borderRadius: size * 0.33 }]}>
             <Animated.Text
+              maxFontSizeMultiplier={FIXED_SHAPE_SCALE}
               style={[styles.text, { opacity: fade, fontSize: size * 0.34, lineHeight: size * 0.5, includeFontPadding: false }]}
             >
               {number ?? '–'}
@@ -87,7 +89,9 @@ export function MiniBall({ n, size = 34 }: { n: number; size?: number }) {
       colors={[light, dark]}
       style={{ width: size, height: size, borderRadius: size / 2, alignItems: 'center', justifyContent: 'center' }}
     >
-      <Text style={{ fontFamily: fonts.bold, color: '#fff', fontSize: size * 0.42 }}>{n}</Text>
+      <Text maxFontSizeMultiplier={FIXED_SHAPE_SCALE} style={{ fontFamily: fonts.bold, color: '#fff', fontSize: size * 0.42 }}>
+        {n}
+      </Text>
     </LinearGradient>
   );
 }

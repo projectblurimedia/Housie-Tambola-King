@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleSheet, Text, useWindowDimensions, View } from 'react-native';
 import Svg, { Circle, Defs, Ellipse, G, LinearGradient as SvgGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
 /** Clean, premium font for the title (loaded in App). */
 const BOLD = 'Montserrat_800ExtraBold';
@@ -42,6 +43,7 @@ export function BingoBall({ n, size = 54, color = 'red' }: { n: number | string;
       </Svg>
       <View style={[StyleSheet.absoluteFill, styles.center]}>
         <Text
+          maxFontSizeMultiplier={FIXED_SHAPE_SCALE}
           style={{
             fontFamily: BLACK,
             fontSize: size * (String(n).length > 1 ? 0.28 : 0.34),
@@ -345,8 +347,8 @@ export function LaunchIntro({ onDone, ready = true }: { onDone: () => void; read
         >
           {ready ? (
             <>
-              <Text style={styles.introTop}>HOUSIE TAMBOLA</Text>
-              <Text style={styles.introKing}>KING</Text>
+              <Text maxFontSizeMultiplier={FIXED_SHAPE_SCALE} style={styles.introTop}>HOUSIE TAMBOLA</Text>
+              <Text maxFontSizeMultiplier={FIXED_SHAPE_SCALE} style={styles.introKing}>KING</Text>
             </>
           ) : null}
         </Animated.View>

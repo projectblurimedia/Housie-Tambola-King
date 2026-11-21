@@ -25,6 +25,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useNavigation } from '@react-navigation/native';
 import { goldGradient, heroGradient, radius, spacing, typography, useThemeColors } from '@/theme';
+import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
 type IconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -40,6 +41,8 @@ export function T({
   children,
   numberOfLines,
   onPress,
+  maxFontSizeMultiplier,
+  adjustsFontSizeToFit,
 }: {
   variant?: Variant;
   muted?: boolean;
@@ -50,12 +53,18 @@ export function T({
   numberOfLines?: number;
   /** Tappable text (e.g. a link inside a sentence). */
   onPress?: () => void;
+  /** 1 = never grows with the phone's font size (text inside a fixed-size shape). */
+  maxFontSizeMultiplier?: number;
+  /** Shrink to fit its box (use with numberOfLines). */
+  adjustsFontSizeToFit?: boolean;
 }) {
   const { colors } = useThemeColors();
   return (
     <Text
       numberOfLines={numberOfLines}
       onPress={onPress}
+      maxFontSizeMultiplier={maxFontSizeMultiplier}
+      adjustsFontSizeToFit={adjustsFontSizeToFit}
       suppressHighlighting
       style={[typography[variant], { color: color ?? (muted ? colors.textMuted : colors.text) }, center && { textAlign: 'center' }, style]}
     >
@@ -430,7 +439,7 @@ export function Stepper({
         color={value <= min ? colors.border : colors.primary}
         onPress={() => onChange(Math.max(min, value - step))}
       />
-      <T variant="h1" center style={{ width }}>
+      <T variant="h1" center style={{ width }} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
         {value}
       </T>
       <IconButton

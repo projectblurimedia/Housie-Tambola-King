@@ -1,5 +1,6 @@
 import React from 'react';
 import { Text, View } from 'react-native';
+import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
 /** 50 built-in avatars (no uploads → no moderation needed). Keys a1…a50 match the server check; a1–a12 never change. */
 export const AVATARS: Record<string, { emoji: string; bg: string }> = {
@@ -72,7 +73,9 @@ export function Avatar({ avatarKey, size = 40, ring }: { avatarKey: string; size
         borderColor: ring,
       }}
     >
-      <Text style={{ fontSize: size * 0.55 }}>{a.emoji}</Text>
+      <Text maxFontSizeMultiplier={FIXED_SHAPE_SCALE} style={{ fontSize: size * 0.55 }}>
+        {a.emoji}
+      </Text>
     </View>
   );
 }

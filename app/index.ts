@@ -1,3 +1,5 @@
+// First: caps very large phone font sizes before any screen imports Text (see the file).
+import './src/utils/fontScaleCap';
 import { registerRootComponent } from 'expo';
 
 import App from './App';

@@ -1,4 +1,4 @@
-import React, { memo, useEffect, useRef } from 'react';
+import React, { memo, useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import * as Haptics from 'expo-haptics';
@@ -6,6 +6,7 @@ import { COLS, Cells } from '@/game/engine/ticket';
 import { fonts, goldGradient, radius } from '@/theme';
 import { HINT_COLORS, STRIKE_COLORS, TICKET_THEMES, TicketTheme, toPalette } from '@/theme/ticketThemes';
 import { useSettingsStore } from '@/state/settingsStore';
+import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
 interface Props {
   cells: Cells;
@@ -183,7 +184,9 @@ function Cell({
           >
             <LinearGradient colors={strike.disc} style={StyleSheet.absoluteFill} />
           </Animated.View>
-          <Text style={[styles.num, { fontSize, color: struck ? '#fff' : theme.ink }]}>{n}</Text>
+          <Text maxFontSizeMultiplier={FIXED_SHAPE_SCALE} style={[styles.num, { fontSize, color: struck ? '#fff' : theme.ink }]}>
+            {n}
+          </Text>
           <Animated.View
             style={[
               styles.strike,
@@ -235,7 +238,12 @@ export const TicketView = memo(function TicketView({
     ];
   const shape = useSettingsStore((s) => s.ticketShape) ?? 'round';
   const corner = shape === 'box' ? 4 : shape === 'soft' ? 11 : 999;
-  const fontSize = compact ? 15 : 19;
+  // Numbers fit their circle at any screen width / display zoom (and ignore the phone's font
+  // size — the circle can't grow): about half the circle, never bigger than the design size.
+  const [cardWidth, setCardWidth] = useState(0);
+  const baseSize = compact ? 15 : 19;
+  const circle = cardWidth ? Math.min(54, (cardWidth - 8 - 3 - 6) / 9 - 3) : 0;
+  const fontSize = circle ? Math.max(10, Math.min(baseSize, Math.floor(circle * 0.48))) : baseSize;
 
   // One shared, gentle zoom for every hinted number on this ticket.
   const hintPulse = useRef(new Animated.Value(0)).current;
@@ -259,19 +267,22 @@ export const TicketView = memo(function TicketView({
 
   return (
     <LinearGradient colors={theme.frame} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.frame}>
-      <View style={[styles.card, { backgroundColor: theme.paper }]}>
+      <View
+        style={[styles.card, { backgroundColor: theme.paper }]}
+        onLayout={(e) => setCardWidth(Math.round(e.nativeEvent.layout.width))}
+      >
         <View style={styles.header}>
           <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.tag}>
-            <Text style={styles.tagText}>🎫 {label ?? ''}</Text>
+            <Text maxFontSizeMultiplier={FIXED_SHAPE_SCALE} style={styles.tagText}>🎫 {label ?? ''}</Text>
           </LinearGradient>
           {badge ? (
             <View style={styles.badge}>
-              <Text style={styles.badgeText} numberOfLines={1}>
+              <Text maxFontSizeMultiplier={FIXED_SHAPE_SCALE} style={styles.badgeText} numberOfLines={1}>
                 🏆 {badge}
               </Text>
             </View>
           ) : (
-            <Text style={[styles.brand, { color: theme.brand }]}>♛ HOUSIE TAMBOLA KING</Text>
+            <Text maxFontSizeMultiplier={FIXED_SHAPE_SCALE} numberOfLines={1} style={[styles.brand, { color: theme.brand }]}>♛ HOUSIE TAMBOLA KING</Text>
           )}
         </View>
         {[0, 1, 2].map((r) => (

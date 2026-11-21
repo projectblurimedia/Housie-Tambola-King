@@ -3,6 +3,7 @@ import { Animated, Easing, Pressable, StyleSheet, TextInput, View } from 'react-
 import { Ionicons } from '@expo/vector-icons';
 import { fonts, radius } from '@/theme';
 import { T } from './ui';
+import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
 const LENGTH = 4;
 
@@ -35,7 +36,7 @@ function PinBox({ digit, active, reveal, error }: { digit: string; active: boole
     <View style={[styles.box, { borderColor: border, backgroundColor: digit ? 'rgba(255,255,255,0.2)' : 'rgba(0,0,0,0.18)' }]}>
       {active ? <Animated.View pointerEvents="none" style={[styles.boxGlow, { opacity: glow }]} /> : null}
       <Animated.View style={{ opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) }] }}>
-        {digit ? reveal ? <T style={styles.digit}>{digit}</T> : <View style={styles.dot} /> : null}
+        {digit ? reveal ? <T style={styles.digit} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>{digit}</T> : <View style={styles.dot} /> : null}
       </Animated.View>
     </View>
   );

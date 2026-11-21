@@ -1,6 +1,7 @@
 import React, { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { fonts, useThemeColors } from '@/theme';
+import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
 /** The 1–90 board (10 per row) with called numbers lit up. */
 export const CalledBoard = memo(function CalledBoard({
@@ -37,6 +38,7 @@ export const CalledBoard = memo(function CalledBoard({
                 ]}
               >
                 <Text
+                  maxFontSizeMultiplier={FIXED_SHAPE_SCALE}
                   style={{
                     fontFamily: on ? fonts.bold : fonts.medium,
                     fontSize: cellSize * 0.46,

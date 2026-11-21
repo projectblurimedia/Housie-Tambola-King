@@ -534,7 +534,8 @@ const styles = StyleSheet.create({
   optIcon: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center' },
   optIconSm: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   optLine: { paddingVertical: spacing.md, borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: 'rgba(124,58,237,0.25)' },
-  grid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
+  // Two 48% tiles per row spread evenly (no fixed column gap), so they never drop to one column.
+  grid: { flexDirection: 'row', flexWrap: 'wrap', rowGap: spacing.sm, justifyContent: 'space-between' },
   item: {
     width: '48%',
     flexDirection: 'row',

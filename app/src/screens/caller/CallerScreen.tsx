@@ -17,6 +17,7 @@ import { CALLER_SPEEDS, minSpeedFor, useCallerStore } from '@/state/callerStore'
 import { showToast } from '@/state/toastStore';
 import { fonts, goldGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
+import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
 const STAGE = ['#1E0B4B', '#4C1D95', '#7C3AED'] as const;
 
@@ -90,7 +91,7 @@ function RoundButton({
     >
       <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.round}>
         <Ionicons name={icon} size={22} color="#fff" style={styles.iconCentred} />
-        <T variant="smallBold" color="#fff" style={{ includeFontPadding: false }}>
+        <T variant="smallBold" color="#fff" style={{ includeFontPadding: false }} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
           {label}
         </T>
       </LinearGradient>
