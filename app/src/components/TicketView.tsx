@@ -233,7 +233,7 @@ export const TicketView = memo(function TicketView({
     HINT_COLORS[
       toPalette(
         useSettingsStore((s) => s.hintColor),
-        'pink',
+        'purple',
       )
     ];
   const shape = useSettingsStore((s) => s.ticketShape) ?? 'round';

@@ -111,7 +111,7 @@ function PublicRoomCard({ room, onPress }: { room: PublicRoomSummary; onPress: (
             {t(`kind.${room.kind}`)}
           </T>
         </Row>
-        <View style={[styles.pubStatus, { backgroundColor: live ? '#EF4444' : 'rgba(255,255,255,0.22)' }]}>
+        <View style={[styles.pubStatus, { backgroundColor: live ? '#16A34A' : 'rgba(255,255,255,0.22)' }]}>
           {live ? <View style={styles.pubLiveDot} /> : null}
           <T variant="tiny" color="#fff">
             {live ? t('game.live') : t('status.open')}
@@ -169,7 +169,8 @@ function MyRoomRow({ room, onPress }: { room: MyRoomSummary; onPress: () => void
   const statusKey = left ? 'left' : room.status === 'ended' ? 'ended' : (room.gameStatus ?? 'open');
 
   const live = statusKey === 'running';
-  const statusColor = live ? colors.error : statusKey === 'ended' ? colors.textMuted : colors.success;
+  // Live = green, You left = red, ended = grey, waiting in the lobby = purple.
+  const statusColor = live ? colors.success : left ? colors.error : statusKey === 'ended' ? colors.textMuted : colors.primary;
   const series = room.kind === 'series';
   return (
     <Card onPress={onPress} style={styles.roomCard}>

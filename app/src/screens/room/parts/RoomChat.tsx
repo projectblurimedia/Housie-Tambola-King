@@ -1,6 +1,6 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, FlatList, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { Animated, BackHandler, Easing, FlatList, KeyboardAvoidingView, PanResponder, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -85,6 +85,26 @@ export function RoomChat({
       setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 30),
     );
   };
+  // The phone's back button closes the chat (it's a panel, not a pop-up window).
+  useEffect(() => {
+    if (!open) return;
+    const sub = BackHandler.addEventListener('hardwareBackPress', () => {
+      close();
+      return true;
+    });
+    return () => sub.remove();
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
+  const fade = useRef(new Animated.Value(0)).current;
+  const [mounted, setMounted] = useState(open);
+  useEffect(() => {
+    if (open) {
+      setMounted(true);
+      fade.setValue(0);
+      Animated.timing(fade, { toValue: 1, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: false }).start();
+    } else if (mounted) {
+      Animated.timing(fade, { toValue: 0, duration: 180, easing: Easing.in(Easing.quad), useNativeDriver: false }).start(() => setMounted(false));
+    }
+  }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => {
     if (!open) return;
     fullRef.current = false;
@@ -161,11 +181,12 @@ export function RoomChat({
         </Pressable>
       ) : null}
 
-      <Modal visible={open} transparent animationType="slide" onRequestClose={close} statusBarTranslucent>
-        <KeyboardAvoidingView behavior="padding" style={styles.backdrop}>
-          {/* The top half stays see-through: tap it to close and keep watching the game. */}
-          <Pressable style={{ flex: 1 }} onPress={close} />
-          <Animated.View style={[styles.sheet, { height: sheetH, backgroundColor: colors.surface }]}>
+      {/* Not a pop-up window: a panel inside the screen that fades in. Everything above it
+          (tickets, numbers) stays usable — chat and strike at the same time. */}
+      {mounted ? (
+        <KeyboardAvoidingView behavior="padding" style={StyleSheet.absoluteFill} pointerEvents="box-none">
+          <View style={{ flex: 1 }} pointerEvents="none" />
+          <Animated.View style={[styles.sheet, { height: sheetH, opacity: fade, backgroundColor: colors.surface }]}>
             <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
               {/* Drag handle: swipe up = full screen, down = half / close; tap = switch. */}
               <Pressable onPress={() => snap(!full)} {...drag.panHandlers} style={styles.handleArea} accessibilityLabel={t('chat.expand')}>
@@ -293,7 +314,7 @@ export function RoomChat({
             )}
           </Animated.View>
         </KeyboardAvoidingView>
-      </Modal>
+      ) : null}
     </>
   );
 }

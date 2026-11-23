@@ -32,7 +32,6 @@ import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { Me, RoomState, Ticket } from '@/types/api';
 import { StandingsList } from './StandingsList';
 import { GameSettingsSheet } from './GameSettingsSheet';
-import { GameSidePanel } from './GameSidePanel';
 import { usePauseRequestStore } from '@/state/pauseRequestStore';
 import { RoomChat, useChatUnread } from './RoomChat';
 import { gameLabel } from '@/utils/gameLabel';
@@ -374,7 +373,8 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
           paddingHorizontal: tab === 'tickets' ? spacing.sm : spacing.lg,
           paddingTop: spacing.md,
           gap: spacing.md,
-          paddingBottom: spacing.xxl + insets.bottom,
+          // Room for the floating buttons under the last card.
+          paddingBottom: spacing.xxl + insets.bottom + 72,
         }}
       >
         {tab === 'tickets' ? (
@@ -428,19 +428,51 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
         ) : null}
         {tab === 'standings' ? <StandingsList roomId={room.id} meId={me.id} /> : null}
       </ScrollView>
-      <GameSidePanel
-        isHost={isHost}
-        paused={game.paused}
-        chatEnabled={room.chatEnabled}
-        chatUnread={chatUnread}
-        pauseBusy={togglePause.isPending}
-        onChat={() => setChatOpen(true)}
-        onTogglePause={() => {
-          dismissPause();
-          togglePause.mutate();
-        }}
-        onAskPause={() => askPause.mutate()}
-      />
+      {/* Floating buttons: room chat bottom-left; pause / resume (host) or ask to pause bottom-right. */}
+      {room.chatEnabled && !chatOpen ? (
+        <Pressable
+          onPress={() => setChatOpen(true)}
+          accessibilityLabel={t('chat.title')}
+          style={({ pressed }) => [styles.fab, styles.fabLeft, { bottom: spacing.xl + insets.bottom, transform: [{ scale: pressed ? 0.94 : 1 }] }]}
+        >
+          <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.fabInner}>
+            <Ionicons name="chatbubbles" size={26} color="#fff" />
+          </LinearGradient>
+          {chatUnread > 0 ? (
+            <View style={[styles.fabBadge, { backgroundColor: colors.pink }]}>
+              <T variant="tiny" color="#fff">
+                {chatUnread > 9 ? '9+' : chatUnread}
+              </T>
+            </View>
+          ) : null}
+        </Pressable>
+      ) : null}
+      {isHost ? (
+        <Pressable
+          onPress={() => {
+            dismissPause();
+            togglePause.mutate();
+          }}
+          disabled={togglePause.isPending}
+          accessibilityLabel={game.paused ? t('game.resume') : t('game.pause')}
+          style={({ pressed }) => [styles.fab, { bottom: spacing.xl + insets.bottom, opacity: pressed || togglePause.isPending ? 0.8 : 1 }]}
+        >
+          <LinearGradient colors={game.paused ? ['#22C55E', '#15803D'] : ['#F59E0B', '#D97706']} style={styles.fabInner}>
+            <Ionicons name={game.paused ? 'play' : 'pause'} size={28} color="#fff" />
+          </LinearGradient>
+        </Pressable>
+      ) : state.myTickets.length ? (
+        <Pressable
+          onPress={() => askPause.mutate()}
+          disabled={game.paused || askPause.isPending}
+          accessibilityLabel={t('game.askPause')}
+          style={({ pressed }) => [styles.fab, { bottom: spacing.xl + insets.bottom, opacity: game.paused ? 0.45 : pressed ? 0.8 : 1 }]}
+        >
+          <LinearGradient colors={['#F59E0B', '#D97706']} style={styles.fabInner}>
+            <Ionicons name="hand-left" size={26} color="#fff" />
+          </LinearGradient>
+        </Pressable>
+      ) : null}
       {room.chatEnabled ? <RoomChat state={state} meId={me.id} showFab={false} open={chatOpen} onClose={() => setChatOpen(false)} /> : null}
       <GameSettingsSheet visible={settingsOpen} state={state} isHost={isHost} onClose={() => setSettingsOpen(false)} />
       <ConfirmModal
@@ -472,6 +504,8 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     shadowOffset: { width: 0, height: 4 },
   },
+  fabLeft: { right: undefined, left: spacing.lg },
+  fabBadge: { position: 'absolute', top: -2, right: -2, minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   fabInner: {
     width: 62,
     height: 62,

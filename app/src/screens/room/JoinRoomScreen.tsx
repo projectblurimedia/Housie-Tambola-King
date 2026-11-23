@@ -110,7 +110,7 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
                   <Pill label={t(`kind.${item.kind}`)} color={item.kind === 'series' ? colors.pink : colors.primary} />
                   <Pill
                     label={item.gameStatus === 'running' ? t('join.playing') : t('join.waiting')}
-                    color={item.gameStatus === 'running' ? colors.error : colors.success}
+                    color={item.gameStatus === 'running' ? colors.success : colors.primary}
                   />
                 </Row>
                 <T variant="h3" numberOfLines={1}>

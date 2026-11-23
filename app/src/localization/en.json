@@ -380,7 +380,8 @@
     "askPauseSent": "Asked the host to pause",
     "pauseAsked": "{{name}} asked to pause the game",
     "ballReady": "Ready",
-    "pauseNow": "Pause now"
+    "pauseNow": "Pause now",
+    "speedNote": "Applies to everyone in the room"
   },
   "winner": {
     "title": "WINNER!",

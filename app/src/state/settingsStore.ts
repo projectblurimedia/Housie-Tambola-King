@@ -67,7 +67,8 @@ export const useSettingsStore = create<SettingsState>()(
       ticketShape: 'box',
       ticketTheme: 'purple',
       strikeColor: 'purple',
-      hintColor: 'pink',
+      // Same purple as the ticket and strike colours by default.
+      hintColor: 'purple',
       lastMe: null,
       setLastMe: (lastMe) => set({ lastMe }),
       callLanguage: 'app',
@@ -86,7 +87,8 @@ export const useSettingsStore = create<SettingsState>()(
       // v1: ticket / strike / hint colours share one palette (old theme names are mapped).
       // v2: vibration off by default — switched off once for everyone (they can turn it back on).
       // v3: Box is the default number shape (switched once for everyone).
-      version: 3,
+      // v4: hint colour defaults to purple like ticket and strike (the old pink default moves once).
+      version: 4,
       migrate: (persisted, version) => {
         const s = (persisted ?? {}) as Record<string, unknown>;
         return {
@@ -95,7 +97,10 @@ export const useSettingsStore = create<SettingsState>()(
           ...(version < 3 ? { ticketShape: 'box' } : {}),
           ticketTheme: toPalette(s.ticketTheme as string | undefined, 'purple'),
           strikeColor: toPalette(s.strikeColor as string | undefined, 'purple'),
-          hintColor: toPalette(s.hintColor as string | undefined, 'pink'),
+          hintColor:
+            version < 4 && toPalette(s.hintColor as string | undefined, 'pink') === 'pink'
+              ? 'purple'
+              : toPalette(s.hintColor as string | undefined, 'purple'),
         } as never;
       },
       storage: createJSONStorage(() => AsyncStorage),
