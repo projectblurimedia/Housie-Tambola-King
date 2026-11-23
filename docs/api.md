@@ -39,6 +39,9 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `end_check` | `p_game` (host) — stop waiting for the check | – | `NOT_HOST` |
 | `set_hint_mode` | `p_room, p_mode ('next'/'struck')` (host) | – | `NOT_HOST`, `INVALID_HINT_MODE` |
 | `set_series_length` | `p_room, p_len (0 = no limit, else 2–50 and ≥ the game in the lobby)` (host, series rooms, lobby only; broadcasts `room_settings`) | – | `NOT_HOST`, `NOT_A_SERIES`, `GAME_ALREADY_STARTED`, `INVALID_SERIES_LENGTH` |
+| `request_pause` | `p_game` (member; running, not paused; once per 30 s) — broadcasts `pause_request {gameId, userId, name}` for the host | – | `NOT_IN_ROOM`, `GAME_NOT_RUNNING`, `PAUSE_ASKED_RECENTLY` |
+| `hide_room` | `p_room` — remove an ended / left room from My rooms (hidden_rooms) | – | `ROOM_STILL_OPEN` |
+| `get_chat` | `p_room` — messages since I (last) joined, with `kind` user / join / leave (join/leave lines are written by a trigger on room_members) | messages | `NOT_IN_ROOM` |
 | `set_late_claim` | `p_room, p_calls (0–90; 0 = off)` (host, not while a game is running; broadcasts `room_settings`) — Normal rule "Late claim" | – | `NOT_HOST`, `INVALID_LATE_CLAIM`, `GAME_ALREADY_STARTED` |
 | `send_chat` | `p_room, p_body (1–200 chars)` | message `{id, userId, name, avatarKey, body, at}` (also broadcast `chat`) | `CHAT_OFF`, `CHAT_TOO_FAST` (5 per 10 s), `INVALID_MESSAGE`, `NOT_IN_ROOM` |
 | `get_chat` | `p_room` | last 50 messages, oldest first | `NOT_IN_ROOM` |

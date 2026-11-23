@@ -91,7 +91,10 @@
     "howToPlayDesc": "Rules & prizes",
     "roomsCount_one": "{{count}} room",
     "roomsCount_other": "{{count}} rooms",
-    "greetingNoName": "Namaste! 🙏"
+    "greetingNoName": "Namaste! 🙏",
+    "deletesIn_one": "Deletes in {{count}} day",
+    "deletesIn_other": "Deletes in {{count}} days",
+    "deletesToday": "Deletes today"
   },
   "kind": {
     "normal": "Normal",
@@ -195,7 +198,7 @@
   "room": {
     "code": "Room code",
     "invite": "Invite",
-    "shareMessage": "Join my Housie room \"{{title}}\" on {{app}}! Room code: {{code}}",
+    "shareMessage": "Join my Housie room \"{{title}}\" on {{app}}! Tap to join: {{link}}  (Room code: {{code}})",
     "players": "Players {{count}}/{{max}}",
     "host": "Host",
     "game": "Game {{n}}",
@@ -215,7 +218,13 @@
     "removedYou": "The host removed you from this room.",
     "dismissRoom": "Dismiss room",
     "dismissConfirm": "No game has been played. Dismiss this room for everyone?",
-    "exitRoom": "Exit room"
+    "exitRoom": "Exit room",
+    "viewChat": "View room chat",
+    "quitRoom": "Quit room",
+    "removeFromMine": "Remove from My rooms",
+    "removeFromMineConfirm": "Remove \"{{title}}\" from your rooms? Your past results stay in the room for others.",
+    "removedFromMine": "Removed from your rooms",
+    "historyNote": "You are no longer in this room. Your games and results here stay visible until the room is cleaned up."
   },
   "lobby": {
     "howManyTickets": "How many tickets this game?",
@@ -356,7 +365,15 @@
     "playTab": "Play",
     "calledOf": "{{count}} / 90 called",
     "stillToWin": "Still to win",
-    "alreadyWon": "Already won"
+    "alreadyWon": "Already won",
+    "moreOptions": "More options",
+    "pauseNote": "Stops the numbers for everyone",
+    "pausedNote": "Numbers continue for everyone",
+    "askPause": "Ask host to pause",
+    "askPauseNote": "The host gets your request",
+    "askPauseSent": "Asked the host to pause",
+    "pauseAsked": "{{name}} asked to pause the game",
+    "ballReady": "Ready"
   },
   "winner": {
     "title": "WINNER!",
@@ -393,7 +410,8 @@
     "total": "Total",
     "tapBox": "Tap a box for details",
     "potOf": "Pot {{pot}}",
-    "noPrizesThisGame": "No prizes in this game."
+    "noPrizesThisGame": "No prizes in this game.",
+    "wonNetLegend": "Each box: won (top) · net = won − tickets (bottom)"
   },
   "prizes": {
     "fast_3": "Fast 3",
@@ -426,7 +444,8 @@
     "finished": "Finished",
     "cancelled": "Cancelled",
     "open": "Open",
-    "ended": "Ended"
+    "ended": "Ended",
+    "left": "You left"
   },
   "caller": {
     "title": "Caller Mode",
@@ -580,7 +599,9 @@
     "PIN_NOT_SET": "This number needs a PIN — create one.",
     "WRONG_PIN": "Wrong PIN.",
     "PIN_LOCKED": "Too many wrong tries. Try again later.",
-    "NOT_A_SERIES": "This setting is only for series rooms."
+    "NOT_A_SERIES": "This setting is only for series rooms.",
+    "PAUSE_ASKED_RECENTLY": "You asked a moment ago — the host has your request.",
+    "ROOM_STILL_OPEN": "This room is still open. Leave it first."
   },
   "update": {
     "title": "Updating app…",
@@ -660,7 +681,10 @@
     "unmute": "Unmute this player",
     "muteHint": "Tap a player to mute or unmute their messages (only for you)",
     "empty": "No messages yet — say hello!",
-    "placeholder": "Type a message…"
+    "placeholder": "Type a message…",
+    "joinedLine": "{{name}} joined the room",
+    "leftLine": "{{name}} left the room",
+    "readOnly": "This room has ended — the chat is read only."
   },
   "prizeSetup": {
     "fast": "Fast numbers",

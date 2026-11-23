@@ -1,6 +1,6 @@
 import '@/localization/i18n';
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { AppState, AppStateStatus, Platform, View } from 'react-native';
+import { AppState, AppStateStatus, Linking, Platform, View } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import * as SplashScreen from 'expo-splash-screen';
 import * as SystemUI from 'expo-system-ui';
@@ -20,6 +20,8 @@ import {
 import { SafeAreaProvider } from 'react-native-safe-area-context';
 import { createNavigationContainerRef, DarkTheme, DefaultTheme, NavigationContainer } from '@react-navigation/native';
 import { installCrashReporting, setCurrentScreen } from '@/services/crashReporter';
+import type { RootStackParamList } from '@/navigation/types';
+import { codeFromLink } from '@/constants/config';
 import { QueryClient, QueryClientProvider, focusManager } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { supabase } from '@/lib/supabase';
@@ -56,7 +58,7 @@ const APPLIED_UPDATE_KEY = 'ota-applied-update-id';
 
 // Crash reports (admin web → Crashes): installed before anything else can throw.
 installCrashReporting();
-const navigationRef = createNavigationContainerRef();
+const navigationRef = createNavigationContainerRef<RootStackParamList>();
 const trackScreen = () => setCurrentScreen(navigationRef.getCurrentRoute()?.name);
 
 const queryClient = new QueryClient({
@@ -137,6 +139,31 @@ export default function App() {
   const sessionReady = useSessionStore((s) => s.isReady);
   const settingsHydrated = useSettingsStore((s) => s.isHydrated);
   const setSession = useSessionStore((s) => s.setSession);
+  const session = useSessionStore((s) => s.session);
+
+  // Shared room links (housietambolaking://join/CODE): kept until the player is logged in and
+  // the screens are ready, then Join Room opens and sends the request by itself.
+  const [linkCode, setLinkCode] = useState<string | null>(null);
+  const [navReady, setNavReady] = useState(false);
+  useEffect(() => {
+    Linking.getInitialURL().then((url) => setLinkCode((c) => c ?? codeFromLink(url ?? null))).catch(() => undefined);
+    const sub = Linking.addEventListener('url', ({ url }) => {
+      const code = codeFromLink(url);
+      if (code) setLinkCode(code);
+    });
+    return () => sub.remove();
+  }, []);
+  useEffect(() => {
+    if (!linkCode || !session || !navReady) return;
+    // Let the logged-in screens mount first (the navigator switches stacks on login).
+    const id = setTimeout(() => {
+      if (navigationRef.isReady()) {
+        navigationRef.navigate('JoinRoom', { code: linkCode, auto: true });
+        setLinkCode(null);
+      }
+    }, 400);
+    return () => clearTimeout(id);
+  }, [linkCode, session, navReady]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', onAppStateChange);
@@ -276,7 +303,10 @@ export default function App() {
   return (
     <SafeAreaProvider>
       <QueryClientProvider client={queryClient}>
-        <NavigationContainer theme={navTheme} ref={navigationRef} onReady={trackScreen} onStateChange={trackScreen}>
+        <NavigationContainer theme={navTheme} ref={navigationRef} onReady={() => {
+            trackScreen();
+            setNavReady(true);
+          }} onStateChange={trackScreen}>
           {/* Always white: every screen has the purple gradient behind the status bar. */}
           <StatusBar style="light" />
           {IS_CONFIGURED ? <SessionGate /> : <NotConfigured />}

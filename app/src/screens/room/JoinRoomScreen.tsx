@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { FlatList, RefreshControl, View } from 'react-native';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
@@ -24,6 +24,15 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
   /** Public room waiting for "Join this room?" confirmation. */
   const [confirmRoom, setConfirmRoom] = useState<PublicRoomSummary | null>(null);
   const rooms = useQuery({ queryKey: ['publicRooms'], queryFn: roomService.listPublic, refetchInterval: 8000 });
+
+  // Opened from a shared room link: ask to join at once (then "waiting for the host" as usual).
+  const autoJoined = useRef(false);
+  useEffect(() => {
+    if (route.params?.auto && route.params.code && !autoJoined.current) {
+      autoJoined.current = true;
+      joinCode();
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const joinCode = async () => {
     setError(undefined);

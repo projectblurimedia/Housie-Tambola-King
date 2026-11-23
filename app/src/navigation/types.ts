@@ -5,8 +5,11 @@ export type RootStackParamList = {
   Welcome: undefined;
   Home: undefined;
   CreateRoom: undefined;
-  JoinRoom: { code?: string } | undefined;
+  /** auto: opened from a shared room link — send the join request straight away. */
+  JoinRoom: { code?: string; auto?: boolean } | undefined;
   Room: { roomId: string };
+  /** A room this player left: standings + game-by-game, read only. */
+  RoomHistory: { roomId: string; title: string };
   Caller: undefined;
   Profile: undefined;
   EditProfile: undefined;

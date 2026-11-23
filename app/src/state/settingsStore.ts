@@ -17,6 +17,9 @@ export const VOICE_STYLES = {
 } as const;
 export type VoiceStyle = keyof typeof VOICE_STYLES;
 
+/** Caller voice in games: the app language, English, Telugu, or both (each number twice). */
+export type CallLanguage = 'app' | 'en' | 'te' | 'both';
+
 interface SettingsState {
   language: SupportedLanguage;
   hasSelectedLanguage: boolean;
@@ -39,6 +42,8 @@ interface SettingsState {
   /** Last loaded profile, shown at once (name, avatar) while a fresh one loads or the network lags. */
   lastMe: Me | null;
   setLastMe: (me: Me | null) => void;
+  callLanguage: CallLanguage;
+  setCallLanguage: (lang: CallLanguage) => void;
   isHydrated: boolean;
   setLanguage: (language: SupportedLanguage) => void;
   confirmLanguage: () => void;
@@ -65,6 +70,8 @@ export const useSettingsStore = create<SettingsState>()(
       hintColor: 'pink',
       lastMe: null,
       setLastMe: (lastMe) => set({ lastMe }),
+      callLanguage: 'app',
+      setCallLanguage: (callLanguage) => set({ callLanguage }),
       isHydrated: false,
       setLanguage: (language) => {
         i18n.changeLanguage(language);
@@ -92,7 +99,7 @@ export const useSettingsStore = create<SettingsState>()(
         } as never;
       },
       storage: createJSONStorage(() => AsyncStorage),
-      partialize: ({ isHydrated: _h, setLanguage: _a, confirmLanguage: _b, set: _c, setVoiceFor: _d, setLastMe: _e, ...rest }) => rest,
+      partialize: ({ isHydrated: _h, setLanguage: _a, confirmLanguage: _b, set: _c, setVoiceFor: _d, setLastMe: _e, setCallLanguage: _f, ...rest }) => rest,
       onRehydrateStorage: () => (state) => {
         if (state) i18n.changeLanguage(state.language);
         useSettingsStore.setState({ isHydrated: true });

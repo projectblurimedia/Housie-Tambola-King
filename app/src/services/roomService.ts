@@ -95,6 +95,16 @@ export const roomService = {
     unwrap(await supabase.rpc('set_series_length', { p_room: roomId, p_len: len }));
   },
 
+  /** A player asks the host to pause the running game (once per 30 s). */
+  async requestPause(gameId: string): Promise<void> {
+    unwrap(await supabase.rpc('request_pause', { p_game: gameId }));
+  },
+
+  /** Remove an ended (or left) room from my "My rooms". */
+  async hideRoom(roomId: string): Promise<void> {
+    unwrap(await supabase.rpc('hide_room', { p_room: roomId }));
+  },
+
   /** Host: Normal rule "Late claim" (0 = off). */
   async setLateClaim(roomId: string, calls: number): Promise<void> {
     unwrap(await supabase.rpc('set_late_claim', { p_room: roomId, p_calls: calls }));

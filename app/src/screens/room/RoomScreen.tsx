@@ -26,7 +26,7 @@ import { playPrizeSound, soundFor } from '@/services/sounds';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RoomChat } from './parts/RoomChat';
 import { RoomSettingsCard } from './parts/RoomSettingsModal';
-import { APP_NAME } from '@/constants/config';
+import { APP_NAME, JOIN_LINK_BASE } from '@/constants/config';
 import type { PrizeType } from '@/game/engine/ticket';
 import { gameLabel } from '@/utils/gameLabel';
 import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
@@ -45,7 +45,7 @@ function RoomHeader({ state, onBack }: { state: RoomState; onBack: () => void })
   const { t } = useTranslation();
   const { room } = state;
   const share = () =>
-    Share.share({ message: t('room.shareMessage', { title: room.title, app: APP_NAME, code: room.code }) }).catch(() => undefined);
+    Share.share({ message: t('room.shareMessage', { title: room.title, app: APP_NAME, code: room.code, link: JOIN_LINK_BASE + room.code }) }).catch(() => undefined);
   const copy = () => Clipboard.setStringAsync(room.code).then(() => showToast({ variant: 'success', title: t('common.copied') }));
 
   // Just back · room code (tap to copy) · share. Everything else is in the card below.
@@ -637,21 +637,29 @@ function PlayersPanel({ state, me, onLeave, onEnd }: { state: RoomState; me: Me;
         </Card>
       ))}
       <Spacer />
-      {room.status === 'open' && isHost ? (
-        <Button
-          title={room.gamesPlayed === 0 ? t('room.dismissRoom') : room.kind === 'series' ? t('room.endSeries') : t('room.endRoom')}
-          variant="danger"
-          icon={room.gamesPlayed === 0 ? 'close-circle' : 'stop-circle'}
-          onPress={onEnd}
-        />
-      ) : null}
-      {/* The host runs the room: they end / dismiss it instead of leaving. */}
+      {/* The host runs the room: they end / dismiss it from the Play tab instead of leaving. */}
       {isHost ? null : <Button title={t('room.leave')} variant="ghost" icon="exit-outline" onPress={onLeave} />}
     </View>
   );
 }
 
-function EndedPanel({ state, me, onPlayAgain, busy }: { state: RoomState; me: Me; onPlayAgain: () => void; busy: boolean }) {
+function EndedPanel({
+  state,
+  me,
+  onPlayAgain,
+  busy,
+  onChat,
+  onQuit,
+  onRemove,
+}: {
+  state: RoomState;
+  me: Me;
+  onPlayAgain: () => void;
+  busy: boolean;
+  onChat: () => void;
+  onQuit: () => void;
+  onRemove: () => void;
+}) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const { room } = state;
@@ -674,6 +682,11 @@ function EndedPanel({ state, me, onPlayAgain, busy }: { state: RoomState; me: Me
           <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} /> {t('room.ended')}
         </T>
       )}
+      {room.chatEnabled ? <Button title={t('room.viewChat')} variant="secondary" icon="chatbubbles-outline" onPress={onChat} /> : null}
+      <Row gap={spacing.sm}>
+        <Button title={t('room.quitRoom')} variant="secondary" icon="exit-outline" onPress={onQuit} style={{ flex: 1 }} />
+        <Button title={t('room.removeFromMine')} variant="ghost" icon="trash-outline" onPress={onRemove} style={{ flex: 1 }} />
+      </Row>
     </View>
   );
 }
@@ -695,7 +708,9 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
   const me = useMe();
   const meRef = useRef<string | undefined>(undefined);
   meRef.current = me.data?.id;
-  const caller = useCaller(undefined, { stopOnUnmount: true });
+  // The caller voice can be switched mid-game from the side panel (English / Telugu / both).
+  const callLanguage = useSettingsStore((s) => s.callLanguage);
+  const caller = useCaller(callLanguage === 'app' ? undefined : callLanguage, { stopOnUnmount: true });
   const announce = useWinnerStore((s) => s.announce);
   const [tab, setTab] = useState<Tab>('game');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -745,6 +760,10 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
           break;
         case 'paused':
           showToast({ variant: e.paused ? 'error' : 'info', title: e.paused ? t('game.pausedToast') : t('game.resumedToast') });
+          break;
+        case 'pause_request':
+          // Only the host can pause; everyone else ignores it.
+          if (isHostRef.current) showToast({ variant: 'info', title: t('game.pauseAsked', { name: e.name }) });
           break;
         case 'room_settings':
           if (!isHostRef.current) showToast({ variant: 'info', title: t('lobby.settingsUpdated') });
@@ -822,6 +841,16 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
     onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
   });
 
+  const [endedChat, setEndedChat] = useState(false);
+  const removeRoom = useMutation({
+    mutationFn: () => roomService.hideRoom(roomId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['myRooms'] });
+      showToast({ variant: 'success', title: t('room.removedFromMine') });
+      navigation.goBack();
+    },
+    onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
+  });
   const playAgain = useMutation({
     mutationFn: () => roomService.playAgain(roomId),
     onSuccess: () => qc.invalidateQueries({ queryKey: roomKey(roomId) }),
@@ -871,8 +900,8 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
   if (state.game?.status === 'running') {
     return (
       <View style={{ flex: 1 }}>
+        {/* Chat, pause and voice live in the game's side panel (no floating buttons). */}
         <LiveView state={state} me={me.data} serverNow={roomQuery.serverNow} connected={roomQuery.connected} />
-        {state.room.chatEnabled ? <RoomChat state={state} meId={me.data.id} raised={isHost} /> : null}
       </View>
     );
   }
@@ -902,9 +931,13 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
         />
         {/* Host: dismiss a room made by mistake (or end it) right here on the Play tab. */}
         {isHost && !ended && tab === 'game' ? (
-          <Row style={{ justifyContent: 'flex-end', marginTop: spacing.sm }}>
-            <Button title={endLabel} small variant="danger" icon="close-circle" onPress={() => setConfirm('end')} />
-          </Row>
+          <Button
+            title={endLabel}
+            variant="danger"
+            icon={notStarted ? 'close-circle' : 'stop-circle'}
+            onPress={() => setConfirm('end')}
+            style={{ marginTop: spacing.sm }}
+          />
         ) : null}
       </View>
       <ScrollView
@@ -915,7 +948,15 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
         </View>
         {tab === 'game' ? (
           ended || !state.game ? (
-            <EndedPanel state={state} me={me.data} onPlayAgain={() => playAgain.mutate()} busy={playAgain.isPending} />
+            <EndedPanel
+              state={state}
+              me={me.data}
+              onPlayAgain={() => playAgain.mutate()}
+              busy={playAgain.isPending}
+              onChat={() => setEndedChat(true)}
+              onQuit={() => setConfirm('leave')}
+              onRemove={() => removeRoom.mutate()}
+            />
           ) : (
             <LobbyPanel
               state={state}
@@ -933,6 +974,10 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
       </ScrollView>
 
       {state.room.chatEnabled && !ended ? <RoomChat state={state} meId={me.data.id} raised={false} /> : null}
+      {/* Ended rooms: the chat history, read only. */}
+      {state.room.chatEnabled && ended ? (
+        <RoomChat state={state} meId={me.data.id} showFab={false} readOnly open={endedChat} onClose={() => setEndedChat(false)} />
+      ) : null}
       {state.game ? (
         <TicketPicker
           visible={pickerOpen && !ended && state.game.status === 'lobby' && state.game.phase === 'tickets' && state.myTickets.length === 0}

@@ -138,6 +138,11 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
   const [picked, setPicked] = useState<{ game: LedgerGame; player: StandingRow } | null>(null);
   const totals = new Map<string, number>();
   games.forEach((g) => g.rows.forEach((r) => totals.set(r.userId, (totals.get(r.userId) ?? 0) + Number(r.won))));
+  // Net = won − what the tickets cost, per game and in total (who is up / down overall).
+  const netTotals = new Map<string, number>();
+  games.forEach((g) => g.rows.forEach((r) => netTotals.set(r.userId, (netTotals.get(r.userId) ?? 0) + Number(r.net))));
+  const netText = (n: number) => `${n > 0 ? '+' : n < 0 ? '−' : ''}${formatRupees(Math.abs(Math.round(n * 100) / 100))}`;
+  const netColor = (n: number) => (n > 0 ? colors.success : n < 0 ? colors.error : colors.textMuted);
   const line = colors.border;
   // Spread the table over the card's full width; scroll sideways only when it can't fit.
   const [avail, setAvail] = useState(0);
@@ -163,6 +168,9 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
           {t('standings.tapBox')}
         </T>
       </Row>
+      <T variant="tiny" muted>
+        {t('standings.wonNetLegend')}
+      </T>
       <ScrollView horizontal showsHorizontalScrollIndicator={false} onLayout={(e) => setAvail(e.nativeEvent.layout.width)}>
         <View style={[styles.table, { borderColor: line }]}>
           <View style={styles.tr}>
@@ -197,6 +205,7 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
               {players.map((p) => {
                 const r = g.rows.find((x) => x.userId === p.userId);
                 const won = r ? Number(r.won) : null;
+                const net = r ? Number(r.net) : 0;
                 return (
                   <Pressable
                     key={p.userId}
@@ -209,9 +218,12 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
                         –
                       </T>
                     ) : (
-                      <T style={{ fontFamily: fonts.bold, fontSize: 13, color: won > 0 ? colors.success : colors.textMuted }}>
-                        {formatRupees(won)}
-                      </T>
+                      <>
+                        <T style={{ fontFamily: fonts.bold, fontSize: 13, color: won > 0 ? colors.success : colors.textMuted }}>
+                          {formatRupees(won)}
+                        </T>
+                        <T style={{ fontFamily: fonts.semibold, fontSize: 11, color: netColor(net) }}>{netText(net)}</T>
+                      </>
                     )}
                   </Pressable>
                 );
@@ -232,6 +244,9 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
                   }}
                 >
                   {formatRupees(totals.get(p.userId) ?? 0)}
+                </T>
+                <T style={{ fontFamily: fonts.bold, fontSize: 12, color: netColor(netTotals.get(p.userId) ?? 0) }}>
+                  {netText(netTotals.get(p.userId) ?? 0)}
                 </T>
               </View>
             ))}

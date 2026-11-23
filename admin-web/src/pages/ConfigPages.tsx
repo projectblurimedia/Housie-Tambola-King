@@ -15,6 +15,8 @@ async function must<T>(p: PromiseLike<{ data: T | null; error: unknown }>): Prom
 interface Settings {
   min_app_version: string;
   maintenance_message: string | null;
+  /** Ended rooms (games, wins, chat) and old chat are deleted after this many days. */
+  room_retention_days: number;
 }
 
 export function SettingsPage() {
@@ -29,6 +31,7 @@ export function SettingsPage() {
           .update({
             min_app_version: data.min_app_version,
             maintenance_message: data.maintenance_message || null,
+            room_retention_days: Math.min(365, Math.max(1, Math.round(Number(data.room_retention_days) || 30))),
             updated_at: new Date().toISOString(),
           })
           .eq('id', 1),
@@ -52,6 +55,20 @@ export function SettingsPage() {
             value={data.maintenance_message ?? ''}
             onChange={(e) => setData({ ...data, maintenance_message: e.target.value })}
           />
+        </label>
+        <label className="field">
+          Delete ended rooms and chat after (days)
+          <input
+            type="number"
+            min={1}
+            max={365}
+            value={data.room_retention_days ?? 30}
+            onChange={(e) => setData({ ...data, room_retention_days: Number(e.target.value) })}
+          />
+          <span className="muted" style={{ fontSize: 12 }}>
+            Runs every night. An ended room is deleted this many days after it ended, with its games, wins and chat; chat
+            older than this is deleted in open rooms too. Players see "Deletes in N days" on their rooms.
+          </span>
         </label>
         <div>
           <button className="btn" onClick={save}>

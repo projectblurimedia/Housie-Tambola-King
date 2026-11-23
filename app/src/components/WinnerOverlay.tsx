@@ -1,6 +1,7 @@
 import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import { Ionicons } from '@expo/vector-icons';
 import Svg, { Circle, Defs, RadialGradient, Rect, Stop } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { useWinnerStore, PrizeWin } from '@/state/winnerStore';
@@ -163,7 +164,8 @@ export function WinnerOverlay() {
 
   return (
     <Modal transparent visible animationType="fade" onRequestClose={dismiss} statusBarTranslucent>
-      <Pressable style={styles.backdrop} onPress={dismiss}>
+      {/* Taps outside don't close it — only the ✕ (or the phone's back button). */}
+      <View style={styles.backdrop}>
         {/* Big golden rays turning slowly behind the card. */}
         <View style={[StyleSheet.absoluteFill, styles.center]} pointerEvents="none">
           <Animated.View style={[styles.bigRays, { opacity: card, transform: [{ rotate: turn }] }]}>
@@ -191,6 +193,9 @@ export function WinnerOverlay() {
             style={styles.frame}
           >
             <View style={styles.inner}>
+              <Pressable onPress={dismiss} hitSlop={12} style={styles.close} accessibilityRole="button" accessibilityLabel={t('common.close')}>
+                <Ionicons name="close" size={20} color="#fff" />
+              </Pressable>
               <Svg width="100%" height="100%" style={StyleSheet.absoluteFill}>
                 <Defs>
                   <RadialGradient id="winGlow" cx="50%" cy="30%" r="80%">
@@ -288,7 +293,7 @@ export function WinnerOverlay() {
             </Animated.View>
           </LinearGradient>
         </Animated.View>
-      </Pressable>
+      </View>
     </Modal>
   );
 }
@@ -335,6 +340,20 @@ const styles = StyleSheet.create({
     textShadowRadius: 14,
   },
   titleCongrats: { fontSize: 32 },
+  close: {
+    position: 'absolute',
+    top: 10,
+    right: 10,
+    zIndex: 5,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'rgba(28,6,58,0.75)',
+    borderWidth: 1.5,
+    borderColor: 'rgba(253,230,138,0.8)',
+  },
   sparkle: { position: 'absolute', color: '#FFF3B0', textShadowColor: '#FFC400', textShadowRadius: 8 },
   glint: { position: 'absolute', top: -80, bottom: -80, width: 90 },
   prize: { fontFamily: fonts.display, fontSize: 26, color: '#fff', marginTop: spacing.sm },

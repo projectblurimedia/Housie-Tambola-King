@@ -11,7 +11,7 @@ import { loadVoices, VoicePicker } from '@/components/VoicePicker';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { MiniBall, NumberBall } from '@/components/NumberBall';
 import { Button, Chip, IconButton, Row, T } from '@/components/ui';
-import { speakNumber, useCaller } from '@/hooks/useCaller';
+import { speakNumber, useCaller, speakSample } from '@/hooks/useCaller';
 import { useSettingsStore } from '@/state/settingsStore';
 import { CALLER_SPEEDS, minSpeedFor, useCallerStore } from '@/state/callerStore';
 import { showToast } from '@/state/toastStore';
@@ -366,8 +366,8 @@ function CallerScreenInner({ navigation }: ScreenProps<'Caller'>) {
                       setVoiceLanguage('both');
                       // A sample: 35 in English, then in Telugu.
                       const { voiceByLanguage } = useSettingsStore.getState();
-                      speakNumber(35, 'en', voiceByLanguage.en);
-                      speakNumber(35, 'te', voiceByLanguage.te, 'normal', true);
+                      speakSample('en', voiceByLanguage.en);
+                      speakSample('te', voiceByLanguage.te, 'normal', true);
                     }}
                   />
                 </Row>

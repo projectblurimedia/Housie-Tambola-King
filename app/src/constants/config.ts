@@ -14,4 +14,12 @@ export const APP_NAME = 'Housie Tambola King';
 export const SUPPORT_EMAIL = 'projectblurimedia@gmail.com';
 /** Public pages served by the admin-web deployment (admin-web/public/*.html). */
 export const PRIVACY_URL = 'https://housie-tambola-king-admin.vercel.app/privacy.html';
+/** Shared room links: https://…/join/CODE opens the app (admin-web/public/join.html). */
+export const JOIN_LINK_BASE = 'https://housie-tambola-king-admin.vercel.app/join/';
+/** The app's own link type (app.json "scheme"): housietambolaking://join/CODE. */
+export function codeFromLink(url: string | null): string | null {
+  if (!url) return null;
+  const m = /\/join\/([A-Za-z0-9]{4,8})/.exec(url);
+  return m ? m[1].toUpperCase() : null;
+}
 export const TERMS_URL = 'https://housie-tambola-king-admin.vercel.app/terms.html';

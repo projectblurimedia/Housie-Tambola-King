@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Join a Housie room · Housie Tambola King</title>
+<meta name="description" content="You're invited to a Housie Tambola King room.">
+<meta property="og:title" content="Join my Housie room!">
+<meta property="og:description" content="Tap to open Housie Tambola King and join the room.">
+<link rel="icon" href="/favicon.svg">
+<style>
+  * { box-sizing: border-box; }
+  body { margin:0; min-height:100vh; display:flex; align-items:center; justify-content:center; padding:16px;
+         font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; color:#fff;
+         background:radial-gradient(circle at 50% 35%,#c026d3 0%,#7e22ce 38%,#3b0a6b 75%,#24073f 100%); }
+  .card { width:100%; max-width:380px; text-align:center; background:rgba(255,255,255,.1); border:1.5px solid rgba(253,230,138,.6);
+          border-radius:22px; padding:28px 20px; }
+  h1 { margin:6px 0 4px; font-size:24px; }
+  p { margin:0 0 18px; opacity:.9; }
+  .code { display:inline-block; font-size:30px; font-weight:800; letter-spacing:6px; color:#ffd43b; background:rgba(0,0,0,.25);
+          border-radius:14px; padding:8px 18px; margin-bottom:20px; }
+  a.btn { display:block; text-decoration:none; font-weight:700; border-radius:999px; padding:14px; margin-top:10px; }
+  .gold { background:linear-gradient(135deg,#fde68a,#f5b700,#d97706); color:#3b1d00; }
+  .ghost { border:1.5px solid rgba(255,255,255,.5); color:#fff; }
+  .small { font-size:13px; opacity:.75; margin-top:16px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div style="font-size:44px">👑</div>
+  <h1>You're invited!</h1>
+  <p>Join this Housie room in Housie Tambola King.</p>
+  <div class="code" id="code">······</div>
+  <a class="btn gold" id="open" href="#">Open the app &amp; join</a>
+  <a class="btn ghost" id="store" href="https://play.google.com/store/apps/details?id=com.housietambolaking.app">Get the app on Google Play</a>
+  <div class="small">No app yet? Install it, open it, then tap <b>Join Room</b> and type the code above.</div>
+</div>
+<script>
+  // /join/ABC123 → code ABC123 (letters and digits only).
+  var raw = (location.pathname.split('/').filter(Boolean)[1] || new URLSearchParams(location.search).get('code') || '');
+  var code = raw.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 8);
+  document.getElementById('code').textContent = code || '——';
+  var store = 'https://play.google.com/store/apps/details?id=com.housietambolaking.app';
+  // Android Chrome: open the installed app (scheme housietambolaking://), else fall back to Play.
+  var intent = 'intent://join/' + code + '#Intent;scheme=housietambolaking;package=com.housietambolaking.app;S.browser_fallback_url=' + encodeURIComponent(store) + ';end';
+  var deep = 'housietambolaking://join/' + code;
+  var isAndroid = /Android/i.test(navigator.userAgent);
+  var open = document.getElementById('open');
+  open.href = isAndroid ? intent : deep;
+  if (code && isAndroid) setTimeout(function () { location.href = intent; }, 300);
+</script>
+</body>
+</html>

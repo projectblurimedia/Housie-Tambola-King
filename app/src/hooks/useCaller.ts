@@ -40,6 +40,25 @@ export function speakNumber(n: number, language: SupportedLanguage, voiceId?: st
   });
 }
 
+/** Voice test: a sentence with no numbers, so it can't be mistaken for a real call. */
+const SAMPLE: Record<SupportedLanguage, string> = {
+  en: 'Hello! This is your Housie caller voice.',
+  te: 'నమస్తే! ఇది మీ హౌసీ కాలర్ వాయిస్.',
+};
+
+/** Plays the voice test in a language with a given voice (queue = after what's playing). */
+export function speakSample(language: SupportedLanguage, voiceId?: string | null, style: VoiceStyle = 'normal', queue = false) {
+  const { pitch, rate } = VOICE_STYLES[style] ?? VOICE_STYLES.normal;
+  if (!queue) Speech.stop();
+  Speech.speak(SAMPLE[language] ?? SAMPLE.en, {
+    language: speechLanguageCode(language),
+    voice: voiceId ?? undefined,
+    pitch,
+    rate,
+    volume: 1,
+  });
+}
+
 /**
  * Announces called numbers (voice + haptic tick). The voice language follows the app
  * language unless the caller passes its own (Caller Mode has an English/Telugu switch).

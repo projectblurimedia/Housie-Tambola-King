@@ -11,6 +11,7 @@ import { HomeScreen } from '@/screens/home/HomeScreen';
 import { CreateRoomScreen } from '@/screens/room/CreateRoomScreen';
 import { JoinRoomScreen } from '@/screens/room/JoinRoomScreen';
 import { RoomScreen } from '@/screens/room/RoomScreen';
+import { RoomHistoryScreen } from '@/screens/room/RoomHistoryScreen';
 import { CallerScreen } from '@/screens/caller/CallerScreen';
 import { ProfileScreen } from '@/screens/profile/ProfileScreen';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
@@ -39,6 +40,7 @@ export function RootNavigator() {
           <Stack.Screen name="CreateRoom" component={CreateRoomScreen} />
           <Stack.Screen name="JoinRoom" component={JoinRoomScreen} />
           <Stack.Screen name="Room" component={RoomScreen} />
+          <Stack.Screen name="RoomHistory" component={RoomHistoryScreen} />
           <Stack.Screen name="Caller" component={CallerScreen} />
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />

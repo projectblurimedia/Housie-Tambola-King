@@ -1,11 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Animated, Easing, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Animated, Easing, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
 import { Wordmark } from '@/components/Wordmark';
 import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
@@ -13,6 +13,8 @@ import { formatRupees } from '@/components/Money';
 import { Card, IconButton, Pill, Row, T } from '@/components/ui';
 import { useAppSettings, useMe } from '@/hooks/useMe';
 import { roomService } from '@/services/roomService';
+import { errorMessage } from '@/localization/errorMessages';
+import { showToast } from '@/state/toastStore';
 import { APP_NAME } from '@/constants/config';
 import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { MyRoomSummary, PublicRoomSummary } from '@/types/api';
@@ -160,10 +162,19 @@ function PublicRoomCard({ room, onPress }: { room: PublicRoomSummary; onPress: (
   );
 }
 
-function MyRoomRow({ room, onPress }: { room: MyRoomSummary; onPress: () => void }) {
+function MyRoomRow({ room, onPress, onRemove }: { room: MyRoomSummary; onPress: () => void; onRemove?: () => void }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
-  const statusKey = room.status === 'ended' ? 'ended' : (room.gameStatus ?? 'open');
+  const left = room.isMember === false;
+  const statusKey = left ? 'left' : room.status === 'ended' ? 'ended' : (room.gameStatus ?? 'open');
+  // Ended rooms are cleaned up after the admin's number of days.
+  const daysLeft = room.deleteAt ? Math.max(0, Math.ceil((new Date(room.deleteAt).getTime() - Date.now()) / 86_400_000)) : null;
+  const canRemove = !!onRemove && (left || room.status === 'ended');
+  const askRemove = () =>
+    Alert.alert(t('room.removeFromMine'), t('room.removeFromMineConfirm', { title: room.title }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('room.removeFromMine'), style: 'destructive', onPress: onRemove },
+    ]);
   const live = statusKey === 'running';
   const statusColor = live ? colors.error : statusKey === 'ended' ? colors.textMuted : colors.success;
   const series = room.kind === 'series';
@@ -203,13 +214,28 @@ function MyRoomRow({ room, onPress }: { room: MyRoomSummary; onPress: () => void
                 {room.memberCount}
               </T>
             </View>
+            {daysLeft !== null ? (
+              <View style={[styles.chip, { backgroundColor: 'rgba(220,38,38,0.1)' }]}>
+                <Ionicons name="time-outline" size={11} color={colors.error} />
+                <T variant="tiny" color={colors.error}>
+                  {daysLeft === 0 ? t('home.deletesToday') : t('home.deletesIn', { count: daysLeft })}
+                </T>
+              </View>
+            ) : null}
           </Row>
         </View>
-        <View style={[styles.statusPill, { borderColor: statusColor }]}>
-          {live ? <View style={[styles.liveDot, { backgroundColor: statusColor }]} /> : null}
-          <T variant="tiny" color={statusColor}>
-            {t(`status.${statusKey}`)}
-          </T>
+        <View style={{ alignItems: 'flex-end', gap: 6 }}>
+          <View style={[styles.statusPill, { borderColor: statusColor }]}>
+            {live ? <View style={[styles.liveDot, { backgroundColor: statusColor }]} /> : null}
+            <T variant="tiny" color={statusColor}>
+              {t(`status.${statusKey}`)}
+            </T>
+          </View>
+          {canRemove ? (
+            <Pressable onPress={askRemove} hitSlop={8} accessibilityLabel={t('room.removeFromMine')}>
+              <Ionicons name="trash-outline" size={18} color={colors.textMuted} />
+            </Pressable>
+          ) : null}
         </View>
       </Row>
     </Card>
@@ -264,7 +290,15 @@ function SectionHeading({ icon, title, count, onSeeAll }: { icon: IconName; titl
   );
 }
 
-function MyRoomsStack({ rooms, onOpen }: { rooms: MyRoomSummary[]; onOpen: (room: MyRoomSummary) => void }) {
+function MyRoomsStack({
+  rooms,
+  onOpen,
+  onRemove,
+}: {
+  rooms: MyRoomSummary[];
+  onOpen: (room: MyRoomSummary) => void;
+  onRemove: (room: MyRoomSummary) => void;
+}) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -309,7 +343,7 @@ function MyRoomsStack({ rooms, onOpen }: { rooms: MyRoomSummary[]; onOpen: (room
                 .reverse()
             : null}
           <View onLayout={(e) => setFrontHeight(e.nativeEvent.layout.height)}>
-            <MyRoomRow room={front} onPress={() => (rooms.length > 1 ? setListOpen(true) : onOpen(front))} />
+            <MyRoomRow room={front} onPress={() => (rooms.length > 1 ? setListOpen(true) : onOpen(front))} onRemove={() => onRemove(front)} />
           </View>
         </View>
       ) : (
@@ -343,6 +377,7 @@ function MyRoomsStack({ rooms, onOpen }: { rooms: MyRoomSummary[]; onOpen: (room
                   setListOpen(false);
                   onOpen(r);
                 }}
+                onRemove={() => onRemove(r)}
               />
             ))}
           </ScrollView>
@@ -361,6 +396,15 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
   const settings = useAppSettings();
   const publicRooms = useQuery({ queryKey: ['publicRooms'], queryFn: roomService.listPublic, refetchInterval: 15000 });
   const myRooms = useQuery({ queryKey: ['myRooms'], queryFn: roomService.myRooms });
+  const qc = useQueryClient();
+  const removeRoom = useMutation({
+    mutationFn: (roomId: string) => roomService.hideRoom(roomId),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['myRooms'] });
+      showToast({ variant: 'success', title: t('room.removedFromMine') });
+    },
+    onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
+  });
   // Home stays loaded behind a room: refresh "My rooms" every time we come back to it
   // (a series restarted, moved on or ended while we were inside).
   const refetchMyRooms = myRooms.refetch;
@@ -501,7 +545,13 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
           </T>
         )}
 
-        <MyRoomsStack rooms={myRooms.data ?? []} onOpen={(r) => navigation.navigate('Room', { roomId: r.id })} />
+        <MyRoomsStack
+          rooms={myRooms.data ?? []}
+          onOpen={(r) =>
+            r.isMember === false ? navigation.navigate('RoomHistory', { roomId: r.id, title: r.title }) : navigation.navigate('Room', { roomId: r.id })
+          }
+          onRemove={(r) => removeRoom.mutate(r.id)}
+        />
       </ScrollView>
       <ConfirmModal
         visible={confirmRoom !== null}

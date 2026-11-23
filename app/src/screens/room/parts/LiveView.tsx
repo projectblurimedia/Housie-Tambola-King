@@ -32,6 +32,8 @@ import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { Me, RoomState, Ticket } from '@/types/api';
 import { StandingsList } from './StandingsList';
 import { GameSettingsSheet } from './GameSettingsSheet';
+import { GameSidePanel } from './GameSidePanel';
+import { RoomChat, useChatUnread } from './RoomChat';
 import { gameLabel } from '@/utils/gameLabel';
 
 type Tab = 'tickets' | 'standings';
@@ -205,6 +207,13 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
       .map((p) => t(`prizes.${p.prize}`))
       .join(' · ');
 
+  const [chatOpen, setChatOpen] = useState(false);
+  const chatUnread = useChatUnread(room.id, me.id);
+  const askPause = useMutation({
+    mutationFn: () => roomService.requestPause(game.id),
+    onSuccess: () => showToast({ variant: 'success', title: t('game.askPauseSent') }),
+    onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
+  });
   const togglePause = useMutation({
     mutationFn: () => roomService.setPaused(game.id, !game.paused),
     onSuccess: () => qc.invalidateQueries({ queryKey: roomKey(room.id) }),
@@ -327,7 +336,7 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
           paddingHorizontal: tab === 'tickets' ? spacing.sm : spacing.lg,
           paddingTop: spacing.md,
           gap: spacing.md,
-          paddingBottom: spacing.xxl + insets.bottom + (isHost ? 64 : 0) + (room.chatEnabled ? 74 : 0),
+          paddingBottom: spacing.xxl + insets.bottom,
         }}
       >
         {tab === 'tickets' ? (
@@ -381,24 +390,17 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
         ) : null}
         {tab === 'standings' ? <StandingsList roomId={room.id} meId={me.id} /> : null}
       </ScrollView>
-      {isHost ? (
-        <Pressable
-          onPress={() => togglePause.mutate()}
-          disabled={togglePause.isPending}
-          accessibilityLabel={game.paused ? t('game.resume') : t('game.pause')}
-          style={({ pressed }) => [
-            styles.fab,
-            {
-              bottom: spacing.xl + insets.bottom,
-              opacity: pressed || togglePause.isPending ? 0.8 : 1,
-            },
-          ]}
-        >
-          <LinearGradient colors={game.paused ? ['#22C55E', '#15803D'] : ['#F59E0B', '#D97706']} style={styles.fabInner}>
-            <Ionicons name={game.paused ? 'play' : 'pause'} size={28} color="#fff" />
-          </LinearGradient>
-        </Pressable>
-      ) : null}
+      <GameSidePanel
+        isHost={isHost}
+        paused={game.paused}
+        chatEnabled={room.chatEnabled}
+        chatUnread={chatUnread}
+        pauseBusy={togglePause.isPending}
+        onChat={() => setChatOpen(true)}
+        onTogglePause={() => togglePause.mutate()}
+        onAskPause={() => askPause.mutate()}
+      />
+      {room.chatEnabled ? <RoomChat state={state} meId={me.id} showFab={false} open={chatOpen} onClose={() => setChatOpen(false)} /> : null}
       <GameSettingsSheet visible={settingsOpen} state={state} isHost={isHost} onClose={() => setSettingsOpen(false)} />
       <ConfirmModal
         visible={confirmLeave}

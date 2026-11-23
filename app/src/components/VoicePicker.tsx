@@ -5,7 +5,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { TFunction } from 'i18next';
 import { useTranslation } from 'react-i18next';
 import { useSettingsStore } from '@/state/settingsStore';
-import { speakNumber } from '@/hooks/useCaller';
+import { speakNumber, speakSample } from '@/hooks/useCaller';
 import type { SupportedLanguage } from '@/localization/languages';
 import { radius, spacing, useThemeColors } from '@/theme';
 import { Chip, T } from './ui';
@@ -111,7 +111,7 @@ export function VoicePicker({ language }: { language: SupportedLanguage }) {
 
   const choose = (id: string | null) => {
     setVoiceFor(language, id);
-    speakNumber(35, language, id);
+    speakSample(language, id);
   };
 
   if (!options) return <ActivityIndicator color={colors.primary} />;

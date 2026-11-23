@@ -111,6 +111,8 @@ export interface ChatMessage {
   avatarKey: string;
   body: string;
   at: string;
+  /** 'join' / 'leave' lines are written by the server when someone joins or leaves. */
+  kind?: 'user' | 'join' | 'leave';
 }
 
 export interface Game {
@@ -236,6 +238,11 @@ export interface MyRoomSummary {
   joinedAt: string;
   gameStatus: GameStatus | null;
   myWon: number;
+  /** false = I played here but left / was removed (history only). */
+  isMember?: boolean;
+  endedAt?: string | null;
+  /** Ended rooms are deleted on this date (admin's clean-up setting). */
+  deleteAt?: string | null;
 }
 
 export interface AppSettings {
