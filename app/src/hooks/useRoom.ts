@@ -64,7 +64,11 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
   const qc = useQueryClient();
   const onEventRef = useRef(onEvent);
   onEventRef.current = onEvent;
-  const [connected, setConnected] = useState(false);
+  const [connected, setConnected] = useState(true);
+  /** Bumped to rebuild the live channel after it errors out. */
+  const [channelTry, setChannelTry] = useState(0);
+  /** Last time anything arrived live — the channel is clearly working then. */
+  const lastLiveAt = useRef(Date.now());
   const connectedRef = useRef(false);
   connectedRef.current = connected;
   /** serverNow ≈ Date.now() + offset */
@@ -100,10 +104,18 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
     };
     const refetchStandings = () => qc.invalidateQueries({ queryKey: standingsKey(roomId) });
     const channel = supabase.channel(`room:${roomId}`, { config: { private: true } });
-    const emit = (e: RoomEvent) => onEventRef.current?.(e);
+    const emit = (e: RoomEvent) => {
+      lastLiveAt.current = Date.now();
+      onEventRef.current?.(e);
+    };
+    // "Reconnecting…" only after 5 s without a live connection AND no live messages — a brief
+    // hiccup the library recovers from by itself is never shown.
+    let offlineTimer: ReturnType<typeof setTimeout> | null = null;
+    let retryTimer: ReturnType<typeof setTimeout> | null = null;
 
     channel
       .on('broadcast', { event: 'call' }, ({ payload }) => {
+        lastLiveAt.current = Date.now();
         const p = payload as { gameId: string; n: number; index: number; nextCallAt: string };
         let applied = false;
         qc.setQueryData<RoomState>(roomKey(roomId), (old) => {
@@ -226,17 +238,38 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
       await supabase.realtime.setAuth();
       if (cancelled) return;
       channel.subscribe((status) => {
-        setConnected(status === 'SUBSCRIBED');
-        if (status === 'SUBSCRIBED') refetch(); // cover anything missed while connecting
+        if (cancelled) return;
+        if (status === 'SUBSCRIBED') {
+          if (offlineTimer) clearTimeout(offlineTimer);
+          offlineTimer = null;
+          lastLiveAt.current = Date.now();
+          setConnected(true);
+          refetch(); // cover anything missed while connecting
+          return;
+        }
+        if (!offlineTimer) {
+          offlineTimer = setTimeout(() => {
+            offlineTimer = null;
+            if (!cancelled && Date.now() - lastLiveAt.current > 5000) setConnected(false);
+          }, 5000);
+        }
+        // The channel gave up (error / timeout / closed): rebuild it shortly.
+        if ((status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') && !retryTimer) {
+          retryTimer = setTimeout(() => {
+            if (!cancelled) setChannelTry((n) => n + 1);
+          }, 3000);
+        }
       });
     })();
 
     return () => {
       cancelled = true;
       if (refetchTimer) clearTimeout(refetchTimer);
+      if (offlineTimer) clearTimeout(offlineTimer);
+      if (retryTimer) clearTimeout(retryTimer);
       supabase.removeChannel(channel);
     };
-  }, [roomId, qc]);
+  }, [roomId, qc, channelTry]);
 
   // Backup clock: if a number is overdue (late cron run), ask the server to advance.
   const gameId = query.data?.game?.id;

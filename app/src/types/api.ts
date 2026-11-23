@@ -152,6 +152,8 @@ export interface RoomState {
   joinRequests: { userId: string; name: string; avatarKey: string; requestedAt: string }[];
   /** Ready step: players who confirmed. */
   readyUserIds: string[];
+  /** Running game, host view: players who asked to pause in the last minute. */
+  pauseRequests?: { userId: string; name: string; at: string }[];
   /** Current check round: players who have checked (or claimed). */
   checkedUserIds: string[];
 }

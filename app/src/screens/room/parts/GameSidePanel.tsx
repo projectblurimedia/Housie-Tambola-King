@@ -8,10 +8,10 @@ import { T } from '@/components/ui';
 import { CallLanguage, useSettingsStore } from '@/state/settingsStore';
 import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
 
+// In a game the caller speaks one language (English + Telugu together is a Caller Mode option).
 const LANGS: { key: CallLanguage; label: string }[] = [
   { key: 'en', label: 'English' },
   { key: 'te', label: 'తెలుగు' },
-  { key: 'both', label: 'EN + తె' },
 ];
 
 function Option({
@@ -91,7 +91,7 @@ export function GameSidePanel({
   const callLanguage = useSettingsStore((s) => s.callLanguage);
   const setCallLanguage = useSettingsStore((s) => s.setCallLanguage);
   const appLanguage = useSettingsStore((s) => s.language);
-  const current: CallLanguage = callLanguage === 'app' ? appLanguage : callLanguage;
+  const current: CallLanguage = callLanguage === 'app' || callLanguage === 'both' ? appLanguage : callLanguage;
 
   useEffect(() => {
     if (!open) return;
@@ -112,7 +112,6 @@ export function GameSidePanel({
       <Pressable onPress={() => setOpen(true)} style={[styles.tab, { bottom }]} accessibilityRole="button" accessibilityLabel={t('game.moreOptions')}>
         <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.tabInner}>
           <Ionicons name="chevron-back" size={20} color="#fff" />
-          {paused ? <Ionicons name="pause" size={12} color="#FDE68A" /> : null}
         </LinearGradient>
         {chatUnread > 0 ? <View style={[styles.tabDot, { backgroundColor: colors.pink }]} /> : null}
       </Pressable>

@@ -33,6 +33,7 @@ import type { Me, RoomState, Ticket } from '@/types/api';
 import { StandingsList } from './StandingsList';
 import { GameSettingsSheet } from './GameSettingsSheet';
 import { GameSidePanel } from './GameSidePanel';
+import { usePauseRequestStore } from '@/state/pauseRequestStore';
 import { RoomChat, useChatUnread } from './RoomChat';
 import { gameLabel } from '@/utils/gameLabel';
 
@@ -208,6 +209,17 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
       .join(' · ');
 
   const [chatOpen, setChatOpen] = useState(false);
+  // Pause requests: live ones + the room state's (last minute), newer than the host's last dismiss.
+  const liveAsks = usePauseRequestStore((s) => s.items);
+  const dismissedAt = usePauseRequestStore((s) => s.dismissedAt);
+  const dismissPause = usePauseRequestStore((s) => s.dismiss);
+  const pauseAskers = [
+    ...new Set(
+      [...liveAsks.filter((r) => r.gameId === game.id), ...(state.pauseRequests ?? [])]
+        .filter((r) => new Date(r.at).getTime() > dismissedAt && r.userId !== me.id)
+        .map((r) => r.name.split(' ')[0]),
+    ),
+  ];
   const chatUnread = useChatUnread(room.id, me.id);
   const askPause = useMutation({
     mutationFn: () => roomService.requestPause(game.id),
@@ -309,6 +321,32 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
         </SafeAreaView>
       </LinearGradient>
 
+      {/* Host: players asking to pause — stays until the host pauses or closes it. */}
+      {isHost && pauseAskers.length && !game.paused ? (
+        <View style={styles.pauseAsk}>
+          <Ionicons name="hand-left" size={22} color="#fff" />
+          <View style={{ flex: 1 }}>
+            <T variant="smallBold" color="#fff" numberOfLines={2}>
+              {t('game.pauseAsked', { name: pauseAskers.join(', ') })}
+            </T>
+          </View>
+          <Pressable
+            onPress={() => {
+              dismissPause();
+              togglePause.mutate();
+            }}
+            style={({ pressed }) => [styles.pauseAskBtn, { opacity: pressed ? 0.8 : 1 }]}
+          >
+            <Ionicons name="pause" size={14} color="#9A3412" />
+            <T variant="smallBold" color="#9A3412">
+              {t('game.pauseNow')}
+            </T>
+          </Pressable>
+          <Pressable onPress={dismissPause} hitSlop={10} accessibilityLabel={t('common.close')}>
+            <Ionicons name="close" size={20} color="#fff" />
+          </Pressable>
+        </View>
+      ) : null}
       {game.paused ? (
         <Pressable
           onPress={isHost ? () => togglePause.mutate() : undefined}
@@ -397,7 +435,10 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
         chatUnread={chatUnread}
         pauseBusy={togglePause.isPending}
         onChat={() => setChatOpen(true)}
-        onTogglePause={() => togglePause.mutate()}
+        onTogglePause={() => {
+          dismissPause();
+          togglePause.mutate();
+        }}
         onAskPause={() => askPause.mutate()}
       />
       {room.chatEnabled ? <RoomChat state={state} meId={me.id} showFab={false} open={chatOpen} onClose={() => setChatOpen(false)} /> : null}
@@ -448,6 +489,15 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(253,230,138,0.6)',
   },
   bell: { fontSize: 34 },
+  pauseAsk: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#EA580C',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+  },
+  pauseAskBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFEDD5', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
   checkedBtn: { height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   checkedDone: { backgroundColor: 'rgba(22,163,74,0.28)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 },
   notice: { marginTop: spacing.sm, backgroundColor: '#FFF7D6', borderRadius: radius.md, padding: spacing.sm },

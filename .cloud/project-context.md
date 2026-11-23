@@ -43,6 +43,7 @@ _Last updated: 2026-11-19_
 - Game screen = one Play page: tickets → called board → prizes (still to win / already won); tabs are only Play + Standings. Host has Dismiss room / End room under the room tabs (Play tab). Opening balls: Luckiest Guy, one line inside the face (no "6" for 65). Home refetches My rooms on focus; the room screen invalidates it when status / game changes.
 - 2026-11-23 round (migration 20261202000001 — applied 2026-11-23): chat from join time only + join/leave lines; request_pause; past players see room history (`_can_view_room`, My rooms lists left rooms → RoomHistory screen); clean-up after `app_settings.room_retention_days` (admin Settings, default 30, nightly `purge_old_rooms`), "Deletes in N days" on My rooms; `hide_room` (Remove from My rooms). App: game side panel "‹" (chat, pause / ask to pause, caller voice EN / TE / both — `settingsStore.callLanguage`); chat = half-height sheet opening at the newest message; winner card closes only with ✕; game-by-game shows won + net; dismiss room full width on the Play tab only; ended room: view chat, quit, remove; voice test speaks a sentence; waiting ball "READY"; share = https link …/join/CODE (admin-web/public/join.html → housietambolaking://join/CODE → auto join).
 - Game-by-game shows **net only** (+ green / − red) per game and in total. My rooms cards: no delete date / trash; inside an ended room: Room chat + Delete tiles and "deletes itself in N days" (no Quit once ended). Chat sheet: drag handle — swipe up full screen, down half / close.
+- Caller voice: numbers queue (no mid-word cut-off; skip ahead only when 2 are waiting); after 6 s of quiet a short "Number" / "నంబర్" lead-in absorbs the audio wake-up (game start, after resume); no silent warm-up utterance. In-game voice = English or Telugu only (EN+TE only in Caller Mode). Pause requests: host banner (live store + get_room_state.pauseRequests, migration 20261203000001). "Reconnecting" only after 5 s with no live connection or messages; the channel is rebuilt after errors. Dismiss / End button is last on the Play tab. Room-name placeholder rotates (Family / Friends / Office / Kitty Party / Diwali Housie).
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
@@ -52,7 +53,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (22 migrations, latest 20261202000001_chat_history_cleanup) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (23 migrations, latest 20261203000001_pause_requests_in_state) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 24 unit tests; EAS project @projectblurimedia/housie-tambola-king; latest preview APK versionCode 5 (2026-11-19: PIN login, expo-audio, screen-orientation, blank native splash, new icon) via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |

@@ -166,7 +166,8 @@
     "perTicket": "per ticket — tap to type any amount",
     "quickPick": "Quick pick",
     "speedDesc": "A new number every {{count}} seconds",
-    "noLimit": "No limit"
+    "noLimit": "No limit",
+    "namePlaceholderList": "Family Housie|Friends Housie|Office Housie|Kitty Party Housie|Diwali Housie"
   },
   "join": {
     "title": "Join Room",
@@ -378,7 +379,8 @@
     "askPauseNote": "The host gets your request",
     "askPauseSent": "Asked the host to pause",
     "pauseAsked": "{{name}} asked to pause the game",
-    "ballReady": "Ready"
+    "ballReady": "Ready",
+    "pauseNow": "Pause now"
   },
   "winner": {
     "title": "WINNER!",

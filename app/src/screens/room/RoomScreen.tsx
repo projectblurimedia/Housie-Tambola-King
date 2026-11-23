@@ -22,6 +22,8 @@ import { showToast } from '@/state/toastStore';
 import { useWinnerStore } from '@/state/winnerStore';
 import { useClaimCheckStore } from '@/state/claimCheckStore';
 import { useSettingsStore } from '@/state/settingsStore';
+import { usePauseRequestStore } from '@/state/pauseRequestStore';
+import * as Haptics from 'expo-haptics';
 import { playPrizeSound, soundFor } from '@/services/sounds';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { RoomChat } from './parts/RoomChat';
@@ -515,9 +517,6 @@ function LobbyPanel({
               </T>
             </>
           )}
-          {room.kind === 'series' && game.gameNo > 1 ? (
-            <Button title={t('room.endSeries')} variant="danger" icon="flag" onPress={onEndSeries} />
-          ) : null}
         </View>
       ) : (
         <Row style={{ justifyContent: 'center' }}>
@@ -750,7 +749,7 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
   meRef.current = me.data?.id;
   // The caller voice can be switched mid-game from the side panel (English / Telugu / both).
   const callLanguage = useSettingsStore((s) => s.callLanguage);
-  const caller = useCaller(callLanguage === 'app' ? undefined : callLanguage, { stopOnUnmount: true });
+  const caller = useCaller(callLanguage === 'en' || callLanguage === 'te' ? callLanguage : undefined, { stopOnUnmount: true });
   const announce = useWinnerStore((s) => s.announce);
   const [tab, setTab] = useState<Tab>('game');
   const [pickerOpen, setPickerOpen] = useState(false);
@@ -802,8 +801,11 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
           showToast({ variant: e.paused ? 'error' : 'info', title: e.paused ? t('game.pausedToast') : t('game.resumedToast') });
           break;
         case 'pause_request':
-          // Only the host can pause; everyone else ignores it.
-          if (isHostRef.current) showToast({ variant: 'info', title: t('game.pauseAsked', { name: e.name }) });
+          // Only the host can pause: a banner on the game screen (with a buzz) until they act.
+          if (isHostRef.current) {
+            usePauseRequestStore.getState().add({ gameId: e.gameId, userId: e.userId, name: e.name, at: new Date().toISOString() });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+          }
           break;
         case 'room_settings':
           if (!isHostRef.current) showToast({ variant: 'info', title: t('lobby.settingsUpdated') });
@@ -969,16 +971,6 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
             { value: 'standings', label: t('room.tabStandings') },
           ]}
         />
-        {/* Host: dismiss a room made by mistake (or end it) right here on the Play tab. */}
-        {isHost && !ended && tab === 'game' ? (
-          <Button
-            title={endLabel}
-            variant="danger"
-            icon={notStarted ? 'close-circle' : 'stop-circle'}
-            onPress={() => setConfirm('end')}
-            style={{ marginTop: spacing.sm }}
-          />
-        ) : null}
       </View>
       <ScrollView
         contentContainerStyle={{ padding: spacing.lg, paddingBottom: spacing.xxl + insets.bottom + (state.room.chatEnabled ? 72 : 0) }}
@@ -997,13 +989,25 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
               onRemove={() => removeRoom.mutate()}
             />
           ) : (
-            <LobbyPanel
-              state={state}
-              me={me.data}
-              onOpenPicker={() => setPickerOpen(true)}
-              onEndSeries={() => setConfirm('end')}
-              onLeave={() => setConfirm('leave')}
-            />
+            <>
+              <LobbyPanel
+                state={state}
+                me={me.data}
+                onOpenPicker={() => setPickerOpen(true)}
+                onEndSeries={() => setConfirm('end')}
+                onLeave={() => setConfirm('leave')}
+              />
+              {/* Host: dismiss a room made by mistake (or end it) — last on the Play tab, same gap above and below. */}
+              {isHost ? (
+                <Button
+                  title={endLabel}
+                  variant="danger"
+                  icon={notStarted ? 'close-circle' : 'stop-circle'}
+                  onPress={() => setConfirm('end')}
+                  style={{ marginVertical: spacing.lg }}
+                />
+              ) : null}
+            </>
           )
         ) : null}
         {tab === 'players' ? (

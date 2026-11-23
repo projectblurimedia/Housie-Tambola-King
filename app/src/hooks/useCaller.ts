@@ -5,39 +5,58 @@ import { useSettingsStore, VOICE_STYLES, VoiceStyle } from '@/state/settingsStor
 import { speechLanguageCode, spokenCall } from '@/game/engine/calls';
 import type { SupportedLanguage } from '@/localization/languages';
 
-/** When a number was last spoken (to tell "still talking" from "first number after a gap"). */
+/** When the caller last finished / started speaking, and how many utterances are queued. */
 let lastSpokeAt = 0;
+let pending = 0;
 let warmedUp = false;
 
+/** After this much quiet, the phone's audio output has gone idle (game start, after a pause). */
+const IDLE_MS = 6000;
 /**
- * Android's speech engine starts cold: its very first sentence loses the beginning while it
- * wakes up. Waking it silently when a game / Caller Mode opens means number 1 is heard in full.
+ * Said before the first number after a quiet gap: waking the audio output swallows the start
+ * of the next sentence, so it swallows this short word instead of the number.
  */
+const LEAD_IN: Record<SupportedLanguage, string> = { en: 'Number', te: 'నంబర్' };
+
+/** Binds the phone's speech engine early (no sound), so the first call starts faster. */
 export function warmUpSpeech() {
   if (warmedUp) return;
   warmedUp = true;
   Speech.getAvailableVoicesAsync().catch(() => undefined);
-  try {
-    Speech.speak(' ', { volume: 0, rate: 1 });
-  } catch {
-    // No engine yet — the first real number will start it.
-  }
 }
 
-/** Speaks one number in a language, with the player's chosen voice for that language. */
+function say(text: string, opts: Speech.SpeechOptions) {
+  pending += 1;
+  const settle = () => {
+    pending = Math.max(0, pending - 1);
+    lastSpokeAt = Date.now();
+  };
+  Speech.speak(text, { ...opts, onDone: settle, onStopped: settle, onError: settle });
+}
+
+/**
+ * Speaks one number in a language, with the player's chosen voice for that language.
+ * Numbers queue up instead of cutting each other off mid-word; only if two are already waiting
+ * (very fast speeds) does it skip ahead to the newest. After a quiet gap a short "Number" goes
+ * first so the number itself is always heard in full.
+ */
 export function speakNumber(n: number, language: SupportedLanguage, voiceId?: string | null, style: VoiceStyle = 'normal', queue = false) {
   const { pitch, rate } = VOICE_STYLES[style] ?? VOICE_STYLES.normal;
-  // Cut off the previous number only if it may still be talking (fast speeds). Calling stop
-  // on an idle / just-woken engine could swallow the number we're about to say.
-  if (!queue && Date.now() - lastSpokeAt < 4000) Speech.stop();
-  lastSpokeAt = Date.now();
-  Speech.speak(spokenCall(n, language), {
+  const opts: Speech.SpeechOptions = {
     language: speechLanguageCode(language),
     voice: voiceId ?? undefined,
     pitch,
     rate,
     volume: 1,
-  });
+  };
+  if (!queue && pending >= 2) {
+    Speech.stop();
+    pending = 0;
+  }
+  const idle = !queue && pending === 0 && Date.now() - lastSpokeAt > IDLE_MS;
+  lastSpokeAt = Date.now();
+  if (idle) say(LEAD_IN[language] ?? LEAD_IN.en, opts);
+  say(spokenCall(n, language), opts);
 }
 
 /** Voice test: a sentence with no numbers, so it can't be mistaken for a real call. */

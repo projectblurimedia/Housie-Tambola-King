@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -152,6 +152,15 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   /** Seconds between called numbers (default 3; the host can change it any time). */
   const [speed, setSpeed] = useState(3);
   const [loading, setLoading] = useState(false);
+  // Example names take turns in the empty name box: Family Housie, Friends Housie, …
+  const nameIdeas = t('create.namePlaceholderList').split('|');
+  const [ideaIndex, setIdeaIndex] = useState(0);
+  useEffect(() => {
+    if (title) return;
+    const id = setInterval(() => setIdeaIndex((i) => i + 1), 2500);
+    return () => clearInterval(id);
+  }, [title]);
+  const namePlaceholder = nameIdeas[ideaIndex % nameIdeas.length];
 
   const priceNum = Number(price);
   const valid = title.trim().length > 0 && Number.isFinite(priceNum) && priceNum >= 0;
@@ -200,7 +209,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
       </LinearGradient>
 
       <Step n={1} title={t('create.roomName')} hint={t('create.nameHint')}>
-        <TextField value={title} onChangeText={setTitle} placeholder={t('create.roomNamePlaceholder')} maxLength={40} />
+        <TextField value={title} onChangeText={setTitle} placeholder={namePlaceholder} maxLength={40} />
       </Step>
 
       <Step n={2} title={t('create.type')} hint={t('create.typeHint')}>
