@@ -38,7 +38,7 @@ export function RoomHistoryScreen({ route, navigation }: ScreenProps<'RoomHistor
       </Card>
       {me.data ? <StandingsList roomId={roomId} meId={me.data.id} /> : null}
       <View style={{ marginTop: spacing.lg }}>
-        <Button title={t('room.removeFromMine')} variant="ghost" icon="trash-outline" loading={remove.isPending} onPress={() => remove.mutate()} />
+        <Button title={t('room.delete')} variant="ghost" icon="trash-outline" loading={remove.isPending} onPress={() => remove.mutate()} />
       </View>
     </Screen>
   );

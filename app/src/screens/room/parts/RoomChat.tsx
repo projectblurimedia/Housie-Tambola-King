@@ -1,6 +1,6 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { FlatList, KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { Animated, Easing, FlatList, KeyboardAvoidingView, Modal, PanResponder, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -71,6 +71,44 @@ export function RoomChat({
   const markSeen = useChatStore((s) => s.markSeen);
   const unread = useChatUnread(roomId, meId);
 
+  // Half the phone by default; swipe the handle up for full screen, down for half / close.
+  const { height: screenH } = useWindowDimensions();
+  const halfH = Math.round(screenH * 0.55);
+  const fullH = Math.round(screenH - insets.top - 8);
+  const sheetH = useRef(new Animated.Value(halfH)).current;
+  const [full, setFull] = useState(false);
+  const fullRef = useRef(false);
+  const snap = (toFull: boolean) => {
+    fullRef.current = toFull;
+    setFull(toFull);
+    Animated.timing(sheetH, { toValue: toFull ? fullH : halfH, duration: 220, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start(() =>
+      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 30),
+    );
+  };
+  useEffect(() => {
+    if (!open) return;
+    fullRef.current = false;
+    setFull(false);
+    sheetH.setValue(halfH);
+  }, [open, halfH, sheetH]);
+  const drag = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 6,
+      onPanResponderMove: (_e, g) => {
+        const base = fullRef.current ? fullH : halfH;
+        sheetH.setValue(Math.max(halfH * 0.6, Math.min(fullH, base - g.dy)));
+      },
+      onPanResponderRelease: (_e, g) => {
+        if (g.dy < -40) snap(true);
+        else if (g.dy > 60) {
+          if (fullRef.current) snap(false);
+          else close();
+        } else snap(fullRef.current);
+      },
+    }),
+  ).current;
+
+
   const chat = useChat(roomId);
   const visible = useMemo(() => (chat.data ?? []).filter((m) => !muted[m.userId]), [chat.data, muted]);
   const newest = chat.data?.length ? chat.data[chat.data.length - 1].id : 0;
@@ -127,8 +165,13 @@ export function RoomChat({
         <KeyboardAvoidingView behavior="padding" style={styles.backdrop}>
           {/* The top half stays see-through: tap it to close and keep watching the game. */}
           <Pressable style={{ flex: 1 }} onPress={close} />
-          <View style={[styles.sheet, { backgroundColor: colors.surface }]}>
-            <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.head}>
+          <Animated.View style={[styles.sheet, { height: sheetH, backgroundColor: colors.surface }]}>
+            <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+              {/* Drag handle: swipe up = full screen, down = half / close; tap = switch. */}
+              <Pressable onPress={() => snap(!full)} {...drag.panHandlers} style={styles.handleArea} accessibilityLabel={t('chat.expand')}>
+                <View style={styles.handle} />
+              </Pressable>
+              <View style={styles.head}>
               <Ionicons name="chatbubbles" size={20} color="#fff" />
               <View style={{ flex: 1 }}>
                 <T variant="h3" color="#fff">
@@ -138,7 +181,9 @@ export function RoomChat({
                   {t('chat.members', { count: state.members.length })}
                 </T>
               </View>
+              <IconButton icon={full ? 'contract' : 'expand'} color="#fff" onPress={() => snap(!full)} />
               <IconButton icon="close" color="#fff" onPress={close} />
+              </View>
             </LinearGradient>
 
             {others.length && !readOnly ? (
@@ -246,7 +291,7 @@ export function RoomChat({
                 </Pressable>
               </Row>
             )}
-          </View>
+          </Animated.View>
         </KeyboardAvoidingView>
       </Modal>
     </>
@@ -268,8 +313,10 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', top: -2, right: -2, minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
   backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
   // About half the phone: the game is still visible above.
-  sheet: { height: '55%', borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, overflow: 'hidden', elevation: 20 },
-  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: 6 },
+  sheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, overflow: 'hidden', elevation: 20 },
+  handleArea: { alignItems: 'center', paddingTop: 8, paddingBottom: 2 },
+  handle: { width: 46, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.7)' },
+  head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingBottom: 6 },
   people: { paddingVertical: 6, borderBottomWidth: StyleSheet.hairlineWidth },
   person: { alignItems: 'center' },
   muteDot: { position: 'absolute', bottom: -2, right: -2, width: 16, height: 16, borderRadius: 8, borderWidth: 2, alignItems: 'center', justifyContent: 'center' },

@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Alert, Animated, Easing, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -649,7 +649,6 @@ function EndedPanel({
   onPlayAgain,
   busy,
   onChat,
-  onQuit,
   onRemove,
 }: {
   state: RoomState;
@@ -657,13 +656,21 @@ function EndedPanel({
   onPlayAgain: () => void;
   busy: boolean;
   onChat: () => void;
-  onQuit: () => void;
   onRemove: () => void;
 }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const { room } = state;
   const lastGameId = state.game?.status === 'finished' ? state.game.id : state.previousGameId;
+  // When the nightly clean-up deletes this room (from My rooms, which carries the date).
+  const myRooms = useQuery({ queryKey: ['myRooms'], queryFn: roomService.myRooms });
+  const deleteAt = myRooms.data?.find((r) => r.id === room.id)?.deleteAt;
+  const daysLeft = deleteAt ? Math.max(0, Math.ceil((new Date(deleteAt).getTime() - Date.now()) / 86_400_000)) : null;
+  const askDelete = () =>
+    Alert.alert(t('room.delete'), t('room.deleteConfirm', { title: room.title }), [
+      { text: t('common.cancel'), style: 'cancel' },
+      { text: t('room.delete'), style: 'destructive', onPress: onRemove },
+    ]);
   return (
     <View style={{ gap: spacing.md }}>
       <LinearGradient colors={['#4C1D95', '#C026D3']} style={styles.endedBanner}>
@@ -682,12 +689,45 @@ function EndedPanel({
           <Ionicons name="information-circle-outline" size={14} color={colors.textMuted} /> {t('room.ended')}
         </T>
       )}
-      {room.chatEnabled ? <Button title={t('room.viewChat')} variant="secondary" icon="chatbubbles-outline" onPress={onChat} /> : null}
+      {/* The room has ended: no Quit — just its chat and a simple Delete (from my rooms). */}
       <Row gap={spacing.sm}>
-        <Button title={t('room.quitRoom')} variant="secondary" icon="exit-outline" onPress={onQuit} style={{ flex: 1 }} />
-        <Button title={t('room.removeFromMine')} variant="ghost" icon="trash-outline" onPress={onRemove} style={{ flex: 1 }} />
+        {room.chatEnabled ? <ActionTile icon="chatbubbles" label={t('chat.title')} tint={['#7C3AED', '#C026D3']} onPress={onChat} /> : null}
+        <ActionTile icon="trash" label={t('room.delete')} tint={['#F87171', '#DC2626']} onPress={askDelete} />
       </Row>
+      {daysLeft !== null ? (
+        <Row gap={6} style={{ justifyContent: 'center' }}>
+          <Ionicons name="time-outline" size={14} color={colors.textMuted} />
+          <T variant="tiny" muted>
+            {daysLeft === 0 ? t('room.autoDeleteToday') : t('room.autoDeleteIn', { count: daysLeft })}
+          </T>
+        </Row>
+      ) : null}
     </View>
+  );
+}
+
+/** A square-ish gradient action tile (ended room: chat / delete). */
+function ActionTile({
+  icon,
+  label,
+  tint,
+  onPress,
+}: {
+  icon: keyof typeof Ionicons.glyphMap;
+  label: string;
+  tint: [string, string];
+  onPress: () => void;
+}) {
+  const { colors } = useThemeColors();
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1, opacity: pressed ? 0.85 : 1 }]}>
+      <View style={[styles.actionTile, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <LinearGradient colors={tint} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.actionIcon}>
+          <Ionicons name={icon} size={22} color="#fff" />
+        </LinearGradient>
+        <T variant="smallBold">{label}</T>
+      </View>
+    </Pressable>
   );
 }
 
@@ -954,7 +994,6 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
               onPlayAgain={() => playAgain.mutate()}
               busy={playAgain.isPending}
               onChat={() => setEndedChat(true)}
-              onQuit={() => setConfirm('leave')}
               onRemove={() => removeRoom.mutate()}
             />
           ) : (
@@ -1004,6 +1043,8 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
 }
 
 const styles = StyleSheet.create({
+  actionTile: { alignItems: 'center', gap: 6, paddingVertical: spacing.md, borderRadius: 16, borderWidth: 1.5 },
+  actionIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
   // A little taller: room to breathe around the code.
   // Taller, with the row centred in it: equal space above and below.
   header: { paddingBottom: spacing.lg, borderBottomLeftRadius: radius.md, borderBottomRightRadius: radius.md },

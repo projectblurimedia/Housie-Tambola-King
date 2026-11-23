@@ -224,7 +224,12 @@
     "removeFromMine": "Remove from My rooms",
     "removeFromMineConfirm": "Remove \"{{title}}\" from your rooms? Your past results stay in the room for others.",
     "removedFromMine": "Removed from your rooms",
-    "historyNote": "You are no longer in this room. Your games and results here stay visible until the room is cleaned up."
+    "historyNote": "You are no longer in this room. Your games and results here stay visible until the room is cleaned up.",
+    "delete": "Delete",
+    "deleteConfirm": "Delete \"{{title}}\" from your rooms?",
+    "autoDeleteIn_one": "This room deletes itself in {{count}} day",
+    "autoDeleteIn_other": "This room deletes itself in {{count}} days",
+    "autoDeleteToday": "This room deletes itself today"
   },
   "lobby": {
     "howManyTickets": "How many tickets this game?",
@@ -411,7 +416,7 @@
     "tapBox": "Tap a box for details",
     "potOf": "Pot {{pot}}",
     "noPrizesThisGame": "No prizes in this game.",
-    "wonNetLegend": "Each box: won (top) · net = won − tickets (bottom)"
+    "wonNetLegend": "Net per game = prizes won − tickets (+ up, − down)"
   },
   "prizes": {
     "fast_3": "Fast 3",
@@ -684,7 +689,8 @@
     "placeholder": "Type a message…",
     "joinedLine": "{{name}} joined the room",
     "leftLine": "{{name}} left the room",
-    "readOnly": "This room has ended — the chat is read only."
+    "readOnly": "This room has ended — the chat is read only.",
+    "expand": "Full screen / half screen"
   },
   "prizeSetup": {
     "fast": "Fast numbers",

@@ -218,12 +218,7 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
                         –
                       </T>
                     ) : (
-                      <>
-                        <T style={{ fontFamily: fonts.bold, fontSize: 13, color: won > 0 ? colors.success : colors.textMuted }}>
-                          {formatRupees(won)}
-                        </T>
-                        <T style={{ fontFamily: fonts.semibold, fontSize: 11, color: netColor(net) }}>{netText(net)}</T>
-                      </>
+                      <T style={{ fontFamily: fonts.bold, fontSize: 13, color: netColor(net) }}>{netText(net)}</T>
                     )}
                   </Pressable>
                 );
@@ -236,16 +231,7 @@ function GameByGame({ games, players, meId }: { games: LedgerGame[]; players: St
             </View>
             {players.map((p) => (
               <View key={p.userId} style={[styles.td, { width: colPlayer, borderColor: line }]}>
-                <T
-                  style={{
-                    fontFamily: fonts.bold,
-                    fontSize: 14,
-                    color: (totals.get(p.userId) ?? 0) > 0 ? colors.success : colors.textMuted,
-                  }}
-                >
-                  {formatRupees(totals.get(p.userId) ?? 0)}
-                </T>
-                <T style={{ fontFamily: fonts.bold, fontSize: 12, color: netColor(netTotals.get(p.userId) ?? 0) }}>
+                <T style={{ fontFamily: fonts.bold, fontSize: 14, color: netColor(netTotals.get(p.userId) ?? 0) }}>
                   {netText(netTotals.get(p.userId) ?? 0)}
                 </T>
               </View>
