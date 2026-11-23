@@ -123,7 +123,8 @@ try {
   check(pub.some((r) => r.id === room.roomId), 'room listed as public');
   const jr = await friend.rpc('join_room_by_code', { p_code: room.code.toLowerCase() });
   check(jr.status === 'pending', 'friend asked to join (waits for host)');
-  await host.rpc('respond_join_request', { p_room: room.roomId, p_user: (await friend.rpc('get_me')).id, p_accept: true });
+  const friendId = (await friend.rpc('get_me')).id;
+  await host.rpc('respond_join_request', { p_room: room.roomId, p_user: friendId, p_accept: true });
   check((await friend.rpc('my_join_status', { p_room: room.roomId })).status === 'member', 'host accepted the friend');
 
   let state = await host.rpc('get_room_state', { p_room: room.roomId });
@@ -186,6 +187,27 @@ try {
   await sleep(1500);
   check(chats.includes('All the best!'), 'chat message reached the other player live');
   check((await friend.rpc('get_chat', { p_room: room.roomId })).some((m) => m.body === 'All the best!'), 'chat history saved');
+  check((await host.rpc('get_chat', { p_room: room.roomId })).some((m) => m.kind === 'join' && m.userId === friendId), 'chat shows "friend joined" line');
+
+  // A late joiner sees chat only from when they joined; leaving writes a "left" line.
+  const late = await guest('Late Joiner');
+  try {
+    await late.rpc('join_room_by_code', { p_code: room.code });
+    await host.rpc('respond_join_request', { p_room: room.roomId, p_user: (await late.rpc('get_me')).id, p_accept: true });
+    const lateChat = await late.rpc('get_chat', { p_room: room.roomId });
+    check(!lateChat.some((m) => m.body === 'All the best!'), 'late joiner does not see the older chat');
+    check(lateChat.some((m) => m.kind === 'join'), 'late joiner sees their own "joined" line');
+    await late.rpc('leave_room', { p_room: room.roomId });
+    check((await host.rpc('get_chat', { p_room: room.roomId })).some((m) => m.kind === 'leave'), 'chat shows "left" line');
+  } finally {
+    await late.rpc('delete_my_account').catch(() => undefined);
+  }
+
+  // Series games can be changed from the lobby (then back to 2 for this test).
+  await host.rpc('set_series_length', { p_room: room.roomId, p_len: 3 });
+  check((await friend.rpc('get_room_state', { p_room: room.roomId })).room.totalGames === 3, 'host changed the series to 3 games');
+  await host.rpc('set_series_length', { p_room: room.roomId, p_len: 2 });
+  check(await expectError(friend.rpc('set_series_length', { p_room: room.roomId, p_len: 4 }), 'NOT_HOST'), 'only host changes the series length');
 
   // Step 3: host sets prizes → everyone ready → the game starts by itself.
   await host.rpc('open_ready', { p_game: game1 });
@@ -194,6 +216,9 @@ try {
   check((await host.rpc('get_room_state', { p_room: room.roomId })).game.status === 'lobby', 'everyone ready — waiting for the host to start');
   await host.rpc('start_game', { p_game: game1 });
   check((await host.rpc('get_room_state', { p_room: room.roomId })).game.status === 'running', 'host started the game');
+  // A player can ask the host to pause (once per 30 s).
+  await friend.rpc('request_pause', { p_game: game1 });
+  check(await expectError(friend.rpc('request_pause', { p_game: game1 }), 'PAUSE_ASKED_RECENTLY'), 'pause request sent; a second one right away is refused');
   console.log('… game 1 started; players strike & claim as numbers arrive');
 
   const players = [host, friend];
@@ -246,6 +271,17 @@ try {
   await host.rpc('end_room', { p_room: room.roomId });
   state = await host.rpc('get_room_state', { p_room: room.roomId });
   check(state.room.status === 'ended', 'host can end the series');
+
+  // A player who leaves keeps the room's history; ended rooms show their delete date.
+  await friend.rpc('leave_room', { p_room: room.roomId });
+  let mine = await friend.rpc('get_my_rooms', {});
+  const left = mine.find((r) => r.id === room.roomId);
+  check(left && left.isMember === false, 'left room still listed in My rooms (as left)');
+  check(left && !!left.deleteAt, `ended room shows its delete date (${left?.deleteAt?.slice(0, 10)})`);
+  check((await friend.rpc('get_room_standings', { p_room: room.roomId })).length >= 2, 'left player can still read the standings');
+  await friend.rpc('hide_room', { p_room: room.roomId });
+  mine = await friend.rpc('get_my_rooms', {});
+  check(!mine.some((r) => r.id === room.roomId), 'Remove from My rooms works');
 
   await channel.unsubscribe();
 } finally {
