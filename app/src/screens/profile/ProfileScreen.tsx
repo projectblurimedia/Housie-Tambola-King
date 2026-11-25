@@ -10,7 +10,6 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import { VoicePicker } from '@/components/VoicePicker';
 import { TicketStylePicker } from '@/components/TicketStylePicker';
 import { formatRupees } from '@/components/Money';
-import { CoinsCard } from '@/components/CoinsCard';
 import { Card, Row, Screen, Segmented, Spacer, T, Toggle } from '@/components/ui';
 import { useMe } from '@/hooks/useMe';
 import { authService } from '@/services/authService';
@@ -127,12 +126,6 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
           ))}
         </Row>
       </LinearGradient>
-
-      {me.data ? (
-        <View style={{ marginTop: spacing.lg }}>
-          <CoinsCard coins={me.data.coins ?? 0} />
-        </View>
-      ) : null}
 
       <T variant="smallBold" muted style={styles.sectionLabel}>
         {t('profile.settings')}

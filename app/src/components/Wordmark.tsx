@@ -159,7 +159,7 @@ function ShinyCrown({ width }: { width: number }) {
 }
 
 /** The shiny crown's shapes in a 120 × 94 box (ids prefixed so two crowns never clash). */
-function CrownArt({ id }: { id: string }) {
+export function CrownArt({ id }: { id: string }) {
   return (
     <G>
       <Defs>

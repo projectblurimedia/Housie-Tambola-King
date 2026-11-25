@@ -140,10 +140,8 @@
     "rule_auto": "Auto",
     "rule_auto_desc": "The app strikes every called number by itself — no hints, no tapping. Everyone who completes a prize on the same number shares it",
     "untilReadyLower": "until all are ready",
-    "hintNext": "Until the next number",
-    "hintStruck": "Keep until marked",
-    "hintNextDesc": "Only the newest number glows, until the next one is called.",
-    "hintStruckDesc": "Every called number on your ticket glows until you strike it.",
+    "hintNext": "Until next number",
+    "hintStruck": "Until marked",
     "lateClaim": "Late claim",
     "lateClaimDesc": "Finished a prize but the next number came before you claimed? You can still claim it within this many numbers, and whoever finished first wins it. 0 = off",
     "lateClaimValue": "Up to {{count}} numbers",
@@ -169,16 +167,18 @@
     "noLimit": "No limit",
     "namePlaceholderList": "Family Housie|Friends Housie|Office Housie|Kitty Party Housie|Diwali Housie",
     "stakeTitle": "Play for",
-    "stakeHint": "Free, play coins, or ₹ amounts just to keep score",
+    "stakeHint": "No price, play coins, or ₹ amounts (score only)",
     "stake_free": "Free",
     "stake_coins": "Coins",
-    "stake_amount": "₹ for fun",
-    "stake_free_desc": "No price at all",
-    "stake_coins_desc": "Tickets cost coins, prizes pay coins",
-    "stake_amount_desc": "Amounts only for scoring",
-    "maxTickets": "Max tickets per player",
-    "maxTicketsDesc": "How many tickets each player may take (up to 10)",
-    "ticketPriceCoins": "Ticket price (coins)"
+    "stake_amount": "₹ Amount",
+    "stake_free_desc": "No price",
+    "stake_coins_desc": "Play coins",
+    "stake_amount_desc": "Score only",
+    "maxTickets": "Max tickets",
+    "maxTicketsDesc": "Per player, up to 10",
+    "ticketPriceCoins": "Ticket price (coins)",
+    "hintNextShort": "Newest number glows",
+    "hintStruckShort": "All called glow till struck"
   },
   "join": {
     "title": "Join Room",
@@ -640,7 +640,7 @@
     "PAUSE_ASKED_RECENTLY": "You asked a moment ago — the host has your request.",
     "ROOM_STILL_OPEN": "This room is still open. Leave it first.",
     "NOT_ENOUGH_COINS": "Not enough coins for these tickets.",
-    "INVALID_STAKE_MODE": "Choose Free, Coins or ₹ for fun.",
+    "INVALID_STAKE_MODE": "Choose Free, Coins or ₹ Amount.",
     "NOT_YOUR_MESSAGE": "You can only delete your own messages.",
     "INVALID_AMOUNT": "Enter a valid amount."
   },
@@ -765,11 +765,6 @@
   "coins": {
     "title": "Coins",
     "playOnly": "Play coins — no money value",
-    "noHistory": "No coin history yet.",
-    "reason_welcome": "Welcome coins",
-    "reason_ticket": "Tickets bought",
-    "reason_refund": "Refund",
-    "reason_prize": "Prize won",
-    "reason_admin": "Adjusted by admin"
+    "amount": "{{n}} coins"
   }
 }

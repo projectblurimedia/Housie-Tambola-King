@@ -5,6 +5,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useMutation } from '@tanstack/react-query';
+import { CoinAmount } from '@/components/CoinIcon';
 import { PrizeList } from '@/components/PrizeList';
 import { formatRupees } from '@/components/Money';
 import { Button, Chip, IconButton, Row, T } from '@/components/ui';
@@ -126,9 +127,13 @@ export function ReadySheet({
                   <T variant="tiny" muted>
                     {t('lobby.pot')}
                   </T>
-                  <T variant="h2" color={colors.goldDark}>
-                    {formatRupees(game.pot)}
-                  </T>
+                  {mode === 'coins' ? (
+                    <CoinAmount value={game.pot} variant="h2" color={colors.goldDark} />
+                  ) : (
+                    <T variant="h2" color={colors.goldDark}>
+                      {formatRupees(game.pot)}
+                    </T>
+                  )}
                 </View>
               )}
             </Row>

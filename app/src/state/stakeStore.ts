@@ -13,3 +13,4 @@ export const useStakeStore = create<{ mode: StakeMode; setMode: (m: StakeMode) =
 }));
 
 export const isFreeRoom = () => useStakeStore.getState().mode === 'free';
+export const isCoinsRoom = () => useStakeStore.getState().mode === 'coins';

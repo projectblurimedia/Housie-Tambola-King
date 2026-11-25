@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
+import { CoinAmount, CoinIcon } from '@/components/CoinIcon';
 import { Button, Card, centeredInput, Row, Screen, Spacer, Stepper, T, TextField, Toggle } from '@/components/ui';
 import { AppIcon } from '@/components/Wordmark';
 import { roomService } from '@/services/roomService';
@@ -61,26 +62,39 @@ export function ChoiceTile({
   title,
   desc,
   onPress,
+  compact,
+  iconNode,
 }: {
   active: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
   desc: string;
   onPress: () => void;
+  /** Three in a row: smaller icon and text, one-line title. */
+  compact?: boolean;
+  /** Drawn instead of the Ionicon (e.g. the crown coin). */
+  iconNode?: React.ReactNode;
 }) {
   const { colors } = useThemeColors();
+  const iconBox = compact ? styles.tileIconSm : styles.tileIcon;
   const body = (
     <>
       <Row style={{ justifyContent: 'space-between' }}>
-        <View style={[styles.tileIcon, { backgroundColor: active ? 'rgba(255,255,255,0.22)' : colors.surface }]}>
-          <Ionicons name={icon} size={20} color={active ? '#fff' : colors.primary} />
+        <View style={[iconBox, { backgroundColor: active ? 'rgba(255,255,255,0.22)' : colors.surface }]}>
+          {iconNode ?? <Ionicons name={icon} size={compact ? 16 : 20} color={active ? '#fff' : colors.primary} />}
         </View>
-        <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={22} color={active ? '#FDE68A' : colors.textMuted} />
+        <Ionicons name={active ? 'checkmark-circle' : 'ellipse-outline'} size={compact ? 18 : 22} color={active ? '#FDE68A' : colors.textMuted} />
       </Row>
-      <T variant="h3" color={active ? '#fff' : colors.text} style={{ marginTop: 8 }}>
+      <T
+        variant={compact ? 'smallBold' : 'h3'}
+        color={active ? '#fff' : colors.text}
+        style={{ marginTop: compact ? 6 : 8 }}
+        numberOfLines={1}
+        adjustsFontSizeToFit={compact}
+      >
         {title}
       </T>
-      <T variant="tiny" color={active ? 'rgba(255,255,255,0.85)' : colors.textMuted}>
+      <T variant="tiny" color={active ? 'rgba(255,255,255,0.85)' : colors.textMuted} numberOfLines={compact ? 1 : undefined}>
         {desc}
       </T>
     </>
@@ -88,11 +102,11 @@ export function ChoiceTile({
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.85 }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
       {active ? (
-        <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.tile, { borderColor: '#FDE68A' }]}>
+        <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.tile, compact && styles.tileSm, { borderColor: '#FDE68A' }]}>
           {body}
         </LinearGradient>
       ) : (
-        <View style={[styles.tile, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>{body}</View>
+        <View style={[styles.tile, compact && styles.tileSm, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>{body}</View>
       )}
     </Pressable>
   );
@@ -147,7 +161,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [maxTickets, setMaxTickets] = useState(3);
   const [rule, setRule] = useState<ClaimRule>('normal');
   const [autoHint, setAutoHint] = useState(false);
-  const [hintMode, setHintMode] = useState<HintMode>('struck');
+  const [hintMode, setHintMode] = useState<HintMode>('next');
   // Owner's defaults: check until everyone is ready (0); late claim 2 numbers.
   const [checkSeconds, setCheckSeconds] = useState(0);
   /** Normal rule "Late claim": 0 = off. */
@@ -276,7 +290,9 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
             <ChoiceTile
               key={m}
               active={stake === m}
-              icon={m === 'free' ? 'gift' : m === 'coins' ? 'logo-bitcoin' : 'cash-outline'}
+              compact
+              icon={m === 'free' ? 'gift' : 'cash-outline'}
+              iconNode={m === 'coins' ? <CoinIcon size={24} /> : undefined}
               title={t(`create.stake_${m}`)}
               desc={t(`create.stake_${m}_desc`)}
               onPress={() => setStake(m)}
@@ -284,7 +300,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
           ))}
         </Row>
         <SettingLine icon="layers" title={t('create.maxTickets')} desc={t('create.maxTicketsDesc')}>
-          <Stepper value={maxTickets} min={1} max={10} onChange={setMaxTickets} width={40} />
+          <Stepper value={maxTickets} min={1} max={10} onChange={setMaxTickets} width={36} />
         </SettingLine>
         {stake === 'free' ? null : (
         <>
@@ -295,7 +311,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.priceFrame}>
           <View style={[styles.priceInner, { backgroundColor: colors.surfaceAlt }]}>
             <Row gap={4} style={{ justifyContent: 'center' }}>
-              <T style={[styles.rupee, { color: colors.goldDark }]}>{stake === 'coins' ? '🪙' : '₹'}</T>
+              {stake === 'coins' ? <CoinIcon size={34} style={{ alignSelf: 'center' }} /> : <T style={[styles.rupee, { color: colors.goldDark }]}>₹</T>}
               <TextInput
                 value={price}
                 onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, '').slice(0, 8))}
@@ -321,13 +337,11 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
               <Pressable key={p} onPress={() => setPrice(String(p))} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.8 }]}>
                 {on ? (
                   <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.preset, { borderColor: '#FDE68A' }]}>
-                    <T variant="bodyMedium" color="#fff">
-                      {stake === 'coins' ? `🪙${p}` : `₹${p}`}
-                    </T>
+                    {stake === 'coins' ? <CoinAmount value={p} variant="bodyMedium" color="#fff" size={14} gap={3} /> : <T variant="bodyMedium" color="#fff">₹{p}</T>}
                   </LinearGradient>
                 ) : (
                   <View style={[styles.preset, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
-                    <T variant="bodyMedium">{stake === 'coins' ? `🪙${p}` : `₹${p}`}</T>
+                    {stake === 'coins' ? <CoinAmount value={p} variant="bodyMedium" size={14} gap={3} /> : <T variant="bodyMedium">₹{p}</T>}
                   </View>
                 )}
               </Pressable>
@@ -395,6 +409,8 @@ const styles = StyleSheet.create({
   badge: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   tile: { flex: 1, padding: spacing.md, borderWidth: 2, borderRadius: radius.lg, gap: 2 },
   tileIcon: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  tileSm: { padding: spacing.sm, borderRadius: radius.md },
+  tileIconSm: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
   line: { paddingVertical: 6 },
   lineIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
   priceFrame: { borderRadius: radius.lg, padding: 2.5 },

@@ -6,6 +6,7 @@ import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context'
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CoinIcon } from '@/components/CoinIcon';
 import { Avatar } from '@/components/Avatar';
 import { Wordmark } from '@/components/Wordmark';
 import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
@@ -411,12 +412,21 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
                 })()}
               />
             </View>
-            {/* Play coins balance (opens Profile, where the history is). */}
+            {/* Play coins balance: crown coin on a dark glass pill with a gold edge. */}
             {me.data ? (
-              <Pressable onPress={() => navigation.navigate('Profile')} style={styles.coinChip} accessibilityLabel={t('coins.title')}>
-                <T variant="smallBold" color="#3B1D00">
-                  {formatCoins(me.data.coins ?? 0)}
-                </T>
+              <Pressable
+                onPress={() => showToast({ variant: 'info', title: t('coins.playOnly') })}
+                style={({ pressed }) => [{ marginRight: spacing.sm }, pressed && { opacity: 0.8 }]}
+                accessibilityLabel={formatCoins(me.data.coins ?? 0)}
+              >
+                <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coinEdge}>
+                  <View style={styles.coinChip}>
+                    <CoinIcon size={24} />
+                    <T variant="smallBold" color="#FFF8D6" maxFontSizeMultiplier={1} numberOfLines={1}>
+                      {Number(me.data.coins ?? 0).toLocaleString('en-IN')}
+                    </T>
+                  </View>
+                </LinearGradient>
               </Pressable>
             ) : null}
             <Pressable onPress={() => navigation.navigate('Profile')}>
@@ -542,7 +552,8 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
-  coinChip: { backgroundColor: '#FDE68A', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, marginRight: spacing.sm, borderWidth: 1, borderColor: '#F5B700' },
+  coinEdge: { borderRadius: 999, padding: 1.5 },
+  coinChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingLeft: 3, paddingRight: 12, paddingVertical: 3, backgroundColor: '#1E0B3B' },
   qaTile: { borderRadius: 20, overflow: 'hidden' },
   qaGradient: { height: 116, padding: 14, justifyContent: 'flex-end' },
   qaWatermark: { position: 'absolute', right: -12, bottom: -14 },

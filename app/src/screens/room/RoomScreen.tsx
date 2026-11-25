@@ -6,6 +6,7 @@ import * as Clipboard from 'expo-clipboard';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { CoinAmount } from '@/components/CoinIcon';
 import { Avatar } from '@/components/Avatar';
 import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { formatRupees } from '@/components/Money';
@@ -24,7 +25,7 @@ import { useClaimCheckStore } from '@/state/claimCheckStore';
 import { useSettingsStore } from '@/state/settingsStore';
 import { usePauseRequestStore } from '@/state/pauseRequestStore';
 import { ReadySheet } from './parts/ReadySheet';
-import { isFreeRoom, useStakeStore } from '@/state/stakeStore';
+import { isCoinsRoom, isFreeRoom, useStakeStore } from '@/state/stakeStore';
 import * as Haptics from 'expo-haptics';
 import { playPrizeSound, soundFor } from '@/services/sounds';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -250,9 +251,13 @@ function PotBadge({ pot, tickets, price }: { pot: number; tickets: number; price
         <T variant="tiny" color="#FDE68A" style={{ letterSpacing: 2 }}>
           {t('lobby.pot').toUpperCase()}
         </T>
-        <T variant="h1" color="#fff" numberOfLines={1} adjustsFontSizeToFit>
-          {formatRupees(pot)}
-        </T>
+        {isCoinsRoom() ? (
+          <CoinAmount value={pot} variant="h1" color="#fff" gap={8} />
+        ) : (
+          <T variant="h1" color="#fff" numberOfLines={1} adjustsFontSizeToFit>
+            {formatRupees(pot)}
+          </T>
+        )}
       </View>
       <View style={styles.potPill}>
         <T variant="tiny" color="#FDE68A">

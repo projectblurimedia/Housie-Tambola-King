@@ -4,6 +4,7 @@ import { Animated, Easing, Modal, Pressable, StyleSheet, View } from 'react-nati
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
+import { CoinAmount } from '@/components/CoinIcon';
 import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { formatCoins, formatRupees } from '@/components/Money';
 import { Button, Row, T } from '@/components/ui';
@@ -110,9 +111,13 @@ export function TicketPicker({
                     <T variant="small" muted>
                       {t('lobby.ticketsCost', { count })}
                     </T>
-                    <T variant="h3" color={short ? colors.error : colors.goldDark}>
-                      {formatRupees(cost)}
-                    </T>
+                    {mode === 'coins' ? (
+                      <CoinAmount value={cost} variant="h3" color={short ? colors.error : colors.goldDark} />
+                    ) : (
+                      <T variant="h3" color={short ? colors.error : colors.goldDark}>
+                        {formatRupees(cost)}
+                      </T>
+                    )}
                   </View>
                 )}
                 {mode === 'coins' && coins !== undefined ? (

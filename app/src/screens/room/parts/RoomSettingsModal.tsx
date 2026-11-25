@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { CoinIcon } from '@/components/CoinIcon';
 import { Button, Card, centeredInput, Chip, IconButton, Row, Stepper, T, TextField, Toggle } from '@/components/ui';
 import { formatRupees } from '@/components/Money';
 import { roomKey } from '@/hooks/useRoom';
@@ -280,19 +281,64 @@ export function RulePicker({
   );
 }
 
-/** Auto hint kind: the newest number until the next call, or every called number until struck. */
+/**
+ * Auto hint kind as two side-by-side cards with a tiny preview: the newest number only, until
+ * the next call (default), or every called number until struck. The chosen card glows.
+ */
 export function HintModePicker({ value, onChange }: { value: HintMode; onChange: (m: HintMode) => void }) {
   const { t } = useTranslation();
+  const { colors } = useThemeColors();
+  const opts: { m: HintMode; icon: keyof typeof Ionicons.glyphMap; title: string; desc: string; glow: number[] }[] = [
+    { m: 'next', icon: 'flash', title: t('create.hintNext'), desc: t('create.hintNextShort'), glow: [2] },
+    { m: 'struck', icon: 'layers', title: t('create.hintStruck'), desc: t('create.hintStruckShort'), glow: [0, 1, 2] },
+  ];
   return (
-    <View style={{ gap: 6, marginTop: spacing.sm }}>
-      <Row gap={spacing.sm} style={{ flexWrap: 'wrap' }}>
-        <Chip label={t('create.hintNext')} active={value === 'next'} onPress={() => onChange('next')} />
-        <Chip label={t('create.hintStruck')} active={value === 'struck'} onPress={() => onChange('struck')} />
-      </Row>
-      <T variant="tiny" muted>
-        {value === 'next' ? t('create.hintNextDesc') : t('create.hintStruckDesc')}
-      </T>
-    </View>
+    <Row gap={spacing.sm} style={{ marginTop: spacing.sm, alignItems: 'stretch' }}>
+      {opts.map((o) => {
+        const on = value === o.m;
+        return (
+          <Pressable
+            key={o.m}
+            onPress={() => onChange(o.m)}
+            accessibilityRole="radio"
+            accessibilityState={{ selected: on }}
+            style={({ pressed }) => [
+              styles.hintCard,
+              { borderColor: on ? colors.primary : colors.border, backgroundColor: on ? colors.primary + '14' : colors.surface },
+              pressed && { opacity: 0.85 },
+            ]}
+          >
+            <Row style={{ justifyContent: 'space-between' }}>
+              <View style={[styles.hintIcon, { backgroundColor: on ? colors.primary : colors.surfaceAlt }]}>
+                <Ionicons name={o.icon} size={13} color={on ? '#fff' : colors.textMuted} />
+              </View>
+              <Ionicons name={on ? 'radio-button-on' : 'radio-button-off'} size={18} color={on ? colors.primary : colors.textMuted} />
+            </Row>
+            {/* Mini preview: three called numbers, the glowing ones lit. */}
+            <Row gap={4} style={{ marginTop: 6 }}>
+              {[0, 1, 2].map((i) => {
+                const lit = o.glow.includes(i);
+                return (
+                  <View
+                    key={i}
+                    style={[
+                      styles.hintDot,
+                      { backgroundColor: lit ? colors.primary : colors.surfaceAlt, borderColor: lit ? colors.primary : colors.border },
+                    ]}
+                  />
+                );
+              })}
+            </Row>
+            <T variant="smallBold" color={on ? colors.primary : colors.text} style={{ marginTop: 6 }} numberOfLines={2}>
+              {o.title}
+            </T>
+            <T variant="tiny" muted numberOfLines={2}>
+              {o.desc}
+            </T>
+          </Pressable>
+        );
+      })}
+    </Row>
   );
 }
 
@@ -397,7 +443,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
   const [rule, setRule] = useState<ClaimRule>(claimRule(room));
   const [checkSeconds, setCheckSeconds] = useState(room.checkSeconds);
   const [autoHint, setAutoHint] = useState(room.autoMark);
-  const [hintMode, setHintMode] = useState<HintMode>(room.hintMode ?? 'struck');
+  const [hintMode, setHintMode] = useState<HintMode>(room.hintMode ?? 'next');
   const [chat, setChat] = useState(room.chatEnabled);
   const [lateClaim, setLateClaim] = useState(room.lateClaimCalls ?? 0);
   const [speed, setSpeed] = useState(room.callIntervalSeconds);
@@ -419,7 +465,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
     setRule(claimRule(room));
     setCheckSeconds(room.checkSeconds);
     setAutoHint(room.autoMark);
-    setHintMode(room.hintMode ?? 'struck');
+    setHintMode(room.hintMode ?? 'next');
     setChat(room.chatEnabled);
     setLateClaim(room.lateClaimCalls ?? 0);
     setSpeed(room.callIntervalSeconds);
@@ -520,9 +566,13 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
               {stake === 'coins' ? t('create.ticketPriceCoins') : t('create.ticketPrice')}
             </T>
             <View style={[styles.priceBox, { borderColor: colors.gold, opacity: priceLocked ? 0.5 : 1 }]}>
-              <T variant="h2" color={colors.goldDark}>
-                {stake === 'coins' ? '🪙' : '₹'}
-              </T>
+              {stake === 'coins' ? (
+                <CoinIcon size={26} />
+              ) : (
+                <T variant="h2" color={colors.goldDark}>
+                  ₹
+                </T>
+              )}
               <TextInput
                 value={price}
                 editable={!priceLocked}
@@ -604,6 +654,9 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
 }
 
 const styles = StyleSheet.create({
+  hintCard: { flex: 1, borderWidth: 1.5, borderRadius: radius.md, padding: spacing.sm },
+  hintIcon: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  hintDot: { width: 14, height: 14, borderRadius: 7, borderWidth: 1 },
   group: { padding: spacing.md, borderWidth: 2 },
   // Every rule card the same size, side by side.
   ruleCard: { padding: spacing.md, borderWidth: 2, borderRadius: radius.lg },
