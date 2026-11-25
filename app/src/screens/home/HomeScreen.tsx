@@ -410,30 +410,30 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
                   const first = (me.data?.displayName ?? '').trim().split(/\s+/)[0];
                   return first ? t('home.greeting', { name: first }) : t('home.greetingNoName');
                 })()}
-                extra={
-                  // Play coins balance: crown coin on a dark glass pill with a gold edge.
-                  me.data ? (
-                    <Pressable
-                      onPress={() => showToast({ variant: 'info', title: t('coins.playOnly') })}
-                      style={({ pressed }) => pressed && { opacity: 0.8 }}
-                      accessibilityLabel={formatCoins(me.data.coins ?? 0)}
-                    >
-                      <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coinEdge}>
-                        <View style={styles.coinChip}>
-                          <CoinIcon size={18} />
-                          <T variant="tiny" color="#FFF8D6" maxFontSizeMultiplier={1} numberOfLines={1} style={{ fontFamily: fonts.bold }}>
-                            {Number(me.data.coins ?? 0).toLocaleString('en-IN')}
-                          </T>
-                        </View>
-                      </LinearGradient>
-                    </Pressable>
-                  ) : null
-                }
               />
             </View>
-            <Pressable onPress={() => navigation.navigate('Profile')}>
-              <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={46} ring="#FDE68A" />
-            </Pressable>
+            {/* Photo with the play-coins balance as a small gold pill hanging under it. */}
+            <View style={{ alignItems: 'center' }}>
+              <Pressable onPress={() => navigation.navigate('Profile')}>
+                <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={46} ring="#FDE68A" />
+              </Pressable>
+              {me.data ? (
+                <Pressable
+                  onPress={() => showToast({ variant: 'info', title: t('coins.playOnly') })}
+                  style={({ pressed }) => [{ marginTop: -8 }, pressed && { opacity: 0.8 }]}
+                  accessibilityLabel={formatCoins(me.data.coins ?? 0)}
+                >
+                  <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coinEdge}>
+                    <View style={styles.coinChip}>
+                      <CoinIcon size={15} />
+                      <T variant="tiny" color="#FFF8D6" maxFontSizeMultiplier={1} numberOfLines={1} style={{ fontFamily: fonts.bold, fontSize: 11, lineHeight: 14 }}>
+                        {compactCoins(me.data.coins ?? 0)}
+                      </T>
+                    </View>
+                  </LinearGradient>
+                </Pressable>
+              ) : null}
+            </View>
           </Row>
         </SafeAreaView>
       </LinearGradient>
@@ -553,9 +553,18 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
   );
 }
 
+/** Short balance for the small pill: 1,250 → 1.2K, 25,000 → 25K, 1,500,000 → 1.5M. */
+function compactCoins(n: number): string {
+  const v = Number(n) || 0;
+  if (v >= 1e6) return `${Math.floor(v / 1e5) / 10}M`;
+  if (v >= 1e4) return `${Math.floor(v / 1e3)}K`;
+  if (v >= 1e3) return `${Math.floor(v / 100) / 10}K`;
+  return String(Math.floor(v));
+}
+
 const styles = StyleSheet.create({
   coinEdge: { borderRadius: 999, padding: 1.5 },
-  coinChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingLeft: 2, paddingRight: 9, paddingVertical: 2, backgroundColor: '#1E0B3B' },
+  coinChip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingLeft: 1.5, paddingRight: 6, paddingVertical: 1.5, backgroundColor: '#1E0B3B' },
   qaTile: { borderRadius: 20, overflow: 'hidden' },
   qaGradient: { height: 116, padding: 14, justifyContent: 'flex-end' },
   qaWatermark: { position: 'absolute', right: -12, bottom: -14 },

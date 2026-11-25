@@ -5,13 +5,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import Svg from 'react-native-svg';
 import { Avatar } from '@/components/Avatar';
+import { CoinIcon } from '@/components/CoinIcon';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { VoicePicker } from '@/components/VoicePicker';
 import { TicketStylePicker } from '@/components/TicketStylePicker';
 import { CrownArt, Rays } from '@/components/Wordmark';
-import Svg from 'react-native-svg';
-import { Card, Row, Screen, Segmented, Spacer, T, Toggle } from '@/components/ui';
+import { Card, Row, Screen, Segmented, T, Toggle } from '@/components/ui';
 import { useMe } from '@/hooks/useMe';
 import { authService } from '@/services/authService';
 import { profileService } from '@/services/profileService';
@@ -25,12 +26,38 @@ import type { ScreenProps } from '@/navigation/types';
 
 type IconName = keyof typeof Ionicons.glyphMap;
 
-function SettingRow({ icon, label, children }: { icon: IconName; label: string; children: React.ReactNode }) {
+/** Row colours: each setting gets its own coloured tile (easy to spot at a glance). */
+const TINT = {
+  voice: '#DB2777',
+  caller: '#EA580C',
+  sounds: '#059669',
+  strike: '#0891B2',
+  haptics: '#4F46E5',
+  edit: '#7C3AED',
+  help: '#F59E0B',
+  support: '#0EA5E9',
+  terms: '#64748B',
+  privacy: '#10B981',
+};
+
+/** A section heading: small icon + uppercase title. */
+function Section({ icon, title }: { icon: IconName; title: string }) {
   const { colors } = useThemeColors();
   return (
+    <Row gap={6} style={styles.sectionLabel}>
+      <Ionicons name={icon} size={14} color={colors.primary} />
+      <T variant="smallBold" muted style={{ textTransform: 'uppercase', letterSpacing: 0.8 }}>
+        {title}
+      </T>
+    </Row>
+  );
+}
+
+function SettingRow({ icon, label, tint, children }: { icon: IconName; label: string; tint: string; children: React.ReactNode }) {
+  return (
     <Row style={styles.settingRow}>
-      <View style={[styles.settingIcon, { backgroundColor: colors.surfaceAlt }]}>
-        <Ionicons name={icon} size={18} color={colors.primary} />
+      <View style={[styles.settingIcon, { backgroundColor: tint }]}>
+        <Ionicons name={icon} size={17} color="#fff" />
       </View>
       <T variant="bodyMedium" style={{ flex: 1 }}>
         {label}
@@ -40,13 +67,12 @@ function SettingRow({ icon, label, children }: { icon: IconName; label: string; 
   );
 }
 
-function LinkRow({ icon, label, onPress, danger }: { icon: IconName; label: string; onPress: () => void; danger?: boolean }) {
+function LinkRow({ icon, label, onPress, tint, danger }: { icon: IconName; label: string; onPress: () => void; tint?: string; danger?: boolean }) {
   const { colors } = useThemeColors();
-  const tint = danger ? colors.error : colors.primary;
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [styles.settingRow, pressed && { opacity: 0.7 }]}>
-      <View style={[styles.settingIcon, { backgroundColor: danger ? 'rgba(220,38,38,0.1)' : colors.surfaceAlt }]}>
-        <Ionicons name={icon} size={18} color={tint} />
+      <View style={[styles.settingIcon, { backgroundColor: danger ? colors.error : (tint ?? colors.primary) }]}>
+        <Ionicons name={icon} size={17} color="#fff" />
       </View>
       <T variant="bodyMedium" color={danger ? colors.error : undefined} style={{ flex: 1 }}>
         {label}
@@ -87,72 +113,78 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
 
   const p = me.data;
   const phone = p?.phone ? `+${p.phone.slice(0, 2)} ${p.phone.slice(2, 7)} ${p.phone.slice(7)}` : '';
-  const stats: [IconName, string, string][] = [
-    ['game-controller', String(p?.gamesPlayed ?? 0), t('profile.gamesPlayed')],
-    ['trophy', String(p?.prizesWon ?? 0), t('profile.prizesWon')],
+  const stats: { key: string; icon: IconName | 'coin'; value: string; label: string }[] = [
+    { key: 'games', icon: 'game-controller', value: String(p?.gamesPlayed ?? 0), label: t('profile.gamesPlayed') },
+    { key: 'prizes', icon: 'trophy', value: String(p?.prizesWon ?? 0), label: t('profile.prizesWon') },
+    { key: 'coins', icon: 'coin', value: Number(p?.coins ?? 0).toLocaleString('en-IN'), label: t('coins.title') },
   ];
 
   return (
     <Screen scroll title={t('profile.title')}>
-      {/* Profile card: light rays + soft glows behind a crowned, gold-ringed photo; name, phone,
-          then the two stats on one glass bar. */}
-      <LinearGradient colors={['#2A0A4F', '#5B21B6', '#7C3AED']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
-        <View style={styles.rays} pointerEvents="none">
-          <Rays size={560} opacity={0.08} count={22} />
-        </View>
-        <View style={[styles.glow, { top: -60, right: -50, backgroundColor: 'rgba(253,230,138,0.18)' }]} pointerEvents="none" />
-        <View style={[styles.glow, { bottom: -70, left: -60, backgroundColor: 'rgba(236,72,153,0.16)' }]} pointerEvents="none" />
-        <LinearGradient colors={['rgba(255,241,168,0.9)', 'rgba(245,183,0,0.35)', 'rgba(255,241,168,0.9)']} style={styles.goldEdge} pointerEvents="none" />
-
-        <View style={styles.crown} pointerEvents="none">
-          <Svg width={46} height={36} viewBox="0 0 120 94">
-            <CrownArt id="pf-cr" jewels={false} />
-          </Svg>
-        </View>
+      {/* Profile card: a gradient cover with soft rays, the gold-ringed photo overlapping it,
+          name + phone, an Edit button, then three stat tiles (games, prizes, coins). */}
+      <View style={[styles.profileCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <LinearGradient colors={['#2A0A4F', '#6D28D9', '#A855F7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.cover}>
+          <View style={styles.rays} pointerEvents="none">
+            <Rays size={520} opacity={0.1} count={22} />
+          </View>
+          <View style={styles.coverCrown} pointerEvents="none">
+            <Svg width={34} height={27} viewBox="0 0 120 94">
+              <CrownArt id="pf-cr" jewels={false} />
+            </Svg>
+          </View>
+        </LinearGradient>
         <View style={styles.avatarWrap}>
           <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400', '#FFE27A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ring}>
-            <Avatar avatarKey={p?.avatarKey ?? 'a1'} size={96} />
+            <View style={[styles.ringGap, { backgroundColor: colors.surface }]}>
+              <Avatar avatarKey={p?.avatarKey ?? 'a1'} size={92} />
+            </View>
           </LinearGradient>
-          <Pressable style={styles.editBadge} onPress={() => navigation.navigate('EditProfile')} hitSlop={8} accessibilityLabel={t('profile.edit')}>
-            <Ionicons name="pencil" size={14} color="#3B1D00" />
+        </View>
+        <View style={{ alignItems: 'center', paddingHorizontal: spacing.md }}>
+          <T style={[styles.name, { color: colors.text }]} center numberOfLines={2}>
+            {p?.displayName}
+          </T>
+          {phone ? (
+            <Row gap={5} style={{ marginTop: 2 }}>
+              <Ionicons name="call" size={12} color={colors.textMuted} />
+              <T variant="small" muted>
+                {phone}
+              </T>
+            </Row>
+          ) : null}
+          <Pressable
+            onPress={() => navigation.navigate('EditProfile')}
+            style={({ pressed }) => [styles.editBtn, { borderColor: colors.primary }, pressed && { opacity: 0.7 }]}
+          >
+            <Ionicons name="pencil" size={13} color={colors.primary} />
+            <T variant="smallBold" color={colors.primary}>
+              {t('profile.edit')}
+            </T>
           </Pressable>
         </View>
-        <T style={styles.name} center numberOfLines={2}>
-          {p?.displayName}
-        </T>
-        {phone ? (
-          <View style={styles.phonePill}>
-            <Ionicons name="call" size={12} color="#FDE68A" />
-            <T variant="smallBold" color="#fff">
-              {phone}
-            </T>
-          </View>
-        ) : null}
-        <View style={styles.statBar}>
-          {stats.map(([icon, value, label], i) => (
-            <React.Fragment key={label}>
-              {i > 0 ? <View style={styles.statDivider} /> : null}
-              <View style={styles.stat}>
-                <LinearGradient colors={['#FFF1A8', '#F5B700']} style={styles.statIcon}>
-                  <Ionicons name={icon} size={16} color="#3B1D00" />
+        <Row gap={spacing.sm} style={{ padding: spacing.md }}>
+          {stats.map((s) => (
+            <View key={s.key} style={[styles.stat, { backgroundColor: colors.surfaceAlt }]}>
+              {s.icon === 'coin' ? (
+                <CoinIcon size={30} />
+              ) : (
+                <LinearGradient colors={s.icon === 'trophy' ? ['#FFE27A', '#E9A400'] : ['#A78BFA', '#6D28D9']} style={styles.statIcon}>
+                  <Ionicons name={s.icon} size={15} color={s.icon === 'trophy' ? '#3B1D00' : '#fff'} />
                 </LinearGradient>
-                <View style={{ flexShrink: 1 }}>
-                  <T variant="h2" color="#fff" numberOfLines={1}>
-                    {value}
-                  </T>
-                  <T variant="tiny" color="rgba(255,255,255,0.75)" numberOfLines={1}>
-                    {label}
-                  </T>
-                </View>
-              </View>
-            </React.Fragment>
+              )}
+              <T variant="h3" numberOfLines={1} adjustsFontSizeToFit style={{ marginTop: 6 }}>
+                {s.value}
+              </T>
+              <T variant="tiny" muted numberOfLines={1}>
+                {s.label}
+              </T>
+            </View>
           ))}
-        </View>
-      </LinearGradient>
+        </Row>
+      </View>
 
-      <T variant="smallBold" muted style={styles.sectionLabel}>
-        {t('profile.settings')}
-      </T>
+      <Section icon="color-palette" title={t('profile.lookTitle')} />
       <Card style={{ gap: spacing.sm }}>
         <T variant="smallBold" muted>
           {t('profile.language')}
@@ -177,45 +209,48 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
             { value: 'dark', label: t('profile.themeDark') },
           ]}
         />
-        <Spacer h={spacing.xs} />
-        <SettingRow icon="volume-high" label={t('profile.voice')}>
+      </Card>
+
+      <Section icon="volume-high" title={t('profile.soundVoice')} />
+      <Card style={{ paddingVertical: spacing.xs }}>
+        <SettingRow icon="volume-high" label={t('profile.voice')} tint={TINT.voice}>
           <Toggle value={settings.voice} onValueChange={(voice) => settings.set({ voice })} />
         </SettingRow>
         <Pressable onPress={() => setVoicesOpen((v) => !v)}>
-          <SettingRow icon="mic" label={t('profile.callerVoice')}>
+          <SettingRow icon="mic" label={t('profile.callerVoice')} tint={TINT.caller}>
             <Ionicons name={voicesOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
           </SettingRow>
         </Pressable>
         {voicesOpen ? <VoicePicker language={settings.language} /> : null}
-        <SettingRow icon="musical-notes" label={t('profile.sounds')}>
+        <SettingRow icon="musical-notes" label={t('profile.sounds')} tint={TINT.sounds}>
           <Toggle value={settings.sounds} onValueChange={(sounds) => settings.set({ sounds })} />
         </SettingRow>
-        <SettingRow icon="radio-button-on" label={t('profile.strikeSound')}>
+        <SettingRow icon="radio-button-on" label={t('profile.strikeSound')} tint={TINT.strike}>
           <Toggle value={settings.strikeSound} onValueChange={(strikeSound) => settings.set({ strikeSound })} />
         </SettingRow>
-        <SettingRow icon="phone-portrait" label={t('profile.haptics')}>
+        <SettingRow icon="phone-portrait" label={t('profile.haptics')} tint={TINT.haptics}>
           <Toggle value={settings.haptics} onValueChange={(haptics) => settings.set({ haptics })} />
         </SettingRow>
       </Card>
 
-      <T variant="smallBold" muted style={styles.sectionLabel}>
-        {t('ticketStyle.title')}
-      </T>
+      <Section icon="grid" title={t('ticketStyle.title')} />
       <Card>
         <TicketStylePicker />
       </Card>
 
-      <T variant="smallBold" muted style={styles.sectionLabel}>
-        {t('profile.more')}
-      </T>
+      <Section icon="help-buoy" title={t('profile.help')} />
       <Card style={{ paddingVertical: spacing.xs }}>
-        <LinkRow icon="create-outline" label={t('profile.edit')} onPress={() => navigation.navigate('EditProfile')} />
-        <LinkRow icon="help-circle-outline" label={t('profile.howToPlay')} onPress={() => navigation.navigate('HowToPlay')} />
-        <LinkRow icon="mail-outline" label={t('profile.support')} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)} />
-        <LinkRow icon="document-text-outline" label={t('profile.terms')} onPress={() => Linking.openURL(TERMS_URL)} />
-        <LinkRow icon="lock-closed-outline" label={t('profile.privacy')} onPress={() => Linking.openURL(PRIVACY_URL)} />
-        <LinkRow icon="log-out-outline" label={t('profile.logout')} onPress={() => setConfirm('logout')} danger />
-        <LinkRow icon="trash-outline" label={t('profile.deleteAccount')} onPress={() => setConfirm('delete')} danger />
+        <LinkRow icon="book" label={t('profile.howToPlay')} tint={TINT.help} onPress={() => navigation.navigate('HowToPlay')} />
+        <LinkRow icon="mail" label={t('profile.support')} tint={TINT.support} onPress={() => Linking.openURL(`mailto:${SUPPORT_EMAIL}`)} />
+        <LinkRow icon="document-text" label={t('profile.terms')} tint={TINT.terms} onPress={() => Linking.openURL(TERMS_URL)} />
+        <LinkRow icon="lock-closed" label={t('profile.privacy')} tint={TINT.privacy} onPress={() => Linking.openURL(PRIVACY_URL)} />
+      </Card>
+
+      <Section icon="person-circle" title={t('profile.account')} />
+      <Card style={{ paddingVertical: spacing.xs }}>
+        <LinkRow icon="create" label={t('profile.edit')} tint={TINT.edit} onPress={() => navigation.navigate('EditProfile')} />
+        <LinkRow icon="log-out" label={t('profile.logout')} onPress={() => setConfirm('logout')} danger />
+        <LinkRow icon="trash" label={t('profile.deleteAccount')} onPress={() => setConfirm('delete')} danger />
       </Card>
       <T variant="tiny" muted center style={{ marginTop: spacing.lg }}>
         {t('profile.version', { version: Constants.expoConfig?.version ?? '1.0.0' })}
@@ -236,54 +271,27 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: radius.xl, padding: spacing.lg, paddingTop: spacing.md, alignItems: 'center', overflow: 'hidden' },
-  rays: { position: 'absolute', top: -170, left: '50%', marginLeft: -280 },
-  glow: { position: 'absolute', width: 200, height: 200, borderRadius: 100 },
-  goldEdge: { position: 'absolute', left: 0, right: 0, top: 0, height: 2 },
-  crown: { marginBottom: -10, zIndex: 2, transform: [{ rotate: '-8deg' }] },
-  avatarWrap: {},
-  ring: { padding: 3.5, borderRadius: 60 },
-  editBadge: {
-    position: 'absolute',
-    right: 0,
-    bottom: 2,
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-    backgroundColor: '#FDE68A',
-    borderWidth: 2,
-    borderColor: '#fff',
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  name: { fontFamily: fonts.bold, fontSize: 23, lineHeight: 31, color: '#fff', marginTop: spacing.md, paddingHorizontal: spacing.sm },
-  phonePill: {
+  profileCard: { borderRadius: radius.xl, borderWidth: 1, overflow: 'hidden' },
+  cover: { height: 104, overflow: 'hidden', alignItems: 'center' },
+  rays: { position: 'absolute', top: -210, left: '50%', marginLeft: -260 },
+  coverCrown: { marginTop: spacing.sm },
+  avatarWrap: { alignSelf: 'center', marginTop: -54 },
+  ring: { padding: 3, borderRadius: 60 },
+  ringGap: { padding: 3, borderRadius: 56 },
+  name: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 30, marginTop: spacing.sm },
+  editBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 4,
+    marginTop: spacing.sm,
+    paddingHorizontal: 14,
+    paddingVertical: 6,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(0,0,0,0.22)',
-    borderWidth: 1,
-    borderColor: 'rgba(253,230,138,0.35)',
+    borderWidth: 1.5,
   },
-  statBar: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    alignSelf: 'stretch',
-    marginTop: spacing.lg,
-    paddingVertical: spacing.md,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderWidth: 1,
-    borderColor: 'rgba(253,230,138,0.3)',
-  },
-  stat: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm },
-  statIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
-  statDivider: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.2)' },
-  sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
+  stat: { flex: 1, alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: 4, borderRadius: radius.lg },
+  statIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm, paddingHorizontal: 4 },
   settingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
-  settingIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },
+  settingIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
 });
