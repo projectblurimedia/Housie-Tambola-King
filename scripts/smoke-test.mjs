@@ -284,6 +284,39 @@ try {
   check(!mine.some((r) => r.id === room.roomId), 'Remove from My rooms works');
 
   await channel.unsubscribe();
+
+  // ── Coins room (play coins only): pay for tickets, refunds, limit, few repeats ──
+  const coinsOf = async (p) => Number((await p.rpc('get_me')).coins);
+  const croom = await host.rpc('create_room', {
+    p_title: 'Smoke Coins', p_kind: 'normal', p_visibility: 'private', p_max_players: 5,
+    p_ticket_price: 25, p_call_interval_seconds: 3, p_series_length: 1, p_prizes: prizes,
+  });
+  await host.rpc('set_stake_mode', { p_room: croom.roomId, p_mode: 'coins' });
+  await host.rpc('set_max_tickets', { p_room: croom.roomId, p_max: 6 });
+  await friend.rpc('join_room_by_code', { p_code: croom.code });
+  await host.rpc('respond_join_request', { p_room: croom.roomId, p_user: friendId, p_accept: true });
+  let cstate = await friend.rpc('get_room_state', { p_room: croom.roomId });
+  check(cstate.room.stakeMode === 'coins' && cstate.room.maxTickets === 6, 'coins room with a 6-ticket limit');
+  const cgame = cstate.game.id;
+  await host.rpc('open_tickets', { p_game: cgame });
+  const before = await coinsOf(friend);
+  check(await expectError(friend.rpc('set_my_tickets', { p_game: cgame, p_count: 7 }), 'INVALID_TICKET_COUNT'), 'more than the room limit is refused');
+  const bought = await friend.rpc('set_my_tickets', { p_game: cgame, p_count: 6 });
+  check((await coinsOf(friend)) === before - 150, `6 tickets × 25 coins taken (${before} → ${await coinsOf(friend)})`);
+  // Few repeats: pairs of a player's tickets share on average far fewer numbers than random (~2.5).
+  let shared = 0, pairs = 0;
+  for (let i = 0; i < bought.length; i++) for (let j = i + 1; j < bought.length; j++) {
+    const a = new Set(bought[i].cells.filter((n) => n > 0));
+    shared += bought[j].cells.filter((n) => n > 0 && a.has(n)).length; pairs++;
+  }
+  check(shared / pairs < 1.5, `tickets share few numbers (avg ${(shared / pairs).toFixed(2)} per pair)`);
+  await friend.rpc('leave_room', { p_room: croom.roomId });
+  check((await coinsOf(friend)) === before, 'leaving the lobby refunds the coins');
+  await host.rpc('set_my_tickets', { p_game: cgame, p_count: 2 });
+  const hostAfterBuy = await coinsOf(host);
+  await host.rpc('end_room', { p_room: croom.roomId });
+  check((await coinsOf(host)) === hostAfterBuy + 50, 'dismissed room refunds its coins');
+  check((await host.rpc('get_my_coin_ledger', {})).some((l) => l.reason === 'refund'), 'coin history records the refund');
 } finally {
   await host.rpc('delete_my_account').catch(() => undefined);
   await friend.rpc('delete_my_account').catch(() => undefined);
