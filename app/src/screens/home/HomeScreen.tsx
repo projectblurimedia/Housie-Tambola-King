@@ -410,25 +410,27 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
                   const first = (me.data?.displayName ?? '').trim().split(/\s+/)[0];
                   return first ? t('home.greeting', { name: first }) : t('home.greetingNoName');
                 })()}
+                extra={
+                  // Play coins balance: crown coin on a dark glass pill with a gold edge.
+                  me.data ? (
+                    <Pressable
+                      onPress={() => showToast({ variant: 'info', title: t('coins.playOnly') })}
+                      style={({ pressed }) => pressed && { opacity: 0.8 }}
+                      accessibilityLabel={formatCoins(me.data.coins ?? 0)}
+                    >
+                      <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coinEdge}>
+                        <View style={styles.coinChip}>
+                          <CoinIcon size={18} />
+                          <T variant="tiny" color="#FFF8D6" maxFontSizeMultiplier={1} numberOfLines={1} style={{ fontFamily: fonts.bold }}>
+                            {Number(me.data.coins ?? 0).toLocaleString('en-IN')}
+                          </T>
+                        </View>
+                      </LinearGradient>
+                    </Pressable>
+                  ) : null
+                }
               />
             </View>
-            {/* Play coins balance: crown coin on a dark glass pill with a gold edge. */}
-            {me.data ? (
-              <Pressable
-                onPress={() => showToast({ variant: 'info', title: t('coins.playOnly') })}
-                style={({ pressed }) => [{ marginRight: spacing.sm }, pressed && { opacity: 0.8 }]}
-                accessibilityLabel={formatCoins(me.data.coins ?? 0)}
-              >
-                <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.coinEdge}>
-                  <View style={styles.coinChip}>
-                    <CoinIcon size={24} />
-                    <T variant="smallBold" color="#FFF8D6" maxFontSizeMultiplier={1} numberOfLines={1}>
-                      {Number(me.data.coins ?? 0).toLocaleString('en-IN')}
-                    </T>
-                  </View>
-                </LinearGradient>
-              </Pressable>
-            ) : null}
             <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={46} ring="#FDE68A" />
             </Pressable>
@@ -553,7 +555,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 
 const styles = StyleSheet.create({
   coinEdge: { borderRadius: 999, padding: 1.5 },
-  coinChip: { flexDirection: 'row', alignItems: 'center', gap: 6, borderRadius: 999, paddingLeft: 3, paddingRight: 12, paddingVertical: 3, backgroundColor: '#1E0B3B' },
+  coinChip: { flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 999, paddingLeft: 2, paddingRight: 9, paddingVertical: 2, backgroundColor: '#1E0B3B' },
   qaTile: { borderRadius: 20, overflow: 'hidden' },
   qaGradient: { height: 116, padding: 14, justifyContent: 'flex-end' },
   qaWatermark: { position: 'absolute', right: -12, bottom: -14 },

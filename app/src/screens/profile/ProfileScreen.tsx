@@ -9,7 +9,8 @@ import { Avatar } from '@/components/Avatar';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { VoicePicker } from '@/components/VoicePicker';
 import { TicketStylePicker } from '@/components/TicketStylePicker';
-import { formatRupees } from '@/components/Money';
+import { CrownArt, Rays } from '@/components/Wordmark';
+import Svg from 'react-native-svg';
 import { Card, Row, Screen, Segmented, Spacer, T, Toggle } from '@/components/ui';
 import { useMe } from '@/hooks/useMe';
 import { authService } from '@/services/authService';
@@ -19,7 +20,7 @@ import { SupportedLanguage } from '@/localization/i18n';
 import { showToast } from '@/state/toastStore';
 import { ThemeMode, useSettingsStore } from '@/state/settingsStore';
 import { PRIVACY_URL, SUPPORT_EMAIL, TERMS_URL } from '@/constants/config';
-import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
+import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
 
 type IconName = keyof typeof Ionicons.glyphMap;
@@ -89,15 +90,30 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
   const stats: [IconName, string, string][] = [
     ['game-controller', String(p?.gamesPlayed ?? 0), t('profile.gamesPlayed')],
     ['trophy', String(p?.prizesWon ?? 0), t('profile.prizesWon')],
-    ['cash', formatRupees(Number(p?.amountWon ?? 0)), t('profile.amountWon')],
   ];
 
   return (
     <Screen scroll title={t('profile.title')}>
-      <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+      {/* Profile card: light rays + soft glows behind a crowned, gold-ringed photo; name, phone,
+          then the two stats on one glass bar. */}
+      <LinearGradient colors={['#2A0A4F', '#5B21B6', '#7C3AED']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+        <View style={styles.rays} pointerEvents="none">
+          <Rays size={560} opacity={0.08} count={22} />
+        </View>
+        <View style={[styles.glow, { top: -60, right: -50, backgroundColor: 'rgba(253,230,138,0.18)' }]} pointerEvents="none" />
+        <View style={[styles.glow, { bottom: -70, left: -60, backgroundColor: 'rgba(236,72,153,0.16)' }]} pointerEvents="none" />
+        <LinearGradient colors={['rgba(255,241,168,0.9)', 'rgba(245,183,0,0.35)', 'rgba(255,241,168,0.9)']} style={styles.goldEdge} pointerEvents="none" />
+
+        <View style={styles.crown} pointerEvents="none">
+          <Svg width={46} height={36} viewBox="0 0 120 94">
+            <CrownArt id="pf-cr" jewels={false} />
+          </Svg>
+        </View>
         <View style={styles.avatarWrap}>
-          <Avatar avatarKey={p?.avatarKey ?? 'a1'} size={92} ring="#FDE68A" />
-          <Pressable style={styles.editBadge} onPress={() => navigation.navigate('EditProfile')} hitSlop={8}>
+          <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400', '#FFE27A']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.ring}>
+            <Avatar avatarKey={p?.avatarKey ?? 'a1'} size={96} />
+          </LinearGradient>
+          <Pressable style={styles.editBadge} onPress={() => navigation.navigate('EditProfile')} hitSlop={8} accessibilityLabel={t('profile.edit')}>
             <Ionicons name="pencil" size={14} color="#3B1D00" />
           </Pressable>
         </View>
@@ -106,25 +122,32 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
         </T>
         {phone ? (
           <View style={styles.phonePill}>
-            <Ionicons name="call" size={13} color="#FDE68A" />
+            <Ionicons name="call" size={12} color="#FDE68A" />
             <T variant="smallBold" color="#fff">
               {phone}
             </T>
           </View>
         ) : null}
-        <Row gap={spacing.sm} style={{ marginTop: spacing.lg, alignSelf: 'stretch' }}>
-          {stats.map(([icon, value, label]) => (
-            <View key={label} style={styles.stat}>
-              <Ionicons name={icon} size={18} color="#FDE68A" />
-              <T variant="h3" color="#fff" numberOfLines={1} style={{ marginTop: 4 }}>
-                {value}
-              </T>
-              <T variant="tiny" color="rgba(255,255,255,0.8)" numberOfLines={1}>
-                {label}
-              </T>
-            </View>
+        <View style={styles.statBar}>
+          {stats.map(([icon, value, label], i) => (
+            <React.Fragment key={label}>
+              {i > 0 ? <View style={styles.statDivider} /> : null}
+              <View style={styles.stat}>
+                <LinearGradient colors={['#FFF1A8', '#F5B700']} style={styles.statIcon}>
+                  <Ionicons name={icon} size={16} color="#3B1D00" />
+                </LinearGradient>
+                <View style={{ flexShrink: 1 }}>
+                  <T variant="h2" color="#fff" numberOfLines={1}>
+                    {value}
+                  </T>
+                  <T variant="tiny" color="rgba(255,255,255,0.75)" numberOfLines={1}>
+                    {label}
+                  </T>
+                </View>
+              </View>
+            </React.Fragment>
           ))}
-        </Row>
+        </View>
       </LinearGradient>
 
       <T variant="smallBold" muted style={styles.sectionLabel}>
@@ -213,12 +236,17 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: radius.xl, padding: spacing.lg, alignItems: 'center' },
-  avatarWrap: { marginTop: spacing.sm },
+  hero: { borderRadius: radius.xl, padding: spacing.lg, paddingTop: spacing.md, alignItems: 'center', overflow: 'hidden' },
+  rays: { position: 'absolute', top: -170, left: '50%', marginLeft: -280 },
+  glow: { position: 'absolute', width: 200, height: 200, borderRadius: 100 },
+  goldEdge: { position: 'absolute', left: 0, right: 0, top: 0, height: 2 },
+  crown: { marginBottom: -10, zIndex: 2, transform: [{ rotate: '-8deg' }] },
+  avatarWrap: {},
+  ring: { padding: 3.5, borderRadius: 60 },
   editBadge: {
     position: 'absolute',
-    right: -2,
-    bottom: -2,
+    right: 0,
+    bottom: 2,
     width: 30,
     height: 30,
     borderRadius: 15,
@@ -228,27 +256,33 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  name: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 30, color: '#fff', marginTop: spacing.md, paddingHorizontal: spacing.sm },
+  name: { fontFamily: fonts.bold, fontSize: 23, lineHeight: 31, color: '#fff', marginTop: spacing.md, paddingHorizontal: spacing.sm },
   phonePill: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginTop: spacing.sm,
+    marginTop: 6,
     paddingHorizontal: 12,
-    paddingVertical: 5,
+    paddingVertical: 4,
     borderRadius: radius.pill,
-    backgroundColor: 'rgba(255,255,255,0.16)',
-  },
-  stat: {
-    flex: 1,
-    alignItems: 'center',
-    paddingVertical: spacing.md,
-    paddingHorizontal: 4,
-    borderRadius: radius.lg,
-    backgroundColor: 'rgba(255,255,255,0.14)',
+    backgroundColor: 'rgba(0,0,0,0.22)',
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.2)',
+    borderColor: 'rgba(253,230,138,0.35)',
   },
+  statBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'stretch',
+    marginTop: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: radius.lg,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderWidth: 1,
+    borderColor: 'rgba(253,230,138,0.3)',
+  },
+  stat: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.sm },
+  statIcon: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  statDivider: { width: 1, alignSelf: 'stretch', backgroundColor: 'rgba(255,255,255,0.2)' },
   sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm, textTransform: 'uppercase', letterSpacing: 0.6 },
   settingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   settingIcon: { width: 36, height: 36, borderRadius: 11, alignItems: 'center', justifyContent: 'center' },

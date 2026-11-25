@@ -159,7 +159,7 @@ function ShinyCrown({ width }: { width: number }) {
 }
 
 /** The shiny crown's shapes in a 120 × 94 box (ids prefixed so two crowns never clash). */
-export function CrownArt({ id }: { id: string }) {
+export function CrownArt({ id, jewels = true }: { id: string; jewels?: boolean }) {
   return (
     <G>
       <Defs>
@@ -215,11 +215,15 @@ export function CrownArt({ id }: { id: string }) {
           <Circle cx={x - 2} cy={y - 2.2} r={2} fill="#FFFFFF" opacity={0.85} />
         </G>
       ))}
-      {/* Jewels */}
-      <Path d="M60 48 L67 58 L60 68 L53 58 Z" fill={`url(#${id}-ruby)`} stroke="#7A0010" strokeWidth={1.2} />
-      <Circle cx={36} cy={80} r={4.4} fill={`url(#${id}-sapphire)`} />
-      <Circle cx={60} cy={80} r={4.8} fill={`url(#${id}-ruby)`} />
-      <Circle cx={84} cy={80} r={4.4} fill={`url(#${id}-emerald)`} />
+      {/* Jewels (left off on the coin: plain gold reads better at small sizes) */}
+      {jewels ? (
+        <>
+          <Path d="M60 48 L67 58 L60 68 L53 58 Z" fill={`url(#${id}-ruby)`} stroke="#7A0010" strokeWidth={1.2} />
+          <Circle cx={36} cy={80} r={4.4} fill={`url(#${id}-sapphire)`} />
+          <Circle cx={60} cy={80} r={4.8} fill={`url(#${id}-ruby)`} />
+          <Circle cx={84} cy={80} r={4.4} fill={`url(#${id}-emerald)`} />
+        </>
+      ) : null}
       {/* Sparkles */}
       <Path d="M92 36 l2 -6 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 Z" fill="#FFFFFF" opacity={0.9} />
       <Path d="M24 58 l1.4 -4 l1.4 4 l4 1.4 l-4 1.4 l-1.4 4 l-1.4 -4 l-4 -1.4 Z" fill="#FFFFFF" opacity={0.85} />
@@ -231,9 +235,9 @@ export function CrownArt({ id }: { id: string }) {
  * The header title: a glossy bingo ball icon (drawn, not a picture) and "Housie Tambola King"
  * on one line in Montserrat ExtraBold — King in gold. Shrinks to fit narrow phones.
  */
-export function Wordmark({ size = 'large', subtitle }: { size?: 'large' | 'small'; subtitle?: string }) {
+export function Wordmark({ size = 'large', subtitle, extra }: { size?: 'large' | 'small'; subtitle?: string; extra?: React.ReactNode }) {
   const large = size === 'large';
-  const font = large ? 26 : 21;
+  const font = large ? 26 : 23;
   return (
     <View style={[styles.row, large && { justifyContent: 'center' }]}>
       <AppIcon size={large ? 52 : 48} />
@@ -242,15 +246,20 @@ export function Wordmark({ size = 'large', subtitle }: { size?: 'large' | 'small
           style={[styles.line, { fontSize: font, lineHeight: font * 1.25 }]}
           numberOfLines={1}
           adjustsFontSizeToFit
-          minimumFontScale={0.7}
+          minimumFontScale={0.8}
         >
           Housie Tambola <Text style={styles.king}>King</Text>
         </Text>
         {/* e.g. "Hi, Manikanta 👋" — right under the title, beside the icon. */}
-        {subtitle ? (
-          <Text style={styles.subtitle} numberOfLines={1}>
-            {subtitle}
-          </Text>
+        {subtitle || extra ? (
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {subtitle ? (
+              <Text style={[styles.subtitle, { flexShrink: 1 }]} numberOfLines={1}>
+                {subtitle}
+              </Text>
+            ) : null}
+            {extra}
+          </View>
         ) : null}
       </View>
     </View>

@@ -37,7 +37,7 @@ export function CoinIcon({ size = 20, style }: { size?: number; style?: StylePro
         })}
         <Circle cx={50} cy={50} r={37} fill={`url(#${id}-face)`} stroke="#8A5A00" strokeWidth={2} />
         <G transform="translate(22 28) scale(0.47)">
-          <CrownArt id={`${id}-cr`} />
+          <CrownArt id={`${id}-cr`} jewels={false} />
         </G>
         {/* Shine */}
         <Circle cx={34} cy={30} r={7} fill="#FFFFFF" opacity={0.35} />
