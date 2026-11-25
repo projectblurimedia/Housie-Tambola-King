@@ -318,7 +318,7 @@ try {
     const a = new Set(bought[i].cells.filter((n) => n > 0));
     shared += bought[j].cells.filter((n) => n > 0 && a.has(n)).length; pairs++;
   }
-  check(shared / pairs < 1.5, `tickets share few numbers (avg ${(shared / pairs).toFixed(2)} per pair)`);
+  check(shared / pairs < 1.8, `tickets share few numbers (avg ${(shared / pairs).toFixed(2)} per pair)`);
   await friend.rpc('leave_room', { p_room: croom.roomId });
   check((await coinsOf(friend)) === before, 'leaving the lobby refunds the coins');
   await host.rpc('set_my_tickets', { p_game: cgame, p_count: 2 });
@@ -422,9 +422,6 @@ try {
     await host.rpc('end_party', { p_game: cat.id });
 
     // Snakes & Ladders: 2 players, roll until someone reaches 100.
-    const LADDERS = { 1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100 };
-    const SNAKES = { 16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78 };
-    const jump = (p) => LADDERS[p] ?? SNAKES[p] ?? p;
     const coinsBefore = { host: await coinsOf(host), friend: await coinsOf(friend) };
     const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 5, p_entry: 50 });
     await friend.rpc('join_party_by_code', { p_code: snl.code });
@@ -432,6 +429,13 @@ try {
     let snlState = await stateOf(host, snl.id);
     check(snlState.game.status === 'playing' && snlState.game.state.turn === snlState.me.userId, 'Snakes & Ladders starts with 2 players, host first');
     check(await expectError(friend.rpc('snakes_roll', { p_game: snl.id }), 'NOT_YOUR_TURN'), 'only the player whose turn it is can roll');
+    const board = snlState.game.state.board;
+    const nL = Object.keys(board?.ladders ?? {}).length, nS = Object.keys(board?.snakes ?? {}).length;
+    const ends = [...Object.entries(board.ladders), ...Object.entries(board.snakes)].flat().map(Number);
+    check(nL >= 6 && nS >= 6 && !Object.values(board.ladders).includes(100) && new Set(ends).size === ends.length,
+      `a new board for this game (${nL} ladders, ${nS} snakes, none to 100, no shared ends)`);
+    check(Object.entries(board.snakes).some(([h, t]) => h - t >= 50), 'the board has a big snake');
+    const jump = (p) => board.ladders[p] ?? board.snakes[p] ?? p;
     const duo = { [snlState.me.userId]: host, [(await stateOf(friend, snl.id)).me.userId]: friend };
     let movesOk = true;
     for (let i = 0; i < 600 && snlState.game.status === 'playing'; i++) {

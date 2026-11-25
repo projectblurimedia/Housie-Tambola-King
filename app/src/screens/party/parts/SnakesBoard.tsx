@@ -6,7 +6,7 @@ import { Row, T } from '@/components/ui';
 import { LADDERS, SNAKES, snlCell, snlSteps } from '@/game/engine/board';
 import type { PartyState } from '@/services/partyService';
 import { spacing } from '@/theme';
-import { Chances, Dice, PlayerPill, Token, TOKEN_COLORS, TurnBar } from './BoardBits';
+import { Chances, Dice, DiceDrop, PlayerPill, Token, TOKEN_COLORS, TurnBar } from './BoardBits';
 import { GoldFrame } from './Premium';
 
 /** Snake skins: body light → dark, and the pattern colour. */
@@ -36,11 +36,11 @@ function SnakeArt({ head, tail, cell, skin, id }: { head: P; tail: P; cell: numb
   const len = Math.hypot(dx, dy);
   const nx = -dy / len;
   const ny = dx / len;
-  const amp = Math.min(cell * 1.0, len * 0.28);
+  const amp = Math.min(cell * 1.3, len * 0.3);
   const c1 = { x: head.x + dx * 0.3 + nx * amp, y: head.y + dy * 0.3 + ny * amp };
   const c2 = { x: head.x + dx * 0.7 - nx * amp, y: head.y + dy * 0.7 - ny * amp };
   const N = 28;
-  const W = cell * 0.34;
+  const W = cell * 0.46;
   const left: P[] = [];
   const right: P[] = [];
   for (let i = 0; i <= N; i++) {
@@ -70,8 +70,8 @@ function SnakeArt({ head, tail, cell, skin, id }: { head: P; tail: P; cell: numb
       ))}
       <G transform={`translate(${head.x} ${head.y}) rotate(${angle})`}>
         <Path d={`M${cell * 0.2} 0 l${cell * 0.13} ${-cell * 0.05} M${cell * 0.2} 0 l${cell * 0.13} ${cell * 0.05}`} stroke="#E11D48" strokeWidth={1.8} strokeLinecap="round" />
-        <Ellipse cx={0} cy={0} rx={cell * 0.24} ry={cell * 0.19} fill={skin.b} />
-        <Ellipse cx={0.5} cy={0} rx={cell * 0.21} ry={cell * 0.16} fill={skin.a} />
+        <Ellipse cx={0} cy={0} rx={cell * 0.3} ry={cell * 0.24} fill={skin.b} />
+        <Ellipse cx={0.5} cy={0} rx={cell * 0.27} ry={cell * 0.21} fill={skin.a} />
         <Circle cx={cell * 0.06} cy={-cell * 0.08} r={cell * 0.055} fill="#fff" />
         <Circle cx={cell * 0.06} cy={cell * 0.08} r={cell * 0.055} fill="#fff" />
         <Circle cx={cell * 0.08} cy={-cell * 0.08} r={cell * 0.028} fill="#111" />
@@ -124,7 +124,10 @@ function LadderArt({ from, to, cell }: { from: P; to: P; cell: number }) {
 }
 
 /** The board: ivory two-tone squares, fine lines, numbers, the crown at 100, ladders, snakes. */
-const BoardArt = React.memo(function BoardArt({ size }: { size: number }) {
+type BoardMap = { ladders: Record<string, number>; snakes: Record<string, number> };
+const CLASSIC: BoardMap = { ladders: LADDERS, snakes: SNAKES };
+
+const BoardArt = React.memo(function BoardArt({ size, board }: { size: number; board: BoardMap }) {
   const cell = size / 10;
   const c = (sq: number): P => {
     const { row, col } = snlCell(sq);
@@ -165,15 +168,15 @@ const BoardArt = React.memo(function BoardArt({ size }: { size: number }) {
       <SvgText x={cell / 2} y={cell * 0.7} fontSize={cell * 0.46} textAnchor="middle">
         👑
       </SvgText>
-      {Object.entries(LADDERS).map(([f, to]) => (
+      {Object.entries(board.ladders).map(([f, to]) => (
         <LadderArt key={`l${f}`} from={c(Number(f))} to={c(to)} cell={cell} />
       ))}
-      {Object.entries(SNAKES).map(([h, tl], i) => (
+      {Object.entries(board.snakes).map(([h, tl], i) => (
         <SnakeArt key={`s${h}`} head={c(Number(h))} tail={c(tl)} cell={cell} skin={SKINS[i % SKINS.length]} id={`skin${i % SKINS.length}`} />
       ))}
     </Svg>
   );
-});
+}, (a, b) => a.size === b.size && JSON.stringify(a.board) === JSON.stringify(b.board));
 
 /**
  * Snakes & Ladders: the board, every player's token (walking square by square after the die
@@ -189,6 +192,7 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
   const tokenSize = cell * 0.56;
   const order = s.order ?? state.players.map((p) => p.userId);
   const pos = s.pos ?? {};
+  const board = (s as { board?: BoardMap }).board ?? CLASSIC;
   const turnPlayer = state.players.find((p) => p.userId === s.turn);
   const colorOf = (uid?: string) => TOKEN_COLORS[Math.max(0, order.indexOf(uid ?? '')) % TOKEN_COLORS.length];
   const isMyTurn = s.turn === state.me.userId;
@@ -232,7 +236,7 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
     if (!a) return;
     const steps = snlSteps(last.from, last.mid ?? last.to);
     if (last.from === 0 && steps.length) a.setValue(centreOf(1));
-    const seq: Animated.CompositeAnimation[] = [Animated.delay(780)];
+    const seq: Animated.CompositeAnimation[] = [Animated.delay(1250)];
     // Each square: move to its centre with a little hop.
     for (const sq of steps) {
       seq.push(
@@ -269,7 +273,8 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
     <View>
       <GoldFrame radius={20} width={2} colors={['#3E2723', '#5D4037', '#3E2723']} innerStyle={{ padding: 7, alignItems: 'center' }}>
         <View style={{ width: size, height: size, borderRadius: 10, overflow: 'hidden' }}>
-          <BoardArt size={size} />
+          <BoardArt size={size} board={board} />
+          <DiceDrop value={last?.roll ?? 1} rollKey={last?.at} size={cell * 1.9} />
           {order.map((uid) => {
             const c = colorOf(uid);
             const on = !outOf(uid) && ((pos[uid] ?? 0) > 0 || moving === uid);
@@ -310,9 +315,10 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
         canAct={isMyTurn && g.phase === 'turn' && !moving}
         busy={busy}
         onAct={onRoll}
+        actionArt={<Dice value={5} rollKey={undefined} size={38} />}
         waitingLabel={isMyTurn ? t('party.board.moving') : t('party.board.waitTurn')}
       >
-        <Dice value={last?.roll ?? 1} rollKey={last?.at} size={56} />
+        <Dice value={last?.roll ?? 1} rollKey={undefined} size={48} />
       </TurnBar>
 
       <Row style={styles.pills}>

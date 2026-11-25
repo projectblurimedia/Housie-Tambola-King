@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmModal } from '@/components/ConfirmModal';
-import { Button, EmptyState, Loading, Screen } from '@/components/ui';
+import { Button, EmptyState, IconButton, Loading, Screen } from '@/components/ui';
 import { partyKey, useParty, type PartyEvent } from '@/hooks/useParty';
 import { isBoardGame, partyService, type PartyPlayer, type PartyState } from '@/services/partyService';
 import { errorMessage } from '@/localization/errorMessages';
@@ -18,6 +18,9 @@ import { ShowBoard } from './parts/ShowBoard';
 import { SnakesBoard } from './parts/SnakesBoard';
 import { ChammaBoard } from './parts/ChammaBoard';
 import { CategoryPicker } from './parts/CategoryPicker';
+import { PARTY_LOOK } from './parts/Premium';
+import { RulesModal } from './parts/RulesModal';
+import { PartyWinner } from './parts/PartyWinner';
 
 const buzz = (kind: 'light' | 'heavy' | 'success') => {
   if (!useSettingsStore.getState().haptics) return;
@@ -32,6 +35,7 @@ export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
   const qc = useQueryClient();
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<'leave' | 'end' | null>(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
   /** This phone is already leaving (its own End / Leave) — don't go back twice. */
   const leaving = useRef(false);
 
@@ -98,7 +102,7 @@ export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
 
   const g = state.game;
   return (
-    <Screen scroll title={title}>
+    <Screen scroll title={title} headerColors={PARTY_LOOK[g.kind].colors} right={<IconButton icon="information-circle-outline" color="#fff" onPress={() => setRulesOpen(true)} />}>
       {g.status === 'lobby' ? (
         <PartyLobby
           state={state}
@@ -182,6 +186,8 @@ export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
         </>
       )}
       <View style={{ height: spacing.xl }} />
+      <RulesModal kind={g.kind} visible={rulesOpen} onClose={() => setRulesOpen(false)} />
+      <PartyWinner state={state} />
 
       <ConfirmModal
         visible={confirm !== null}

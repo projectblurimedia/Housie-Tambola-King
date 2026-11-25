@@ -984,9 +984,7 @@
       "noCutNeeded": "No cut needed — pawns go straight to the centre.",
       "teamA": "Team A",
       "teamB": "Team B",
-      "noneUp": "None up = 8 · Ashta!",
-      "nUp_one": "{{count}} up = {{count}}",
-      "nUp_other": "{{count}} up = {{count}}"
+      "threw": "{{name}} threw"
     },
     "coinsOrFree": "Free or play coins",
     "entry": "Entry (coins)",
@@ -1001,6 +999,8 @@
     "wins": "wins the game",
     "winTeam": "win as a team",
     "wonCoins": "+{{count}} coins",
-    "wonEach": "+{{count}} coins each"
+    "wonEach": "+{{count}} coins each",
+    "rules": "Rules",
+    "congrats": "CONGRATULATIONS!"
   }
 }

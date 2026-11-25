@@ -96,6 +96,98 @@ export function Dice({ value, rollKey, size = 64 }: { value: number; rollKey: st
   );
 }
 
+/**
+ * A big die thrown onto the middle of the board: it drops in spinning, bounces twice (squashing
+ * a little on each landing, its shadow growing as it falls), settles on the number with a gold
+ * pop, then fades so the token's walk is clear.
+ */
+export function DiceDrop({ value, rollKey, size }: { value: number; rollKey: string | number | undefined; size: number }) {
+  const p = useRef(new Animated.Value(1)).current;
+  const pop = useRef(new Animated.Value(0)).current;
+  const fade = useRef(new Animated.Value(0)).current;
+  const [face, setFace] = useState(value || 1);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (!rollKey) return;
+    p.setValue(0);
+    pop.setValue(0);
+    fade.setValue(1);
+    const flicker = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 80);
+    Animated.sequence([
+      Animated.timing(p, { toValue: 1, duration: 950, easing: Easing.linear, useNativeDriver: true }),
+      Animated.spring(pop, { toValue: 1, friction: 4, tension: 160, useNativeDriver: true }),
+      Animated.delay(350),
+      Animated.timing(fade, { toValue: 0, duration: 260, useNativeDriver: true }),
+    ]).start();
+    const settle = setTimeout(() => {
+      clearInterval(flicker);
+      setFace(value || 1);
+    }, 700);
+    return () => {
+      clearInterval(flicker);
+      clearTimeout(settle);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rollKey]);
+  const pip = size * 0.17;
+  return (
+    <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, { alignItems: 'center', justifyContent: 'center', opacity: fade }]}>
+      {/* Shadow on the board */}
+      <Animated.View
+        style={{
+          position: 'absolute',
+          width: size * 0.9,
+          height: size * 0.22,
+          borderRadius: size,
+          backgroundColor: 'rgba(0,0,0,0.3)',
+          transform: [
+            { translateY: size * 0.55 },
+            { scale: p.interpolate({ inputRange: [0, 0.35, 0.55, 0.72, 0.84, 1], outputRange: [0.3, 1, 0.7, 1, 0.92, 1] }) },
+          ],
+        }}
+      />
+      <Animated.View
+        style={{
+          transform: [
+            { translateY: p.interpolate({ inputRange: [0, 0.35, 0.55, 0.72, 0.84, 1], outputRange: [-size * 2.4, 0, -size * 0.55, 0, -size * 0.14, 0] }) },
+            { rotate: p.interpolate({ inputRange: [0, 0.35, 0.72, 1], outputRange: ['-300deg', '-60deg', '-10deg', '0deg'] }) },
+            { scaleY: p.interpolate({ inputRange: [0, 0.33, 0.36, 0.42, 0.7, 0.73, 0.78, 1], outputRange: [1, 1, 0.84, 1, 1, 0.92, 1, 1] }) },
+            { scale: pop.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.18, 1] }) },
+          ],
+        }}
+      >
+        <View style={[styles.dropGlow, { width: size * 1.3, height: size * 1.3, borderRadius: size, left: -size * 0.15, top: -size * 0.15 }]} />
+        <LinearGradient
+          colors={['#FFFFFF', '#F8F4EC', '#E2D7C3']}
+          start={{ x: 0.1, y: 0 }}
+          end={{ x: 0.9, y: 1 }}
+          style={[styles.die, { width: size, height: size, borderRadius: size * 0.22, borderWidth: 2, borderColor: '#D6C7AA' }]}
+        >
+          <View style={[styles.dieBevel, { borderRadius: size * 0.18 }]} />
+          {(PIPS[face] ?? PIPS[1]).map(([r, c], i) => (
+            <View
+              key={i}
+              style={{
+                position: 'absolute',
+                width: pip,
+                height: pip,
+                borderRadius: pip / 2,
+                backgroundColor: face === 1 ? '#DC2626' : '#111827',
+                left: size * (0.22 + c * 0.28) - pip / 2,
+                top: size * (0.22 + r * 0.28) - pip / 2,
+              }}
+            />
+          ))}
+        </LinearGradient>
+      </Animated.View>
+    </Animated.View>
+  );
+}
+
 /** Chances left (3 hearts): a heart greys out each time the server had to play for them. */
 export function Chances({ misses }: { misses: number }) {
   return (
@@ -119,6 +211,7 @@ export function TurnBar({
   busy,
   onAct,
   waitingLabel,
+  actionArt,
   children,
 }: {
   player?: PartyPlayer;
@@ -131,6 +224,8 @@ export function TurnBar({
   busy: boolean;
   onAct: () => void;
   waitingLabel: string;
+  /** Drawn inside the round action button (a die, seeds…). */
+  actionArt?: React.ReactNode;
   children?: React.ReactNode;
 }) {
   const { t } = useTranslation();
@@ -164,19 +259,29 @@ export function TurnBar({
             </View>
           </Row>
         </View>
-        {children}
-      </Row>
-      {isMe && canAct ? (
-        <Animated.View style={{ marginTop: spacing.md, transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) }] }}>
-          <Pressable onPress={onAct} disabled={busy}>
-            <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.action}>
-              <ShineSweep every={1400} />
-              <Ionicons name={actionIcon} size={22} color="#3B1D00" />
-              <T style={styles.actionText}>{actionLabel}</T>
-            </LinearGradient>
+        {isMe && canAct ? (
+          /* My turn: a round gold button with a pulsing ring, the art inside, the label under it. */
+          <Pressable onPress={onAct} disabled={busy} style={{ alignItems: 'center' }} accessibilityLabel={actionLabel}>
+            <View style={styles.roundWrap}>
+              <Animated.View
+                style={[
+                  styles.ring,
+                  { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.8, 0] }), transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.35] }) }] },
+                ]}
+              />
+              <Animated.View style={{ transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }] }}>
+                <LinearGradient colors={['#FFF1A8', '#F5B700', '#B45309']} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={styles.round}>
+                  <ShineSweep width={80} every={1200} />
+                  <View style={styles.roundInner}>{actionArt ?? <Ionicons name={actionIcon} size={30} color="#3B1D00" />}</View>
+                </LinearGradient>
+              </Animated.View>
+            </View>
+            <T style={styles.roundLabel}>{actionLabel}</T>
           </Pressable>
-        </Animated.View>
-      ) : null}
+        ) : (
+          children
+        )}
+      </Row>
     </View>
   );
 }
@@ -215,6 +320,13 @@ export function PlayerPill({
 }
 
 const styles = StyleSheet.create({
+  roundWrap: { width: 78, height: 78, alignItems: 'center', justifyContent: 'center' },
+  ring: { position: 'absolute', width: 78, height: 78, borderRadius: 39, borderWidth: 3, borderColor: '#F5B700' },
+  round: { width: 72, height: 72, borderRadius: 36, padding: 4, overflow: 'hidden', borderWidth: 2, borderColor: '#92400E' },
+  roundInner: { flex: 1, borderRadius: 32, backgroundColor: 'rgba(59,29,0,0.18)', alignItems: 'center', justifyContent: 'center' },
+  roundLabel: { fontFamily: fonts.display, fontSize: 13, lineHeight: 18, color: '#B45309', marginTop: 2 },
+  dropGlow: { position: 'absolute', backgroundColor: 'rgba(253,230,138,0.35)' },
+  dieBevel: { position: 'absolute', left: 3, top: 3, right: 3, bottom: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)' },
   glow: { shadowColor: '#FDE68A', shadowOpacity: 0.9, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 6 },
   spot: { position: 'absolute', backgroundColor: 'rgba(255,255,255,0.6)' },
   die: { shadowColor: '#000', shadowOpacity: 0.35, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 6, borderWidth: 1, borderColor: '#C8B89C' },

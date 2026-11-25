@@ -6,7 +6,8 @@ import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { CoinIcon } from '@/components/CoinIcon';
-import { Button, centeredInput, Row, Screen, Stepper, T, Toggle } from '@/components/ui';
+import { Button, centeredInput, IconButton, Row, Screen, Stepper, T, Toggle } from '@/components/ui';
+import { SvgXml } from 'react-native-svg';
 import { useMe } from '@/hooks/useMe';
 import { isBoardGame, PARTY_LIMITS, partyService, type PartyOptions } from '@/services/partyService';
 import { errorMessage } from '@/localization/errorMessages';
@@ -14,6 +15,8 @@ import { showToast } from '@/state/toastStore';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
 import { PARTY_LOOK, ShineSweep } from './parts/Premium';
+import { GAME_ART } from './parts/gameArt';
+import { RulesModal } from './parts/RulesModal';
 
 const ENTRY_PRESETS = [0, 10, 25, 50, 100];
 const SAFE_CELLS = {
@@ -98,6 +101,7 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
   });
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState<'create' | 'join' | null>(null);
+  const [rulesOpen, setRulesOpen] = useState(false);
   const mine = useQuery({ queryKey: ['myParties'], queryFn: partyService.mine });
   const refetchMine = mine.refetch;
   useFocusEffect(
@@ -145,29 +149,27 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
   };
 
   return (
-    <Screen scroll title={t(`party.${kind}.title`)}>
-      {/* Hero */}
+    <Screen
+      scroll
+      title={t(`party.${kind}.title`)}
+      headerColors={look.colors}
+      right={<IconButton icon="information-circle-outline" color="#fff" onPress={() => setRulesOpen(true)} accessibilityLabel={t('party.howItWorks')} />}
+    >
+      {/* Hero: the game's illustration on its own colours, name, line, and quick facts */}
       <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
-        <Animated.Text
-          style={[
-            styles.heroWatermark,
-            { transform: [{ rotate: drift.interpolate({ inputRange: [0, 1], outputRange: ['-14deg', '-4deg'] }) }, { scale: drift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] }) }] },
-          ]}
-        >
-          {look.emoji}
-        </Animated.Text>
-        <View style={styles.heroBadge}>
-          <T style={{ fontSize: 26, lineHeight: 32 }} maxFontSizeMultiplier={1}>
-            {look.emoji}
-          </T>
-        </View>
-        <T style={styles.heroTitle}>{t(`party.${kind}.title`)}</T>
-        <T variant="small" color="rgba(255,255,255,0.9)" style={{ marginTop: 2, maxWidth: '82%' }}>
+        <LinearGradient colors={['rgba(255,255,255,0.14)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 0.7 }} style={StyleSheet.absoluteFill} />
+        <Animated.View style={{ alignSelf: 'center', transform: [{ translateY: drift.interpolate({ inputRange: [0, 1], outputRange: [3, -3] }) }] }}>
+          <SvgXml xml={GAME_ART[kind]} width={232} height={174} />
+        </Animated.View>
+        <T style={styles.heroTitle} center>
+          {t(`party.${kind}.title`)}
+        </T>
+        <T variant="small" color="rgba(255,255,255,0.88)" center style={{ marginTop: 2, paddingHorizontal: spacing.md }}>
           {t(`party.${kind}.tagline`)}
         </T>
-        <Row gap={6} style={{ marginTop: spacing.md }}>
+        <Row gap={8} style={{ marginTop: spacing.md, justifyContent: 'center' }}>
           <View style={styles.heroChip}>
-            <Ionicons name="people" size={12} color="#fff" />
+            <Ionicons name="people" size={12} color={look.accent} />
             <T variant="tiny" color="#fff">
               {t('party.players', { min, max })}
             </T>
@@ -178,27 +180,15 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
               {t('party.coinsOrFree')}
             </T>
           </View>
+          <Pressable onPress={() => setRulesOpen(true)} style={styles.heroChip}>
+            <Ionicons name="book" size={12} color={look.accent} />
+            <T variant="tiny" color="#fff">
+              {t('party.rules')}
+            </T>
+          </Pressable>
         </Row>
       </LinearGradient>
-
-      {/* How it goes */}
-      <T variant="smallBold" muted style={styles.label}>
-        {t('party.howItWorks').toUpperCase()}
-      </T>
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {[1, 2, 3, 4].map((n) => (
-          <Row key={n} gap={spacing.md} style={{ alignItems: 'flex-start', paddingVertical: 6 }}>
-            <LinearGradient colors={look.colors} style={styles.stepNum}>
-              <T variant="tiny" color="#fff" maxFontSizeMultiplier={1}>
-                {n}
-              </T>
-            </LinearGradient>
-            <T variant="small" style={{ flex: 1 }}>
-              {t(`party.${kind}.step${n}`)}
-            </T>
-          </Row>
-        ))}
-      </View>
+      <RulesModal kind={kind} visible={rulesOpen} onClose={() => setRulesOpen(false)} />
 
       {/* Your open games */}
       {myGames.length ? (
@@ -342,9 +332,9 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
         ) : null}
 
         <Pressable onPress={create} disabled={busy !== null} style={({ pressed }) => [pressed && { transform: [{ scale: 0.98 }] }]}>
-          <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.createBtn}>
+          <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.createBtn}>
             <ShineSweep />
-            <Ionicons name="add-circle" size={20} color="#fff" />
+            <Ionicons name="add-circle" size={20} color="#3B1D00" />
             <T style={styles.createText}>{busy === 'create' ? t('common.loading') : t('party.create')}</T>
           </LinearGradient>
         </Pressable>
@@ -374,11 +364,11 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: 22, padding: spacing.lg, overflow: 'hidden' },
+  hero: { borderRadius: 26, padding: spacing.lg, paddingTop: spacing.sm, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   heroWatermark: { position: 'absolute', right: -14, bottom: -24, fontSize: 130, lineHeight: 150, opacity: 0.2 },
   heroBadge: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
-  heroTitle: { fontFamily: fonts.display, fontSize: 24, lineHeight: 32, color: '#fff', marginTop: spacing.sm },
-  heroChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.2)' },
+  heroTitle: { fontFamily: fonts.display, fontSize: 26, lineHeight: 34, color: '#fff' },
+  heroChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.16)' },
   label: { marginTop: spacing.lg, marginBottom: spacing.sm, letterSpacing: 0.8 },
   card: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.md },
   stepNum: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
@@ -389,6 +379,6 @@ const styles = StyleSheet.create({
   diagram: { width: 46, height: 46, flexDirection: 'row', flexWrap: 'wrap', gap: 1.5 },
   diagramCell: { width: 8, height: 8, borderRadius: 2 },
   createBtn: { height: 52, borderRadius: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
-  createText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 22, color: '#fff' },
+  createText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 22, color: '#3B1D00' },
   code: { flex: 1, height: 50, borderRadius: radius.md, borderWidth: 1, fontFamily: fonts.bold, fontSize: 20, letterSpacing: 4 },
 });

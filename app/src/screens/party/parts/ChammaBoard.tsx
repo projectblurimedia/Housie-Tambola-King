@@ -10,6 +10,7 @@ import type { PartyState } from '@/services/partyService';
 import { fonts, spacing } from '@/theme';
 import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 import { Chances, Token, TurnBar } from './BoardBits';
+import { LastThrow, SeedsArt, ThrowOverlay } from './ChammaSeeds';
 import { GOLD_EDGE, GoldFrame } from './Premium';
 
 /** Spots inside a square when pawns share it (a lone pawn sits in the middle). */
@@ -70,7 +71,13 @@ const BoardArt = React.memo(function BoardArt({ size, sidesInUse, safe }: { size
         );
       })}
       {/* Inner safe squares (the chosen layout) */}
-      {EXTRA_SAFE[safe].map((c) => cross(c, '#FCD34D', 2.2))}
+      {EXTRA_SAFE[safe].map((c) => (
+        <G key={`is${c}`}>
+          <Rect x={(c % 5) * cell + 1.5} y={Math.floor(c / 5) * cell + 1.5} width={cell - 3} height={cell - 3} rx={6} fill="#8A6A1C" />
+          <Rect x={(c % 5) * cell + 4} y={Math.floor(c / 5) * cell + 4} width={cell - 8} height={cell - 8} rx={4} fill="none" stroke="#FDE68A" strokeOpacity={0.5} strokeWidth={1} />
+          {cross(c, '#FDE68A', 2.4)}
+        </G>
+      ))}
       {/* Centre: home */}
       {Array.from({ length: 8 }, (_, i) => {
         const a = (i * Math.PI) / 4;
@@ -86,92 +93,30 @@ const BoardArt = React.memo(function BoardArt({ size, sidesInUse, safe }: { size
         );
       })}
       <Circle cx={mid} cy={mid} r={cell * 0.07} fill="#FDE68A" />
-      {/* Path direction hints: little chalk arrows on the outer corners (anticlockwise) */}
-      {[
-        [4.5, 4.5, -90],
-        [4.5, 0.5, 180],
-        [0.5, 0.5, 90],
-        [0.5, 4.5, 0],
-      ].map(([cx, cy, rot], i) => (
-        <G key={`a${i}`} transform={`translate(${cx * cell} ${cy * cell}) rotate(${rot})`}>
-          <Path d={`M${-cell * 0.12} ${-cell * 0.08} L${cell * 0.12} 0 L${-cell * 0.12} ${cell * 0.08}`} stroke="rgba(255,248,230,0.35)" strokeWidth={2} fill="none" strokeLinecap="round" strokeLinejoin="round" />
-        </G>
-      ))}
+      {/* How each colour goes inside: an arrow from its last outer square into the inner ring */}
+      {sidesInUse.map((side) => {
+        const from = chammaCell(side, 15);
+        const to = chammaCell(side, 16);
+        const ax = (from % 5) * cell + cell / 2;
+        const ay = Math.floor(from / 5) * cell + cell / 2;
+        const bx = (to % 5) * cell + cell / 2;
+        const by = Math.floor(to / 5) * cell + cell / 2;
+        const angle = (Math.atan2(by - ay, bx - ax) * 180) / Math.PI;
+        const len = Math.hypot(bx - ax, by - ay);
+        return (
+          <G key={`in${side}`} transform={`translate(${ax} ${ay}) rotate(${angle})`} opacity={0.92}>
+            <Path d={`M${len * 0.14} 0 L${len * 0.62} 0`} stroke="#000" strokeOpacity={0.35} strokeWidth={6} strokeLinecap="round" />
+            <Path d={`M${len * 0.14} 0 L${len * 0.62} 0`} stroke={CHAMMA_COLORS[side].hex} strokeWidth={4} strokeLinecap="round" />
+            <Path d={`M${len * 0.6} ${-cell * 0.13} L${len * 0.84} 0 L${len * 0.6} ${cell * 0.13} Z`} fill={CHAMMA_COLORS[side].hex} stroke="#000" strokeOpacity={0.3} strokeWidth={1} />
+          </G>
+        );
+      })}
     </Svg>
   );
 });
 
-/** A round tamarind seed: pale inside face (counts) or dark shiny shell. */
-function Seed({ up, size }: { up: boolean; size: number }) {
-  return (
-    <LinearGradient
-      colors={up ? ['#FFFBEB', '#F3DFB2', '#D9B77A'] : ['#8A4B22', '#552A0E', '#2B1405']}
-      start={{ x: 0.25, y: 0.1 }}
-      end={{ x: 0.8, y: 1 }}
-      style={[styles.seed, { width: size, height: size, borderRadius: size / 2 }, up && styles.seedUp]}
-    >
-      {up ? <View style={[styles.seedDot, { width: size * 0.26, height: size * 0.26, borderRadius: size * 0.13 }]} /> : <View style={[styles.seedShine, { width: size * 0.34, height: size * 0.2, borderRadius: size * 0.1 }]} />}
-    </LinearGradient>
-  );
-}
-
 /**
- * The throw: four round seeds shaken in a wooden bowl, then they flip and land; the ones that
- * land pale-side up glow, and a label says what that means ("3 up = 3", "none up = Ashta 8").
- */
-function SeedBowl({ seeds, throwKey, value }: { seeds: boolean[]; throwKey?: number; value: number | null }) {
-  const { t } = useTranslation();
-  const shake = useRef(new Animated.Value(1)).current;
-  const [flying, setFlying] = useState(false);
-  const first = useRef(true);
-  useEffect(() => {
-    if (first.current) {
-      first.current = false;
-      return;
-    }
-    if (!throwKey) return;
-    shake.setValue(0);
-    setFlying(true);
-    Animated.timing(shake, { toValue: 1, duration: 900, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => setFlying(false));
-  }, [throwKey, shake]);
-  const up = seeds.filter(Boolean).length;
-  const spots: [number, number][] = [[-14, -10], [12, -12], [-12, 12], [14, 10]];
-  return (
-    <View style={{ alignItems: 'center' }}>
-      <Animated.View style={{ transform: [{ rotate: shake.interpolate({ inputRange: [0, 0.1, 0.2, 0.3, 0.4, 1], outputRange: ['0deg', '-10deg', '10deg', '-8deg', '6deg', '0deg'] }) }] }}>
-        <LinearGradient colors={['#A16207', '#713F12', '#422006']} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={styles.bowl}>
-          <View style={styles.bowlInner}>
-            {seeds.map((s, i) => (
-              <Animated.View
-                key={i}
-                style={{
-                  position: 'absolute',
-                  transform: [
-                    { translateX: spots[i][0] },
-                    { translateY: shake.interpolate({ inputRange: [0, 0.45, 0.8, 1], outputRange: [spots[i][1], spots[i][1] - 26 - i * 4, spots[i][1] + 2, spots[i][1]] }) },
-                    { scaleX: shake.interpolate({ inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1], outputRange: [1, 0.1, 1, 0.1, 1, 1] }) },
-                  ],
-                }}
-              >
-                <Seed up={flying ? i % 2 === 0 : !!s} size={20} />
-              </Animated.View>
-            ))}
-          </View>
-        </LinearGradient>
-      </Animated.View>
-      {value !== null && !flying ? (
-        <View style={styles.valuePill}>
-          <T style={styles.valueText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
-            {up === 0 ? t('party.chamma.noneUp') : t('party.chamma.nUp', { count: up })}
-          </T>
-        </View>
-      ) : null}
-    </View>
-  );
-}
-
-/**
- * Ashta Chamma: the board, everyone's pawns (walking square by square), the seed bowl, and on
+ * Ashta Chamma: the board, everyone's pawns (walking square by square), the seeds (thrown onto the board for everyone to see), and on
  * my turn Throw, then tap a glowing pawn. Waiting pawns sit in each player's tray.
  */
 export function ChammaBoard({
@@ -335,6 +280,12 @@ export function ChammaBoard({
               </Animated.View>
             );
           })}
+          <ThrowOverlay
+            seeds={s.seeds ?? [true, false, true, false]}
+            throwKey={s.thrownAt}
+            name={s.thrownBy ? nameOf(s.thrownBy) : ''}
+            color={colorOf(s.thrownBy).hex}
+          />
         </View>
       </GoldFrame>
 
@@ -354,9 +305,10 @@ export function ChammaBoard({
         canAct={isMyTurn && g.phase === 'throw'}
         busy={busy}
         onAct={onThrow}
+        actionArt={<SeedsArt />}
         waitingLabel={canMove ? t('party.chamma.tapPawn', { count: seconds }) : isMyTurn ? t('party.board.moving') : t('party.board.waitTurn')}
       >
-        <SeedBowl seeds={s.seeds ?? [true, false, true, false]} throwKey={s.thrownAt} value={throwValue ?? (s.thrownAt ? (s.seeds ?? []).filter(Boolean).length || 8 : null)} />
+        <LastThrow seeds={s.seeds ?? [true, false, true, false]} value={s.thrownAt ? (s.seeds ?? []).filter(Boolean).length || 8 : null} />
       </TurnBar>
 
       {/* Players: colour, team, waiting pawns (tap one to bring it in on 4 / 8), pawns home, cut, chances */}

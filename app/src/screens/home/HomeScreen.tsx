@@ -17,6 +17,8 @@ import { useAppSettings, useMe } from '@/hooks/useMe';
 import { roomService } from '@/services/roomService';
 import { partyService, type PartyKind } from '@/services/partyService';
 import { PARTY_LOOK } from '@/screens/party/parts/Premium';
+import { GAME_ART } from '@/screens/party/parts/gameArt';
+import { SvgXml } from 'react-native-svg';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { APP_NAME } from '@/constants/config';
@@ -237,56 +239,45 @@ const PEEK_SHRINK = 0.05;
  */
 /** Home section heading, the same everywhere: gradient icon · title · thin rule · See all · N. */
 /**
- * A party game tile, in the same style as Create / Join: a vivid gradient, a big faded emblem
- * drifting in the corner, a small glass badge, the name and one line. Compact (2 × 2).
+ * A party game card: deep jewel-tone gradient, the game's illustration on a soft glow, the name
+ * and one line, a fine light border. Compact (2 × 2).
  */
 function PartyCard({ kind, live, onPress, delay }: { kind: PartyKind; live: number; onPress: () => void; delay: number }) {
   const { t } = useTranslation();
   const look = PARTY_LOOK[kind];
   const enter = useRef(new Animated.Value(0)).current;
-  const drift = useRef(new Animated.Value(0)).current;
+  const float = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     Animated.spring(enter, { toValue: 1, delay, friction: 7, useNativeDriver: true }).start();
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(drift, { toValue: 1, duration: 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(drift, { toValue: 0, duration: 2400, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(float, { toValue: 1, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(float, { toValue: 0, duration: 2200, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     );
     loop.start();
     return () => loop.stop();
-  }, [enter, drift, delay]);
+  }, [enter, float, delay]);
   return (
     <Animated.View style={{ width: '48%', opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
       <Pressable onPress={onPress} style={({ pressed }) => [styles.partyTile, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
         <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.partyGradient}>
-          <Animated.Text
-            style={[
-              styles.partyWatermark,
-              { transform: [{ rotate: drift.interpolate({ inputRange: [0, 1], outputRange: ['-12deg', '-2deg'] }) }, { scale: drift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }] },
-            ]}
-          >
-            {look.emoji}
-          </Animated.Text>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <View style={styles.partyBadge}>
-              <T style={{ fontSize: 17, lineHeight: 22 }} maxFontSizeMultiplier={1}>
-                {look.emoji}
+          <LinearGradient colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 0.6 }} style={StyleSheet.absoluteFill} />
+          <Animated.View style={{ alignItems: 'center', transform: [{ translateY: float.interpolate({ inputRange: [0, 1], outputRange: [2, -2] }) }] }}>
+            <SvgXml xml={GAME_ART[kind]} width={128} height={96} />
+          </Animated.View>
+          {live ? (
+            <View style={styles.partyLive}>
+              <View style={styles.partyLiveDot} />
+              <T variant="tiny" color="#fff" maxFontSizeMultiplier={1}>
+                {live}
               </T>
             </View>
-            {live ? (
-              <View style={styles.partyLive}>
-                <View style={styles.partyLiveDot} />
-                <T variant="tiny" color="#fff" maxFontSizeMultiplier={1}>
-                  {live}
-                </T>
-              </View>
-            ) : null}
-          </Row>
-          <T variant="bodyMedium" color="#fff" numberOfLines={1} style={{ marginTop: 'auto' }}>
+          ) : null}
+          <T style={styles.partyName} numberOfLines={1}>
             {t(`party.${kind}.title`)}
           </T>
-          <T variant="tiny" color="rgba(255,255,255,0.88)" numberOfLines={1}>
+          <T variant="tiny" color={look.accent} numberOfLines={1} style={{ opacity: 0.9 }}>
             {t(`party.${kind}.short`)}
           </T>
         </LinearGradient>
@@ -641,11 +632,10 @@ const styles = StyleSheet.create({
   coinChip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingLeft: 1.5, paddingRight: 6, paddingVertical: 1.5, backgroundColor: '#1E0B3B' },
   qaTile: { borderRadius: 20, overflow: 'hidden' },
   partyGrid: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: spacing.md },
-  partyTile: { borderRadius: 18, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 8, shadowOffset: { width: 0, height: 4 }, elevation: 3 },
-  partyGradient: { height: 104, padding: 12 },
-  partyWatermark: { position: 'absolute', right: -6, bottom: -10, fontSize: 64, lineHeight: 76, opacity: 0.22 },
-  partyBadge: { width: 34, height: 34, borderRadius: 11, backgroundColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
-  partyLive: { flexDirection: 'row', alignItems: 'center', gap: 4, height: 20, borderRadius: 10, paddingHorizontal: 7, backgroundColor: 'rgba(0,0,0,0.25)' },
+  partyTile: { borderRadius: 20, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.14)', shadowColor: '#000', shadowOpacity: 0.25, shadowRadius: 10, shadowOffset: { width: 0, height: 6 }, elevation: 5 },
+  partyGradient: { paddingTop: 8, paddingBottom: 12, paddingHorizontal: 12 },
+  partyName: { fontFamily: fonts.display, fontSize: 15, lineHeight: 20, color: '#fff', marginTop: 2 },
+  partyLive: { position: 'absolute', right: 10, top: 10, flexDirection: 'row', alignItems: 'center', gap: 4, height: 20, borderRadius: 10, paddingHorizontal: 7, backgroundColor: 'rgba(0,0,0,0.3)' },
   partyLiveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' },
   qaGradient: { height: 116, padding: 14, justifyContent: 'flex-end' },
   qaWatermark: { position: 'absolute', right: -12, bottom: -14 },

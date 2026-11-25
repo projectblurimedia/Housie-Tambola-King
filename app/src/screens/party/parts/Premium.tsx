@@ -4,12 +4,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 import type { PartyKind } from '@/services/partyService';
 import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
-/** Each party game's look: a vivid two-tone gradient, a soft tint, and its emblem. */
-export const PARTY_LOOK: Record<PartyKind, { emoji: string; colors: [string, string]; tint: string }> = {
-  seeta: { emoji: '🏹', colors: ['#F97316', '#BE123C'], tint: '#FFEDD5' },
-  show: { emoji: '🃏', colors: ['#6366F1', '#7C3AED'], tint: '#E0E7FF' },
-  snakes: { emoji: '🐍', colors: ['#10B981', '#047857'], tint: '#D1FAE5' },
-  chamma: { emoji: '🌰', colors: ['#F59E0B', '#B45309'], tint: '#FEF3C7' },
+/** Each party game's look: a deep jewel-tone gradient, an accent, its emblem (illustrations: gameArt.ts). */
+export const PARTY_LOOK: Record<PartyKind, { emoji: string; colors: [string, string]; accent: string }> = {
+  seeta: { emoji: '🏹', colors: ['#4A0D2E', '#9F1239'], accent: '#FDE68A' },
+  show: { emoji: '🃏', colors: ['#1E1B4B', '#4338CA'], accent: '#A5F3FC' },
+  snakes: { emoji: '🐍', colors: ['#052E2B', '#0F766E'], accent: '#D9F99D' },
+  chamma: { emoji: '🌰', colors: ['#3B1A06', '#9A3412'], accent: '#FDE68A' },
 };
 
 export const GOLD_EDGE = ['#FFF1A8', '#D4A017', '#8A6100', '#F5D06F'] as const;

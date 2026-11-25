@@ -88,6 +88,7 @@ export function Screen({
   padded = true,
   refreshControl,
   style,
+  headerColors,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
@@ -97,6 +98,8 @@ export function Screen({
   padded?: boolean;
   refreshControl?: React.ReactElement;
   style?: StyleProp<ViewStyle>;
+  /** A different header gradient (e.g. a party game's own colours). */
+  headerColors?: readonly [string, string, ...string[]];
 }) {
   const { colors } = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -104,7 +107,7 @@ export function Screen({
   return (
     <View style={[{ flex: 1, backgroundColor: colors.background, paddingBottom: insets.bottom }, style]}>
       {title !== undefined ? (
-        <Header title={title} right={right} onBack={onBack} />
+        <Header title={title} right={right} onBack={onBack} colors={headerColors} />
       ) : (
         <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={{ height: insets.top }} />
       )}
@@ -128,12 +131,22 @@ export function Screen({
 }
 
 /** Gradient header bar: back button, centered title (wraps to 2 lines if long), optional action. */
-export function Header({ title, right, onBack }: { title?: string; right?: React.ReactNode; onBack?: () => void }) {
+export function Header({
+  title,
+  right,
+  onBack,
+  colors,
+}: {
+  title?: string;
+  right?: React.ReactNode;
+  onBack?: () => void;
+  colors?: readonly [string, string, ...string[]];
+}) {
   const navigation = useNavigation();
   const insets = useSafeAreaInsets();
   return (
     <LinearGradient
-      colors={heroGradient}
+      colors={colors ?? heroGradient}
       start={{ x: 0, y: 0 }}
       end={{ x: 1, y: 1 }}
       style={[styles.header, { paddingTop: insets.top + spacing.md }]}
