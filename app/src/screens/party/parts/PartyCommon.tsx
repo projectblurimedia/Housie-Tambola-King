@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, Share, StyleSheet, View } from 'react-native';
+import { Animated, Easing, Pressable, Share, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -109,7 +109,28 @@ export function PartyLobby({
   const players = state.players.filter((p) => p.active);
   const need = Math.max(0, PARTY_LIMITS[state.game.kind][0] - players.length);
   const look = PARTY_LOOK[state.game.kind];
-  const copy = () => Clipboard.setStringAsync(state.game.code).then(() => showToast({ variant: 'success', title: t('common.copied') }));
+  // Copy: the icon turns into a green tick and the button says Copied ✓ for 2 s (plus a toast).
+  const [copied, setCopied] = useState(false);
+  // Tiles shrink on narrow phones so the code and the copy button always fit on one line.
+  const { width: screenW } = useWindowDimensions();
+  const tileW = Math.max(26, Math.min(36, Math.floor((screenW - 32 - 48 - 46 - 30) / 6)));
+  const copyPop = useRef(new Animated.Value(0)).current;
+  const tilePop = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(tilePop, { toValue: 1, friction: 5, tension: 80, useNativeDriver: true }).start();
+  }, [tilePop]);
+  useEffect(() => {
+    if (!copied) return;
+    const id = setTimeout(() => setCopied(false), 2000);
+    return () => clearTimeout(id);
+  }, [copied]);
+  const copy = () =>
+    Clipboard.setStringAsync(state.game.code).then(() => {
+      setCopied(true);
+      copyPop.setValue(0);
+      Animated.timing(copyPop, { toValue: 1, duration: 320, useNativeDriver: true }).start();
+      showToast({ variant: 'success', title: t('common.copied') });
+    });
   const share = () =>
     Share.share({ message: t('party.shareMessage', { game: title, code: state.game.code, link: JOIN_LINK_BASE + state.game.code }) }).catch(
       () => undefined,
@@ -122,19 +143,29 @@ export function PartyLobby({
         <T variant="tiny" color="rgba(255,255,255,0.85)" style={{ letterSpacing: 2 }}>
           {t('party.gameCode').toUpperCase()}
         </T>
-        <Row gap={spacing.sm} style={{ marginTop: 2 }}>
-          <T style={styles.code} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
-            {state.game.code}
-          </T>
-          <Pressable onPress={copy} hitSlop={10} style={({ pressed }) => [styles.copyBtn, pressed && { opacity: 0.7 }]} accessibilityLabel={t('party.copyCode')}>
-            <Ionicons name="copy-outline" size={18} color="#fff" />
-          </Pressable>
-        </Row>
-        <Row gap={spacing.sm} style={{ marginTop: spacing.sm }}>
-          <Pressable onPress={copy} style={({ pressed }) => [styles.codeAction, pressed && { opacity: 0.8 }]}>
-            <Ionicons name="copy" size={14} color="#fff" />
-            <T variant="smallBold" color="#fff">
-              {t('party.copyCode')}
+        {/* The code as glossy letter tiles; tap anywhere on it to copy */}
+        <Pressable onPress={copy} accessibilityLabel={t('party.copyCode')} style={({ pressed }) => [{ marginTop: spacing.sm }, pressed && { transform: [{ scale: 0.98 }] }]}>
+          <Row gap={6}>
+            {state.game.code.split('').map((ch, i) => (
+              <Animated.View key={i} style={{ transform: [{ translateY: tilePop.interpolate({ inputRange: [0, 1], outputRange: [i % 2 ? -3 : 3, 0] }) }] }}>
+                <LinearGradient colors={['#FFFFFF', '#FFF7E6', '#F1DEB2']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 1 }} style={[styles.codeTile, { width: tileW, height: Math.round(tileW * 1.28) }]}>
+                  <View style={styles.codeTileShine} />
+                  <T style={[styles.codeChar, { color: look.colors[0], fontSize: Math.round(tileW * 0.66), lineHeight: Math.round(tileW * 0.84) }]} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
+                    {ch}
+                  </T>
+                </LinearGradient>
+              </Animated.View>
+            ))}
+            <Animated.View style={[styles.copyBtn, copied && styles.copyBtnDone, { transform: [{ scale: copyPop.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.25, 1] }) }] }]}>
+              <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={18} color={copied ? '#065F46' : '#fff'} />
+            </Animated.View>
+          </Row>
+        </Pressable>
+        <Row gap={spacing.sm} style={{ marginTop: spacing.md }}>
+          <Pressable onPress={copy} style={({ pressed }) => [styles.codeAction, copied && styles.codeActionDone, pressed && { opacity: 0.8 }]}>
+            <Ionicons name={copied ? 'checkmark-circle' : 'copy'} size={14} color={copied ? '#065F46' : '#fff'} />
+            <T variant="smallBold" color={copied ? '#065F46' : '#fff'}>
+              {copied ? t('common.copied') : t('party.copyCode')}
             </T>
           </Pressable>
           <Pressable onPress={share} style={({ pressed }) => [styles.codeAction, styles.codeActionMain, pressed && { opacity: 0.8 }]}>
@@ -457,7 +488,12 @@ const styles = StyleSheet.create({
   roundPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   codeCard: { borderRadius: 22, padding: spacing.lg, alignItems: 'center', overflow: 'hidden' },
   codeWatermark: { position: 'absolute', right: -10, bottom: -20, fontSize: 110, lineHeight: 130, opacity: 0.18 },
-  copyBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
+  copyBtn: { width: 38, height: 46, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center', marginLeft: 2 },
+  copyBtnDone: { backgroundColor: '#86EFAC' },
+  codeActionDone: { backgroundColor: '#86EFAC' },
+  codeTile: { width: 36, height: 46, borderRadius: 10, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
+  codeTileShine: { position: 'absolute', left: 0, right: 0, top: 0, height: '45%', backgroundColor: 'rgba(255,255,255,0.6)' },
+  codeChar: { fontFamily: fonts.display, fontSize: 24, lineHeight: 30 },
   codeAction: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.2)' },
   codeActionMain: { backgroundColor: '#fff' },
   infoCard: { marginTop: spacing.md, borderRadius: radius.lg, borderWidth: 1, padding: spacing.md, gap: spacing.sm },

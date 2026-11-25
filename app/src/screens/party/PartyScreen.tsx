@@ -1,4 +1,4 @@
-import React, { useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
@@ -6,7 +6,7 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { Button, EmptyState, IconButton, Loading, Screen } from '@/components/ui';
 import { partyKey, useParty, type PartyEvent } from '@/hooks/useParty';
-import { isBoardGame, partyService, type PartyPlayer, type PartyState } from '@/services/partyService';
+import { isBoardGame, partyService, type PartyOptions, type PartyPlayer, type PartyState, type ShowItem } from '@/services/partyService';
 import { errorMessage } from '@/localization/errorMessages';
 import { useSettingsStore } from '@/state/settingsStore';
 import { showToast } from '@/state/toastStore';
@@ -82,6 +82,66 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
     }
   };
 
+  // Fast taps (Show category, card to pass): show the latest choice at once, send only the latest
+  // after a short pause, and ignore replies to older taps — so the selection never jumps back.
+  const [pendingOptions, setPendingOptions] = useState<PartyOptions | null>(null);
+  const [pendingPick, setPendingPick] = useState<number | null>(null);
+  const optSeq = useRef(0);
+  const pickSeq = useRef(0);
+  const optTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const pickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  useEffect(
+    () => () => {
+      if (optTimer.current) clearTimeout(optTimer.current);
+      if (pickTimer.current) clearTimeout(pickTimer.current);
+    },
+    [],
+  );
+  const chooseCategory = (category: string, items: ShowItem[] | null, catTitle: string | null) => {
+    setPendingOptions(category === 'custom' ? { category, items: items ?? [], title: catTitle ?? '' } : { category });
+    const seq = ++optSeq.current;
+    if (optTimer.current) clearTimeout(optTimer.current);
+    optTimer.current = setTimeout(async () => {
+      try {
+        await partyService.setOptions(partyId, category, items, catTitle);
+      } catch (err) {
+        if (seq === optSeq.current) {
+          showToast({ variant: 'error', title: errorMessage(err) });
+          setPendingOptions(null);
+        }
+        return;
+      }
+      if (seq !== optSeq.current) return;
+      await qc.invalidateQueries({ queryKey: partyKey(partyId) });
+      if (seq === optSeq.current) setPendingOptions(null);
+    }, 350);
+  };
+  const choosePick = (index: number) => {
+    setPendingPick(index);
+    const seq = ++pickSeq.current;
+    if (pickTimer.current) clearTimeout(pickTimer.current);
+    pickTimer.current = setTimeout(async () => {
+      try {
+        await partyService.pick(partyId, index);
+      } catch (err) {
+        if (seq === pickSeq.current) {
+          showToast({ variant: 'error', title: errorMessage(err) });
+          setPendingPick(null);
+        }
+        return;
+      }
+      if (seq !== pickSeq.current) return;
+      await qc.invalidateQueries({ queryKey: partyKey(partyId) });
+      if (seq === pickSeq.current) setPendingPick(null);
+    }, 250);
+  };
+  // A new turn (cards passed) starts with no pick.
+  const turnKey = `${state?.game.roundNo}:${state?.game.turnNo}`;
+  useEffect(() => {
+    setPendingPick(null);
+    pickSeq.current++;
+  }, [turnKey]);
+
   const leave = async () => {
     setConfirm(null);
     leaving.current = true;
@@ -125,17 +185,10 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
           extra={
             g.kind === 'show' ? (
               <CategoryPicker
-                options={g.options ?? {}}
+                options={pendingOptions ?? g.options ?? {}}
                 isHost={g.hostId === state.me.userId}
                 players={state.players.filter((p) => p.active).length}
-                onPick={(category, items, catTitle) =>
-                  act(() => partyService.setOptions(partyId, category, items, catTitle), {
-                    optimistic: (s) => ({
-                      ...s,
-                      game: { ...s.game, options: category === 'custom' ? { category, items: items ?? [], title: catTitle ?? '' } : { category } },
-                    }),
-                  })
-                }
+                onPick={chooseCategory}
               />
             ) : null
           }
@@ -178,11 +231,11 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
             />
           ) : (
             <ShowBoard
-              state={state}
+              state={pendingPick !== null ? { ...state, me: { ...state.me, pick: pendingPick } } : state}
               seconds={seconds}
               onPick={(i) => {
                 buzz('light');
-                act(() => partyService.pick(partyId, i), { optimistic: (s) => ({ ...s, me: { ...s.me, pick: i } }) });
+                choosePick(i);
               }}
               onShow={() => {
                 buzz('heavy');
