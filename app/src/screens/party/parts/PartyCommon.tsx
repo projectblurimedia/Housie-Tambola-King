@@ -7,7 +7,7 @@ import { Avatar } from '@/components/Avatar';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { Button, Card, Row, T } from '@/components/ui';
 import { JOIN_LINK_BASE } from '@/constants/config';
-import type { PartyPlayer, PartyState } from '@/services/partyService';
+import { isBoardGame, PARTY_LIMITS, type PartyPlayer, type PartyState } from '@/services/partyService';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
@@ -87,9 +87,12 @@ export function PartyLobby({
   onStart,
   onLeave,
   onRemove,
+  extra,
 }: {
   state: PartyState;
   title: string;
+  /** Game-specific lobby settings (Show: card category). */
+  extra?: React.ReactNode;
   busy: boolean;
   onStart: () => void;
   onLeave: () => void;
@@ -100,7 +103,7 @@ export function PartyLobby({
   const [removing, setRemoving] = useState<PartyPlayer | null>(null);
   const isHost = state.game.hostId === state.me.userId;
   const players = state.players.filter((p) => p.active);
-  const need = Math.max(0, 3 - players.length);
+  const need = Math.max(0, PARTY_LIMITS[state.game.kind][0] - players.length);
   const share = () =>
     Share.share({ message: t('party.shareMessage', { game: title, code: state.game.code, link: JOIN_LINK_BASE + state.game.code }) }).catch(
       () => undefined,
@@ -127,9 +130,11 @@ export function PartyLobby({
         <T variant="smallBold" muted style={{ letterSpacing: 0.6 }}>
           {t('party.inLobby', { count: players.length }).toUpperCase()}
         </T>
-        <T variant="tiny" muted>
-          {t('party.roundsCount', { count: state.game.rounds })}
-        </T>
+        {isBoardGame(state.game.kind) ? null : (
+          <T variant="tiny" muted>
+            {t('party.roundsCount', { count: state.game.rounds })}
+          </T>
+        )}
       </Row>
       <View style={styles.grid}>
         {players.map((p) => (
@@ -152,6 +157,8 @@ export function PartyLobby({
           </View>
         ))}
       </View>
+
+      {extra}
 
       <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
         {isHost ? (

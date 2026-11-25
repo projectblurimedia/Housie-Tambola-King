@@ -15,7 +15,7 @@ export type RootStackParamList = {
   EditProfile: undefined;
   HowToPlay: undefined;
   /** A party game's details: create (rounds) or join with a code. */
-  PartyIntro: { kind: 'seeta' | 'show' };
+  PartyIntro: { kind: 'seeta' | 'show' | 'snakes' | 'chamma' };
   Party: { partyId: string };
 };
 

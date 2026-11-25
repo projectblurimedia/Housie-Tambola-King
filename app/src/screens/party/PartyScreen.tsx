@@ -6,7 +6,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { Button, EmptyState, Loading, Screen } from '@/components/ui';
 import { partyKey, useParty, type PartyEvent } from '@/hooks/useParty';
-import { partyService, type PartyPlayer, type PartyState } from '@/services/partyService';
+import { isBoardGame, partyService, type PartyPlayer, type PartyState } from '@/services/partyService';
 import { errorMessage } from '@/localization/errorMessages';
 import { useSettingsStore } from '@/state/settingsStore';
 import { showToast } from '@/state/toastStore';
@@ -15,6 +15,9 @@ import type { ScreenProps } from '@/navigation/types';
 import { PartyFinished, PartyLobby, ScoreStrip, useNow } from './parts/PartyCommon';
 import { SeetaBoard } from './parts/SeetaBoard';
 import { ShowBoard } from './parts/ShowBoard';
+import { SnakesBoard } from './parts/SnakesBoard';
+import { ChammaBoard } from './parts/ChammaBoard';
+import { CategoryPicker } from './parts/CategoryPicker';
 
 const buzz = (kind: 'light' | 'heavy' | 'success') => {
   if (!useSettingsStore.getState().haptics) return;
@@ -35,7 +38,7 @@ export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
   const onEvent = (e: PartyEvent) => {
     if (e.type === 'show') buzz(e.first ? 'heavy' : 'light');
     else if (e.type === 'reveal' || e.type === 'finished') buzz('success');
-    else if (e.type === 'turn' || e.type === 'round') buzz('light');
+    else if (e.type === 'round') buzz('light');
     if (e.type === 'closed' && !leaving.current) {
       leaving.current = true;
       showToast({ variant: 'info', title: t('party.closed') });
@@ -102,6 +105,23 @@ export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
           onStart={() => act(() => partyService.start(partyId))}
           onLeave={() => setConfirm('leave')}
           onRemove={(p: PartyPlayer) => act(() => partyService.remove(partyId, p.userId))}
+          extra={
+            g.kind === 'show' ? (
+              <CategoryPicker
+                options={g.options ?? {}}
+                isHost={g.hostId === state.me.userId}
+                players={state.players.filter((p) => p.active).length}
+                onPick={(category, items, catTitle) =>
+                  act(() => partyService.setOptions(partyId, category, items, catTitle), {
+                    optimistic: (s) => ({
+                      ...s,
+                      game: { ...s.game, options: category === 'custom' ? { category, items: items ?? [], title: catTitle ?? '' } : { category } },
+                    }),
+                  })
+                }
+              />
+            ) : null
+          }
         />
       ) : g.status === 'finished' ? (
         <PartyFinished
@@ -115,6 +135,30 @@ export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
         <>
           {g.kind === 'seeta' ? (
             <SeetaBoard state={state} seconds={seconds} onGuess={(id) => act(() => partyService.guess(partyId, id))} />
+          ) : g.kind === 'snakes' ? (
+            <SnakesBoard
+              state={state}
+              seconds={seconds}
+              busy={busy}
+              onRoll={() => {
+                buzz('light');
+                act(() => partyService.roll(partyId));
+              }}
+            />
+          ) : g.kind === 'chamma' ? (
+            <ChammaBoard
+              state={state}
+              seconds={seconds}
+              busy={busy}
+              onThrow={() => {
+                buzz('light');
+                act(() => partyService.throwSeeds(partyId));
+              }}
+              onMove={(pawn) => {
+                buzz('light');
+                act(() => partyService.movePawn(partyId, pawn));
+              }}
+            />
           ) : (
             <ShowBoard
               state={state}
@@ -129,7 +173,7 @@ export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
               }}
             />
           )}
-          <ScoreStrip players={state.players} meId={state.me.userId} />
+          {isBoardGame(g.kind) ? null : <ScoreStrip players={state.players} meId={state.me.userId} />}
           <View style={{ marginTop: spacing.md }}>
             <Button title={t('party.leave')} variant="ghost" icon="exit-outline" onPress={() => setConfirm('leave')} />
           </View>

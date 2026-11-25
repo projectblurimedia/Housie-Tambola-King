@@ -237,7 +237,7 @@ export function CrownArt({ id, jewels = true }: { id: string; jewels?: boolean }
  */
 export function Wordmark({ size = 'large', subtitle, extra }: { size?: 'large' | 'small'; subtitle?: string; extra?: React.ReactNode }) {
   const large = size === 'large';
-  const font = large ? 26 : 23;
+  const font = large ? 26 : 20;
   return (
     <View style={[styles.row, large && { justifyContent: 'center' }]}>
       <AppIcon size={large ? 52 : 48} />

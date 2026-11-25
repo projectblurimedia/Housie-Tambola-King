@@ -63,7 +63,7 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `register_push_token` | `p_token, p_platform` | – | `INVALID_PUSH_TOKEN` |
 
 ## Party games (`authenticated`, points only)
-Find Seeta (3–15 players) and Show (3–10). Roles / hands are in `party_secrets` (no client access); each player reads only their own.
+Find Seeta (3–15 players), Show (3–10), Snakes & Ladders (2–6) and Ashta Chamma (2–4). Board games are one game (rounds = 1); `start_party` raises `NEED_MORE_PLAYERS` below the minimum and `NOT_ENOUGH_ITEMS` for a custom Show category with fewer items than players. Roles / hands are in `party_secrets` (no client access); each player reads only their own.
 
 | RPC | Args | Returns | Errors |
 |---|---|---|---|
@@ -76,9 +76,13 @@ Find Seeta (3–15 players) and Show (3–10). Roles / hands are in `party_secre
 | `seeta_guess` | `p_game, p_target` | – (Ram only; reveals all roles + scores) | `NOT_RAM`, `NOT_NOW`, `INVALID_TARGET` |
 | `show_pick` | `p_game, p_index (0–3)` | – (all picked → every card passes to the next seat) | `NOT_NOW`, `INVALID_CARD` |
 | `show_call` | `p_game` | – (first needs 4 of a colour; then everyone races) | `NOT_A_SHOW`, `NOT_NOW` |
+| `set_party_options` | `p_game, p_category ('colors'·'fruits'·'animals'·'flowers'·'sweets'·'vehicles'·'custom'), p_items [{e, n}] (custom: 3–10), p_title` | – (Show, host, lobby) | `INVALID_CATEGORY`, `NOT_HOST`, `NOT_NOW` |
+| `snakes_roll` | `p_game` | – (your turn; die 1–6, ladders / snakes, 6 = again) | `NOT_YOUR_TURN`, `NOT_NOW` |
+| `chamma_throw` | `p_game` | – (4 seeds; none up = 8) | `NOT_YOUR_TURN`, `NOT_NOW` |
+| `chamma_move` | `p_game, p_pawn (0–3)` | – | `INVALID_PAWN`, `INVALID_MOVE`, `NOT_YOUR_TURN` |
 | `party_nudge` | `p_game` | – (acts on a passed deadline; pg_cron `party-tick` does too) | – |
 
-Private channel `party:<id>` (members only): `players`, `picked {userId}`, `round {roundNo}`, `turn {turn}`, `show {userId, first}`, `reveal`, `finished`, `lobby`, `closed`.
+Private channel `party:<id>` (members only): `players`, `picked {userId}`, `move {userId, …}`, `throw {userId, throw, seeds}`, `turn {userId}`, `round {roundNo}`, `turn {turn}`, `show {userId, first}`, `reveal`, `finished`, `lobby`, `closed`.
 
 ## Realtime
 Private channel `room:<roomId>` (members only, receive-only). Events: `call {gameId, n, index, nextCallAt}`, `prize {gameId, prize, amount, callIndex, winners[{userId, name, avatarKey, ticketSerial, numbers}]}`, `prize_settled {gameId, prize, each, winners, amount, callIndex, winnerList[…, amount]}` (check rooms announce on this), `claim_check {gameId, prize, callIndex, winners, deadline, round, earlier}` (`earlier` = a late claim replaced the previous winners), `speed {seconds}`, `paused {gameId, paused}`, `phase {gameId, phase}`, `chat {id, userId, name, avatarKey, body, at}`, `ready {gameId, userIds}`, `check_ack {gameId, round, userIds}`, `final_check {gameId, deadline, round}`, `room_settings`, `lobby {gameId, ticketCount, playerCount, pot}`, `members {memberCount, joined?}`, `state {gameId, gameNo, status}`, `game {gameId, gameNo}` (next lobby opened), `room_ended {reason}`.

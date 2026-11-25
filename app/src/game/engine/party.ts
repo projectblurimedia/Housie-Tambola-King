@@ -68,3 +68,15 @@ export function nextSeatPlayer<T extends { seat: number }>(players: readonly T[]
   const i = ordered.findIndex((p) => p.seat === meSeat);
   return i < 0 || ordered.length < 2 ? undefined : ordered[(i + 1) % ordered.length];
 }
+
+/** Show's built-in card categories (names are translated: party.items.<key>, "A|B|C…"). */
+export const SHOW_CATEGORIES = {
+  colors: ['', '', '', '', '', '', '', '', '', ''],
+  fruits: ['🍎', '🍌', '🍇', '🍊', '🥭', '🍉', '🍍', '🍓', '🍒', '🥥'],
+  animals: ['🐘', '🐅', '🦁', '🐒', '🐄', '🐎', '🦚', '🐍', '🐇', '🐻'],
+  flowers: ['🌹', '🌻', '🌷', '🌸', '🌼', '🌺', '🏵️', '💐', '🍀', '🌿'],
+  sweets: ['🍬', '🍫', '🍩', '🍰', '🍪', '🍨', '🍯', '🥧', '🧁', '🍮'],
+  vehicles: ['🚗', '🚌', '🚲', '🏍️', '🚂', '✈️', '🚢', '🛺', '🚜', '🚁'],
+} as const;
+export type ShowCategoryKey = keyof typeof SHOW_CATEGORIES;
+export const SHOW_CATEGORY_KEYS = Object.keys(SHOW_CATEGORIES) as ShowCategoryKey[];

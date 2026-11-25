@@ -11,6 +11,8 @@ export type PartyEvent =
   | { type: 'reveal' }
   | { type: 'round' }
   | { type: 'turn' }
+  | { type: 'move' }
+  | { type: 'throw' }
   | { type: 'finished' }
   | { type: 'closed' };
 
@@ -59,6 +61,8 @@ export function useParty(id: string, onEvent?: (e: PartyEvent) => void) {
       });
     on('players');
     on('picked');
+    on('move', () => ({ type: 'move' }));
+    on('throw', () => ({ type: 'throw' }));
     on('lobby');
     on('round', () => ({ type: 'round' }));
     on('turn', () => ({ type: 'turn' }));

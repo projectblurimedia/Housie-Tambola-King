@@ -337,7 +337,7 @@ try {
     // Find Seeta
     const seeta = await host.rpc('create_party', { p_kind: 'seeta', p_rounds: 3 });
     await friend.rpc('join_party_by_code', { p_code: seeta.code });
-    check(await expectError(host.rpc('start_party', { p_game: seeta.id }), 'NEED_3_PLAYERS'), 'Find Seeta needs 3 players');
+    check(await expectError(host.rpc('start_party', { p_game: seeta.id }), 'NEED_MORE_PLAYERS'), 'Find Seeta needs 3 players');
     await third.rpc('join_party_by_code', { p_code: seeta.code });
     await host.rpc('start_party', { p_game: seeta.id });
     let states = await Promise.all(crew.map((p) => stateOf(p, seeta.id)));
@@ -409,6 +409,84 @@ try {
     await host.rpc('end_party', { p_game: show.id });
     await host.rpc('end_party', { p_game: seeta.id });
     check(await expectError(third.rpc('join_party_by_code', { p_code: seeta.code }), 'PARTY_NOT_FOUND'), 'an ended game cannot be joined');
+
+    // Show categories: built-in or the host's own items (at least one per player).
+    const cat = await host.rpc('create_party', { p_kind: 'show', p_rounds: 3 });
+    check((await stateOf(host, cat.id)).game.options.category === 'colors', 'Show starts with the Colours category');
+    check(await expectError(host.rpc('set_party_options', { p_game: cat.id, p_category: 'custom', p_items: [{ n: 'A' }, { n: 'B' }], p_title: 'Mine' }), 'INVALID_CATEGORY'),
+      'a category needs at least 3 items');
+    await host.rpc('set_party_options', { p_game: cat.id, p_category: 'custom', p_items: [{ e: '🍕', n: 'Pizza' }, { e: '🍔', n: 'Burger' }, { e: '🌮', n: 'Taco' }], p_title: 'Food' });
+    const catState = await stateOf(host, cat.id);
+    check(catState.game.options.title === 'Food' && catState.game.options.items.length === 3, 'custom category saved for everyone');
+    check(await expectError(friend.rpc('set_party_options', { p_game: cat.id, p_category: 'fruits', p_items: null, p_title: null }), 'NOT_HOST'), 'only the host picks the category');
+    await host.rpc('end_party', { p_game: cat.id });
+
+    // Snakes & Ladders: 2 players, roll until someone reaches 100.
+    const LADDERS = { 1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100 };
+    const SNAKES = { 16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78 };
+    const jump = (p) => LADDERS[p] ?? SNAKES[p] ?? p;
+    const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 5 });
+    await friend.rpc('join_party_by_code', { p_code: snl.code });
+    await host.rpc('start_party', { p_game: snl.id });
+    let snlState = await stateOf(host, snl.id);
+    check(snlState.game.status === 'playing' && snlState.game.state.turn === snlState.me.userId, 'Snakes & Ladders starts with 2 players, host first');
+    check(await expectError(friend.rpc('snakes_roll', { p_game: snl.id }), 'NOT_YOUR_TURN'), 'only the player whose turn it is can roll');
+    const duo = { [snlState.me.userId]: host, [(await stateOf(friend, snl.id)).me.userId]: friend };
+    let movesOk = true;
+    for (let i = 0; i < 600 && snlState.game.status === 'playing'; i++) {
+      const who = duo[snlState.game.state.turn];
+      await who.rpc('snakes_roll', { p_game: snl.id });
+      snlState = await stateOf(host, snl.id);
+      const l = snlState.game.state.last;
+      if (!(l.roll >= 1 && l.roll <= 6 && l.to === jump(l.mid) && (l.mid === l.from + l.roll || (l.mid === l.from && l.from + l.roll > 100)))) movesOk = false;
+    }
+    check(movesOk, 'every roll is 1–6 and follows the ladders and snakes');
+    const winner = snlState.players.find((p) => p.userId === snlState.game.state.winnerId);
+    check(snlState.game.status === 'finished' && winner?.score === 100, 'first to 100 wins');
+    await host.rpc('end_party', { p_game: snl.id });
+
+    // Ashta Chamma: 2 players (opposite sides), seeds, entering on 4 / 8, cuts.
+    const ach = await host.rpc('create_party', { p_kind: 'chamma', p_rounds: 5 });
+    await friend.rpc('join_party_by_code', { p_code: ach.code });
+    await third.rpc('join_party_by_code', { p_code: ach.code });
+    await host.rpc('start_party', { p_game: ach.id });
+    let ac = await stateOf(host, ach.id);
+    const sides = Object.values(ac.game.state.sides).sort();
+    check(sides.join(',') === '0,1,2', `3 players sit on sides ${sides.join(', ')}`);
+    const trio = { [ac.me.userId]: host };
+    trio[(await stateOf(friend, ach.id)).me.userId] = friend;
+    trio[(await stateOf(third, ach.id)).me.userId] = third;
+    const target = (idx, th, cut) => (idx === 24 ? null : idx === -1 ? ([4, 8].includes(th) ? 0 : null) : !cut ? (idx + th) % 16 : idx + th > 24 ? null : idx + th);
+    let throwsOk = true, enterOk = true, ringOk = true, cuts = 0;
+    for (let i = 0; i < 300 && ac.game.status === 'playing'; i++) {
+      const turn = ac.game.state.turn;
+      const p = trio[turn];
+      if (ac.game.phase === 'throw') {
+        const beforePawns = ac.game.state.pawns[turn].slice();
+        await p.rpc('chamma_throw', { p_game: ach.id });
+        ac = await stateOf(host, ach.id);
+        const seedsUp = (ac.game.state.seeds ?? []).filter(Boolean).length;
+        const th = ac.game.state.throw;
+        if (th !== null && th !== (seedsUp === 0 ? 8 : seedsUp)) throwsOk = false;
+        if (beforePawns.every((x) => x === -1) && ![4, 8].includes(seedsUp === 0 ? 8 : seedsUp) && ac.game.phase === 'move') enterOk = false;
+      } else {
+        const pawns = ac.game.state.pawns[turn];
+        const cut = ac.game.state.cut[turn];
+        const th = ac.game.state.throw;
+        const k = pawns.findIndex((x) => target(x, th, cut) !== null);
+        await p.rpc('chamma_move', { p_game: ach.id, p_pawn: k });
+        ac = await stateOf(host, ach.id);
+        cuts += ac.game.state.last?.captured?.length ?? 0;
+      }
+      for (const [uid, pw] of Object.entries(ac.game.state.pawns)) {
+        if (!ac.game.state.cut[uid] && pw.some((x) => x > 15)) ringOk = false;
+      }
+    }
+    check(throwsOk, 'seed throws: n seeds up = n, none up = 8');
+    check(enterOk, 'a pawn comes in only on a 4 or 8');
+    check(ringOk, 'no pawn enters the inner ring before its player has cut');
+    check(true, `${cuts} cut(s) in 300 moves; game ${ac.game.status}`);
+    await host.rpc('end_party', { p_game: ach.id });
   } finally {
     await third.rpc('delete_my_account').catch(() => undefined);
   }

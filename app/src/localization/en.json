@@ -16,7 +16,8 @@
     "seconds": "{{count}}s",
     "minutesSeconds": "{{m}}m {{s}}s",
     "on": "On",
-    "off": "Off"
+    "off": "Off",
+    "delete": "Delete"
   },
   "app": {
     "tagline": "Play Housie live with family & friends",
@@ -665,7 +666,13 @@
     "INVALID_CARD": "Pick one of your cards.",
     "NOT_A_SHOW": "You need four of one colour for a SHOW.",
     "NOT_ALLOWED": "That isn’t allowed.",
-    "NOT_A_MEMBER": "You are not in this game."
+    "NOT_A_MEMBER": "You are not in this game.",
+    "NEED_MORE_PLAYERS": "Not enough players to start yet.",
+    "NOT_ENOUGH_ITEMS": "This category needs one item per player.",
+    "INVALID_CATEGORY": "Give the category a name and 3–10 items.",
+    "NOT_YOUR_TURN": "Wait for your turn.",
+    "INVALID_PAWN": "Pick one of your pawns.",
+    "INVALID_MOVE": "That pawn can’t move with this throw."
   },
   "update": {
     "title": "Updating app…",
@@ -852,7 +859,8 @@
       "found": "{{ram}} found Seeta!",
       "missed": "{{ram}} missed!",
       "foundDesc": "It was {{seeta}}. Ram keeps 1000 points.",
-      "missedDesc": "{{guess}} wasn’t Seeta — it was {{seeta}}. Seeta takes 1000 points."
+      "missedDesc": "{{guess}} wasn’t Seeta — it was {{seeta}}. Seeta takes 1000 points.",
+      "isItHer": "Is this Seeta?"
     },
     "show": {
       "title": "Show",
@@ -889,6 +897,72 @@
       "dasaratha": "Dasaratha",
       "janaka": "Janaka",
       "guha": "Guha"
+    },
+    "cards": "Cards",
+    "newCategory": "New category",
+    "categoryName": "Category name (e.g. Movies)",
+    "itemsHint": "Add 3–10 items — at least {{count}} for this game (one per player).",
+    "itemName": "Item {{n}}",
+    "addItem": "Add item",
+    "saveCategory": "Save & use",
+    "deleteCategory": "Delete this category?",
+    "needItems": "This category needs at least {{count}} items (one per player).",
+    "cat": {
+      "colors": "Colours",
+      "fruits": "Fruits",
+      "animals": "Animals",
+      "flowers": "Flowers",
+      "sweets": "Sweets",
+      "vehicles": "Vehicles",
+      "custom": "My category"
+    },
+    "items": {
+      "colors": "Red|Blue|Green|Yellow|Purple|Orange|Pink|Teal|Brown|Black",
+      "fruits": "Apple|Banana|Grapes|Orange|Mango|Watermelon|Pineapple|Strawberry|Cherry|Coconut",
+      "animals": "Elephant|Tiger|Lion|Monkey|Cow|Horse|Peacock|Snake|Rabbit|Bear",
+      "flowers": "Rose|Sunflower|Tulip|Blossom|Daisy|Hibiscus|Marigold|Bouquet|Clover|Tulsi",
+      "sweets": "Candy|Chocolate|Donut|Cake|Cookie|Ice cream|Honey|Pie|Cupcake|Pudding",
+      "vehicles": "Car|Bus|Cycle|Bike|Train|Plane|Ship|Auto|Tractor|Helicopter"
+    },
+    "board": {
+      "yourTurn": "Your turn",
+      "theirTurn": "{{name}}’s turn",
+      "autoIn_one": "Plays for you in {{count}} s",
+      "autoIn_other": "Plays for you in {{count}} s",
+      "moving": "Moving…",
+      "waitTurn": "Waiting for their move"
+    },
+    "snakes": {
+      "title": "Snakes & Ladders",
+      "short": "Climb ladders, dodge snakes",
+      "tagline": "Roll the die, climb the ladders, dodge the snakes — first to 100 wins!",
+      "step1": "2–6 players take turns rolling the die.",
+      "step2": "Your token walks that many squares. Land on a ladder’s foot → climb up!",
+      "step3": "Land on a snake’s head → slide down to its tail. Rolling a 6 gives another roll.",
+      "step4": "You need the exact number to finish. First to reach 100 wins.",
+      "roll": "Roll the die",
+      "start": "Everyone starts off the board. Roll to begin!",
+      "moved": "{{name}} rolled {{roll}} → square {{to}}",
+      "climbed": "{{name}} climbed a ladder to {{to}}! 🪜",
+      "bitten": "{{name}} was bitten — down to {{to}} 🐍",
+      "tooHigh": "{{name}} needs an exact roll to reach 100"
+    },
+    "chamma": {
+      "title": "Ashta Chamma",
+      "short": "Tamarind seeds, 5×5 board",
+      "tagline": "The classic Telugu board game — throw 4 tamarind seeds and race your pawns home!",
+      "step1": "2–4 players, 4 pawns each, on a 5×5 board. Throw 4 seeds: seeds facing up = your number; none up = 8 (Ashta).",
+      "step2": "A pawn comes in only on a 4 (Chamma) or an 8 (Ashta). 4, 8 or a cut gives another throw.",
+      "step3": "Land on an opponent (not on a ✕ safe square) to cut it back home. Pawns go round the outer ring until you have cut one.",
+      "step4": "After a cut your pawns can enter the inner ring and reach the centre. All 4 pawns home wins!",
+      "throw": "Throw seeds",
+      "chamma": "Chamma!",
+      "ashta": "Ashta!",
+      "tapPawn_one": "Tap a glowing pawn ({{count}} s)",
+      "tapPawn_other": "Tap a glowing pawn ({{count}} s)",
+      "cutMsg": "⚔️ {{name}} cut a pawn! Another throw.",
+      "needCut": "Cut an opponent’s pawn to open the inner ring.",
+      "innerOpen": "⚔️ You have cut — your pawns can go to the centre."
     }
   }
 }

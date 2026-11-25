@@ -1,10 +1,14 @@
 import { supabase } from '@/lib/supabase';
 import { unwrap } from './errors';
 
-export type PartyKind = 'seeta' | 'show';
+export type PartyKind = 'seeta' | 'show' | 'snakes' | 'chamma';
+
+/** Players per game: [min, max]. Board games are one game (no rounds). */
+export const PARTY_LIMITS: Record<PartyKind, [number, number]> = { seeta: [3, 15], show: [3, 10], snakes: [2, 6], chamma: [2, 4] };
+export const isBoardGame = (k: PartyKind) => k === 'snakes' || k === 'chamma';
 export type PartyStatus = 'lobby' | 'playing' | 'finished' | 'closed';
 /** lobby · seeta: guess, reveal · show: pass, show, reveal · done */
-export type PartyPhase = 'lobby' | 'guess' | 'pass' | 'show' | 'reveal' | 'done';
+export type PartyPhase = 'lobby' | 'guess' | 'pass' | 'show' | 'reveal' | 'turn' | 'throw' | 'move' | 'done';
 
 export interface PartyPlayer {
   userId: string;
@@ -40,6 +44,45 @@ export interface PartyRoundState {
   color?: number;
   shows?: string[];
   results?: ShowResult[];
+  // Board games
+  order?: string[];
+  turn?: string;
+  winnerId?: string;
+  /** Snakes & Ladders: square per player (0 = not on the board yet). */
+  pos?: Record<string, number>;
+  roll?: number;
+  sixes?: number;
+  /** Last move (both board games); at = server time in seconds. */
+  last?: {
+    userId: string;
+    at: number;
+    roll?: number;
+    from: number;
+    mid?: number;
+    to: number;
+    pawn?: number;
+    throw?: number;
+    captured?: { userId: string; pawn: number }[];
+  };
+  /** Ashta Chamma */
+  pawns?: Record<string, number[]>;
+  cut?: Record<string, boolean>;
+  sides?: Record<string, number>;
+  throw?: number | null;
+  seeds?: boolean[];
+  thrownAt?: number;
+}
+
+export interface ShowItem {
+  e?: string;
+  n: string;
+}
+
+/** Show's card category: built-in, or the host's own items. */
+export interface PartyOptions {
+  category?: string;
+  title?: string;
+  items?: ShowItem[];
 }
 
 export interface PartyState {
@@ -54,6 +97,7 @@ export interface PartyState {
     phase: PartyPhase;
     turnNo: number;
     state: PartyRoundState;
+    options: PartyOptions;
     deadline: string | null;
   };
   players: PartyPlayer[];
@@ -107,6 +151,18 @@ export const partyService = {
   },
   async callShow(id: string): Promise<void> {
     unwrap(await supabase.rpc('show_call', { p_game: id }));
+  },
+  async setOptions(id: string, category: string, items: ShowItem[] | null, title: string | null): Promise<void> {
+    unwrap(await supabase.rpc('set_party_options', { p_game: id, p_category: category, p_items: items, p_title: title }));
+  },
+  async roll(id: string): Promise<void> {
+    unwrap(await supabase.rpc('snakes_roll', { p_game: id }));
+  },
+  async throwSeeds(id: string): Promise<void> {
+    unwrap(await supabase.rpc('chamma_throw', { p_game: id }));
+  },
+  async movePawn(id: string, pawn: number): Promise<void> {
+    unwrap(await supabase.rpc('chamma_move', { p_game: id, p_pawn: pawn }));
   },
   async nudge(id: string): Promise<void> {
     unwrap(await supabase.rpc('party_nudge', { p_game: id }));

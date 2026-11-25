@@ -49,6 +49,7 @@ _Last updated: 2026-11-19_
 - 2026-11-25 polish: Create Room "Play for" = compact tiles Free / Coins / **₹ Amount** (score only); "Max tickets" (per player, up to 10); auto hint defaults to **Until next number** (two preview cards). Coins drawn as a gold coin with the app's crown (`components/CoinIcon.tsx`, CoinAmount); in sentences "N coins". Home header coin pill = dark glass + gold edge. Profile no longer shows a coins card / history (removed). Home title full width (coin pill sits beside the greeting); profile card: rays + crowned gold-ringed photo + 2 stats (no amount-won tile); coin = minted gold coin with an embossed crown (no jewels); Home coins = small pill under the photo (1.2K style); Profile = cover card + colour-tiled settings sections + games / prizes / coins stats; How to play = 8-step timeline for the current rules.
 - **Party games** (2026-11-25, migration 20261205000001_party_games): Home "Party games" cards → details (rules, rounds 3–20, create, join by code, your games) → live game. **Find Seeta** (classic Ram/Seeta points, 15 Ramayana roles) and **Show** (pass colour cards round a circular table, SHOW race, last gets 0). Points only. Codes share the Housie join link (Join Room falls back to party codes). pg_cron `party-tick` every 1 s + `party-cleanup` hourly.
 - Pull-to-refresh = NearbyU's PullToRefresh (`components/PullToRefresh.tsx`) on Home + Join Room. Profile: Sound & voice ends with Call numbers aloud → Caller voice; Language & look = gradient choice tiles; ready-made ticket looks removed.
+- **Board games + premium party look** (2026-11-25, migration 20261206000001_board_games, applied): **Snakes & Ladders** (2–6, drawn SVG board, die tumble, tokens walk then climb / slide) and **Ashta Chamma** (2–4, chalk 5×5 board, 4 tamarind seeds, enter on 4/8, cut to open the inner ring, ✕ safe squares). **Show categories** (built-in sets or the host's own, saved on the phone in `state/partyStore`). Party cards on Home 2×2 in gold frames (`screens/party/parts/Premium.tsx`); Seeta role card + Show table redesigned. Home title 20 px.
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
@@ -58,7 +59,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (26 migrations, latest 20261205000001_party_games) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (27 migrations, latest 20261206000001_board_games) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 24 unit tests; EAS project @projectblurimedia/housie-tambola-king; latest preview APK versionCode 5 (2026-11-19: PIN login, expo-audio, screen-orientation, blank native splash, new icon) via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |

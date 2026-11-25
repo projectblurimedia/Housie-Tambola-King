@@ -7,24 +7,21 @@ import { useFocusEffect } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Card, centeredInput, Row, Screen, Stepper, T } from '@/components/ui';
 import { Rays } from '@/components/Wordmark';
-import { partyService, type PartyKind } from '@/services/partyService';
+import { isBoardGame, PARTY_LIMITS, partyService } from '@/services/partyService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
+import { GoldFrame, Medallion, PARTY_LOOK, ShineSweep } from './parts/Premium';
 
-/** Look of each party game (also used by the Home cards). */
-export const PARTY_LOOK: Record<PartyKind, { emoji: string; colors: [string, string, string] }> = {
-  seeta: { emoji: '🏹', colors: ['#7C2D12', '#EA580C', '#FBBF24'] },
-  show: { emoji: '🃏', colors: ['#1E1B4B', '#4F46E5', '#06B6D4'] },
-};
-
-/** A party game's details: what it is, how a round goes, create (rounds) or join with a code. */
+/** A party game's details: what it is, how it goes, create (rounds for card games) or join with a code. */
 export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const { kind } = route.params;
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const look = PARTY_LOOK[kind];
+  const [min, max] = PARTY_LIMITS[kind];
+  const board = isBoardGame(kind);
   const [rounds, setRounds] = useState(5);
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState<'create' | 'join' | null>(null);
@@ -40,7 +37,7 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
   const create = async () => {
     setBusy('create');
     try {
-      const res = await partyService.create(kind, rounds);
+      const res = await partyService.create(kind, board ? 1 : rounds);
       navigation.navigate('Party', { partyId: res.id });
     } catch (err) {
       showToast({ variant: 'error', title: errorMessage(err) });
@@ -66,24 +63,22 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
   return (
     <Screen scroll title={t(`party.${kind}.title`)}>
       {/* Hero */}
-      <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+      <GoldFrame radius={26} colors={look.colors} innerStyle={styles.hero}>
         <View style={styles.rays} pointerEvents="none">
-          <Rays size={520} opacity={0.12} count={20} />
+          <Rays size={560} opacity={0.1} count={22} />
         </View>
-        <View style={styles.emojiDisc}>
-          <T style={styles.emoji}>{look.emoji}</T>
-        </View>
-        <T variant="h1" color="#fff" center>
+        <Medallion emoji={look.emoji} size={92} />
+        <T style={styles.heroTitle} center>
           {t(`party.${kind}.title`)}
         </T>
-        <T variant="small" color="rgba(255,255,255,0.9)" center style={{ marginTop: 4 }}>
+        <T variant="small" color="rgba(255,255,255,0.88)" center style={{ marginTop: 4, paddingHorizontal: spacing.sm }}>
           {t(`party.${kind}.tagline`)}
         </T>
         <Row gap={6} style={{ marginTop: spacing.md }}>
           <View style={styles.heroPill}>
-            <Ionicons name="people" size={13} color="#fff" />
+            <Ionicons name="people" size={13} color="#FDE68A" />
             <T variant="tiny" color="#fff">
-              {t('party.players', { min: 3, max: kind === 'seeta' ? 15 : 10 })}
+              {t('party.players', { min, max })}
             </T>
           </View>
           <View style={styles.heroPill}>
@@ -93,26 +88,29 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
             </T>
           </View>
         </Row>
-      </LinearGradient>
+      </GoldFrame>
 
-      {/* How a round goes */}
+      {/* How it goes */}
       <T variant="smallBold" muted style={styles.label}>
         {t('party.howItWorks').toUpperCase()}
       </T>
-      <Card style={{ gap: spacing.sm }}>
+      <View style={[styles.stepsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         {steps.map((s, i) => (
-          <Row key={i} gap={spacing.sm} style={{ alignItems: 'flex-start' }}>
-            <LinearGradient colors={[look.colors[1], look.colors[2]]} style={styles.stepNum}>
-              <T variant="tiny" color="#fff">
-                {i + 1}
-              </T>
-            </LinearGradient>
-            <T variant="small" style={{ flex: 1 }}>
+          <Row key={i} gap={spacing.md} style={{ alignItems: 'flex-start' }}>
+            <View style={{ alignItems: 'center' }}>
+              <LinearGradient colors={[look.colors[1], look.colors[2]]} style={styles.stepNum}>
+                <T variant="tiny" color="#fff" maxFontSizeMultiplier={1}>
+                  {i + 1}
+                </T>
+              </LinearGradient>
+              {i < steps.length - 1 ? <View style={[styles.stepLine, { backgroundColor: colors.border }]} /> : null}
+            </View>
+            <T variant="small" style={{ flex: 1, paddingBottom: spacing.md }}>
               {s}
             </T>
           </Row>
         ))}
-      </Card>
+      </View>
 
       {/* Your open games of this kind */}
       {myGames.length ? (
@@ -127,9 +125,11 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
                 onPress={() => navigation.navigate('Party', { partyId: g.id })}
                 style={({ pressed }) => [styles.mine, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.8 }]}
               >
-                <T style={{ fontSize: 22 }}>{look.emoji}</T>
+                <Medallion emoji={look.emoji} size={40} float={false} />
                 <View style={{ flex: 1 }}>
-                  <T variant="bodyMedium">{g.code}</T>
+                  <T variant="bodyMedium" style={{ letterSpacing: 2 }}>
+                    {g.code}
+                  </T>
                   <T variant="tiny" muted>
                     {t(`party.status_${g.status}`)} · {t('party.playersCount', { count: g.players })}
                   </T>
@@ -146,23 +146,24 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
         {t('party.newGame').toUpperCase()}
       </T>
       <Card>
-        <Row gap={spacing.md}>
-          <View style={{ flex: 1 }}>
-            <T variant="bodyMedium">{t('party.rounds')}</T>
-            <T variant="tiny" muted>
-              {t('party.roundsDesc')}
-            </T>
-          </View>
-          <Stepper value={rounds} min={3} max={20} onChange={setRounds} width={36} />
-        </Row>
-        <Button
-          title={t('party.create')}
-          variant="gold"
-          icon="sparkles"
-          loading={busy === 'create'}
-          onPress={create}
-          style={{ marginTop: spacing.md }}
-        />
+        {board ? null : (
+          <Row gap={spacing.md} style={{ marginBottom: spacing.md }}>
+            <View style={{ flex: 1 }}>
+              <T variant="bodyMedium">{t('party.rounds')}</T>
+              <T variant="tiny" muted>
+                {t('party.roundsDesc')}
+              </T>
+            </View>
+            <Stepper value={rounds} min={3} max={20} onChange={setRounds} width={36} />
+          </Row>
+        )}
+        <Pressable onPress={create} disabled={busy !== null} style={({ pressed }) => [pressed && { transform: [{ scale: 0.98 }] }]}>
+          <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.createBtn}>
+            <ShineSweep />
+            <Ionicons name="sparkles" size={18} color="#3B1D00" />
+            <T style={styles.createText}>{busy === 'create' ? t('common.loading') : t('party.create')}</T>
+          </LinearGradient>
+        </Pressable>
       </Card>
 
       {/* Join */}
@@ -189,23 +190,26 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
 }
 
 const styles = StyleSheet.create({
-  hero: { borderRadius: radius.xl, padding: spacing.lg, alignItems: 'center', overflow: 'hidden' },
-  rays: { position: 'absolute', top: -200, left: '50%', marginLeft: -260 },
-  emojiDisc: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
-    backgroundColor: 'rgba(255,255,255,0.18)',
-    borderWidth: 2,
-    borderColor: 'rgba(253,230,138,0.7)',
+  hero: { padding: spacing.lg, alignItems: 'center' },
+  rays: { position: 'absolute', top: -220, left: '50%', marginLeft: -280 },
+  heroTitle: { fontFamily: fonts.display, fontSize: 26, lineHeight: 34, color: '#fff', marginTop: spacing.sm, letterSpacing: 0.5 },
+  heroPill: {
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    marginBottom: spacing.sm,
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 999,
+    backgroundColor: 'rgba(0,0,0,0.3)',
+    borderWidth: 1,
+    borderColor: 'rgba(253,230,138,0.35)',
   },
-  emoji: { fontSize: 44, lineHeight: 54 },
-  heroPill: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.22)' },
   label: { marginTop: spacing.lg, marginBottom: spacing.sm, letterSpacing: 0.8 },
-  stepNum: { width: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
+  stepsCard: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.md, paddingBottom: 0 },
+  stepNum: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  stepLine: { width: 2, flex: 1, marginVertical: 3, borderRadius: 1 },
   mine: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: radius.lg, borderWidth: 1 },
+  createBtn: { height: 54, borderRadius: 27, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
+  createText: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22, color: '#3B1D00' },
   code: { flex: 1, height: 52, borderRadius: radius.md, borderWidth: 1, fontFamily: fonts.bold, fontSize: 20, letterSpacing: 4 },
 });
