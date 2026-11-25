@@ -75,3 +75,9 @@ Both: host picks 3–20 rounds; 9 s reveal between rounds; join by code / link w
 **Snakes & Ladders** (2–6): classic board — ladders 1→38, 4→14, 9→31, 21→42, 28→84, 36→44, 51→67, 71→91, 80→100; snakes 16→6, 47→26, 49→11, 56→53, 62→19, 64→60, 87→24, 93→73, 95→75, 98→78. A 1–6 die; over 100 = stay; a 6 rolls again (max 3 in a row); first to 100 wins. 20 s per turn, then the server rolls.
 
 **Ashta Chamma** (2–4): 5×5 board, 4 pawns each, 4 tamarind seeds: n up = n, none up = 8. A pawn comes in on its start square only with 4 (Chamma) or 8 (Ashta). Pawns go round the outer ring anticlockwise; only after its player has cut an opponent may a pawn enter the inner ring (clockwise) and the centre — until then it keeps circling. Safe (✕): the four start squares and the centre. Landing on an opponent elsewhere sends it home. 4, 8 or a cut throws again. All 4 pawns in the centre wins. 20 s to throw / move, then the server does it (furthest pawn that can move).
+
+**Party coins**: the host may set an entry (0–10,000 play coins). Everyone pays it when the game starts; the winner takes the pot (winners / a team split it equally; card games: top score, ties split). The host ending a game mid-play refunds everyone; a player who leaves forfeits their entry.
+
+**3 chances (board games)**: every time the server has to play a turn for someone (20 s passed) they lose a chance; on the 3rd they are out. The last player (or team) left wins.
+
+**Ashta Chamma options** (at create): pawns start outside (enter on 4 / 8) or all on their start square; inner safe squares = the 4 inner corners or the 4 inner squares straight in from each start (start squares and the centre are always safe); teams (exactly 4 players, opposite sides together, no cutting a partner, the team wins when both are home); cut needed before the inner ring (on by default).

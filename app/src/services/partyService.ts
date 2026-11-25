@@ -17,6 +17,7 @@ export interface PartyPlayer {
   seat: number;
   score: number;
   active: boolean;
+  paid: number;
   /** Show: this player has chosen the card to pass this turn. */
   picked: boolean | null;
 }
@@ -71,6 +72,16 @@ export interface PartyRoundState {
   throw?: number | null;
   seeds?: boolean[];
   thrownAt?: number;
+  thrownBy?: string;
+  /** Board games: turns the server had to play for each player (3 = out). */
+  misses?: Record<string, number>;
+  winners?: string[];
+  payout?: { pot: number; each: number };
+  /** Ashta Chamma options (copied in at the start). */
+  start?: 'enter' | 'board';
+  safe?: 'corners' | 'straight';
+  teams?: boolean;
+  needCut?: boolean;
 }
 
 export interface ShowItem {
@@ -80,6 +91,12 @@ export interface ShowItem {
 
 /** Show's card category: built-in, or the host's own items. */
 export interface PartyOptions {
+  // Ashta Chamma
+  start?: 'enter' | 'board';
+  safe?: 'corners' | 'straight';
+  teams?: boolean;
+  needCut?: boolean;
+  // Show
   category?: string;
   title?: string;
   items?: ShowItem[];
@@ -99,9 +116,12 @@ export interface PartyState {
     state: PartyRoundState;
     options: PartyOptions;
     deadline: string | null;
+    /** Play coins each player pays at the start (0 = free); the winners share the pot. */
+    entryCoins: number;
+    pot: number;
   };
   players: PartyPlayer[];
-  me: { userId: string; role: string | null; hand: number[] | null; pick: number | null };
+  me: { userId: string; role: string | null; hand: number[] | null; pick: number | null; coins: number };
   serverNow: string;
 }
 
@@ -116,8 +136,8 @@ export interface MyParty {
 
 /** Party games (Find Seeta, Show): points only. Every rule runs on the server. */
 export const partyService = {
-  async create(kind: PartyKind, rounds: number): Promise<{ id: string; code: string }> {
-    return unwrap(await supabase.rpc('create_party', { p_kind: kind, p_rounds: rounds })) as { id: string; code: string };
+  async create(kind: PartyKind, rounds: number, entry = 0, options: PartyOptions | null = null): Promise<{ id: string; code: string }> {
+    return unwrap(await supabase.rpc('create_party', { p_kind: kind, p_rounds: rounds, p_entry: entry, p_options: options })) as { id: string; code: string };
   },
   async joinByCode(code: string): Promise<string> {
     return unwrap(await supabase.rpc('join_party_by_code', { p_code: code })) as string;

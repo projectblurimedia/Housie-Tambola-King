@@ -6,193 +6,252 @@ import { Row, T } from '@/components/ui';
 import { LADDERS, SNAKES, snlCell, snlSteps } from '@/game/engine/board';
 import type { PartyState } from '@/services/partyService';
 import { spacing } from '@/theme';
-import { Dice, PlayerPill, Token, TOKEN_COLORS, TurnBar } from './BoardBits';
+import { Chances, Dice, PlayerPill, Token, TOKEN_COLORS, TurnBar } from './BoardBits';
 import { GoldFrame } from './Premium';
 
-const CELL_COLORS = ['#FEF3C7', '#FFE4E6', '#DCFCE7', '#DBEAFE', '#F3E8FF'];
-const SNAKE_COLORS: [string, string][] = [
-  ['#22C55E', '#14532D'],
-  ['#F97316', '#7C2D12'],
-  ['#A855F7', '#4C1D95'],
-  ['#EF4444', '#7F1D1D'],
-  ['#0EA5E9', '#0C4A6E'],
+/** Snake skins: body light → dark, and the pattern colour. */
+const SKINS = [
+  { a: '#4ADE80', b: '#15803D', spot: '#FDE047' },
+  { a: '#FB923C', b: '#C2410C', spot: '#1F2937' },
+  { a: '#C084FC', b: '#7E22CE', spot: '#FDE68A' },
+  { a: '#F87171', b: '#B91C1C', spot: '#FEF3C7' },
+  { a: '#38BDF8', b: '#0369A1', spot: '#FDE047' },
 ];
-/** Where each player's token sits inside a square, so several can share it. */
-const OFFSETS: [number, number][] = [[-0.2, -0.2], [0.2, -0.2], [-0.2, 0.2], [0.2, 0.2], [0, -0.26], [0, 0.26]];
+/** Where tokens sit when several share a square (a lone token sits in the middle). */
+const SHARE: [number, number][] = [[-0.2, -0.18], [0.2, -0.18], [-0.2, 0.2], [0.2, 0.2], [0, -0.24], [0, 0.26]];
 
-/** The drawn board: squares, numbers, ladders (wood) and snakes (curvy, with heads). */
+type P = { x: number; y: number };
+const bez = (a: P, c1: P, c2: P, b: P, t: number): P => {
+  const u = 1 - t;
+  return {
+    x: u * u * u * a.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * b.x,
+    y: u * u * u * a.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * b.y,
+  };
+};
+
+/** A snake as a filled body that tapers from head to tail, with spots along its back. */
+function SnakeArt({ head, tail, cell, skin, id }: { head: P; tail: P; cell: number; skin: (typeof SKINS)[number]; id: string }) {
+  const dx = tail.x - head.x;
+  const dy = tail.y - head.y;
+  const len = Math.hypot(dx, dy);
+  const nx = -dy / len;
+  const ny = dx / len;
+  const amp = Math.min(cell * 1.0, len * 0.28);
+  const c1 = { x: head.x + dx * 0.3 + nx * amp, y: head.y + dy * 0.3 + ny * amp };
+  const c2 = { x: head.x + dx * 0.7 - nx * amp, y: head.y + dy * 0.7 - ny * amp };
+  const N = 28;
+  const W = cell * 0.34;
+  const left: P[] = [];
+  const right: P[] = [];
+  for (let i = 0; i <= N; i++) {
+    const t = 0.06 + (i / N) * 0.94;
+    const p = bez(head, c1, c2, tail, t);
+    const q = bez(head, c1, c2, tail, Math.min(1, t + 0.01));
+    const tl = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+    const ux = -(q.y - p.y) / tl;
+    const uy = (q.x - p.x) / tl;
+    const w = (W / 2) * (1 - t * 0.85);
+    left.push({ x: p.x + ux * w, y: p.y + uy * w });
+    right.push({ x: p.x - ux * w, y: p.y - uy * w });
+  }
+  const body = `M${left.map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' L')} L${right
+    .reverse()
+    .map((p) => `${p.x.toFixed(1)} ${p.y.toFixed(1)}`)
+    .join(' L')} Z`;
+  const spots = Array.from({ length: 7 }, (_, i) => bez(head, c1, c2, tail, 0.16 + i * 0.11));
+  const h0 = bez(head, c1, c2, tail, 0.06);
+  const angle = (Math.atan2(head.y - h0.y, head.x - h0.x) * 180) / Math.PI;
+  return (
+    <G>
+      <Path d={body} fill="rgba(0,0,0,0.22)" transform="translate(2 3)" />
+      <Path d={body} fill={`url(#${id})`} stroke={skin.b} strokeWidth={1.2} />
+      {spots.map((s, i) => (
+        <Circle key={i} cx={s.x} cy={s.y} r={(W / 2) * (0.42 - i * 0.04)} fill={skin.spot} opacity={0.75} />
+      ))}
+      <G transform={`translate(${head.x} ${head.y}) rotate(${angle})`}>
+        <Path d={`M${cell * 0.2} 0 l${cell * 0.13} ${-cell * 0.05} M${cell * 0.2} 0 l${cell * 0.13} ${cell * 0.05}`} stroke="#E11D48" strokeWidth={1.8} strokeLinecap="round" />
+        <Ellipse cx={0} cy={0} rx={cell * 0.24} ry={cell * 0.19} fill={skin.b} />
+        <Ellipse cx={0.5} cy={0} rx={cell * 0.21} ry={cell * 0.16} fill={skin.a} />
+        <Circle cx={cell * 0.06} cy={-cell * 0.08} r={cell * 0.055} fill="#fff" />
+        <Circle cx={cell * 0.06} cy={cell * 0.08} r={cell * 0.055} fill="#fff" />
+        <Circle cx={cell * 0.08} cy={-cell * 0.08} r={cell * 0.028} fill="#111" />
+        <Circle cx={cell * 0.08} cy={cell * 0.08} r={cell * 0.028} fill="#111" />
+      </G>
+    </G>
+  );
+}
+
+/** A wooden ladder: rounded rails with a light edge, evenly spaced rungs, a soft shadow. */
+function LadderArt({ from, to, cell }: { from: P; to: P; cell: number }) {
+  const dx = to.x - from.x;
+  const dy = to.y - from.y;
+  const len = Math.hypot(dx, dy);
+  const ux = dx / len;
+  const uy = dy / len;
+  // Start / end a little inside the squares so the feet and tops sit neatly in them.
+  const A = { x: from.x + ux * cell * 0.12, y: from.y + uy * cell * 0.12 };
+  const B = { x: to.x - ux * cell * 0.12, y: to.y - uy * cell * 0.12 };
+  const px = -uy * cell * 0.17;
+  const py = ux * cell * 0.17;
+  const inner = len - cell * 0.24;
+  const rungs = Math.max(2, Math.round(inner / (cell * 0.32)));
+  const rail = (s: number) => ({ x1: A.x + s * px, y1: A.y + s * py, x2: B.x + s * px, y2: B.y + s * py });
+  return (
+    <G>
+      {[1, -1].map((s) => (
+        <Line key={`sh${s}`} {...rail(s)} stroke="rgba(0,0,0,0.2)" strokeWidth={5} strokeLinecap="round" transform="translate(2 3)" />
+      ))}
+      {Array.from({ length: rungs }, (_, i) => {
+        const t = (i + 0.5) / rungs;
+        const x = A.x + (B.x - A.x) * t;
+        const y = A.y + (B.y - A.y) * t;
+        return (
+          <G key={i}>
+            <Line x1={x + px} y1={y + py} x2={x - px} y2={y - py} stroke="#7C4A1E" strokeWidth={3.6} strokeLinecap="round" />
+            <Line x1={x + px * 0.8} y1={y + py * 0.8 - 0.8} x2={x - px * 0.8} y2={y - py * 0.8 - 0.8} stroke="#E8B77A" strokeWidth={1} strokeLinecap="round" />
+          </G>
+        );
+      })}
+      {[1, -1].map((s) => (
+        <G key={`r${s}`}>
+          <Line {...rail(s)} stroke="#6B3E17" strokeWidth={5} strokeLinecap="round" />
+          <Line {...rail(s)} stroke="#C98A4B" strokeWidth={2.6} strokeLinecap="round" />
+          <Line {...rail(s)} stroke="#F3D3A1" strokeWidth={0.9} strokeLinecap="round" />
+        </G>
+      ))}
+    </G>
+  );
+}
+
+/** The board: ivory two-tone squares, fine lines, numbers, the crown at 100, ladders, snakes. */
 const BoardArt = React.memo(function BoardArt({ size }: { size: number }) {
   const cell = size / 10;
-  const c = (sq: number) => {
+  const c = (sq: number): P => {
     const { row, col } = snlCell(sq);
     return { x: col * cell + cell / 2, y: row * cell + cell / 2 };
   };
-  const squares = Array.from({ length: 100 }, (_, i) => i + 1);
   return (
     <Svg width={size} height={size}>
       <Defs>
-        {SNAKE_COLORS.map(([a, b], i) => (
-          <SvgGradient key={i} id={`sn${i}`} x1="0" y1="0" x2="1" y2="1">
-            <Stop offset="0" stopColor={a} />
-            <Stop offset="1" stopColor={b} />
+        {SKINS.map((s, i) => (
+          <SvgGradient key={i} id={`skin${i}`} x1="0" y1="0" x2="1" y2="1">
+            <Stop offset="0" stopColor={s.a} />
+            <Stop offset="1" stopColor={s.b} />
           </SvgGradient>
         ))}
       </Defs>
-      {squares.map((sq) => {
+      <Rect x={0} y={0} width={size} height={size} fill="#FFF8EC" />
+      {Array.from({ length: 100 }, (_, i) => {
+        const sq = i + 1;
         const { row, col } = snlCell(sq);
+        const dark = (row + col) % 2 === 0;
         return (
           <G key={sq}>
-            <Rect x={col * cell} y={row * cell} width={cell} height={cell} fill={CELL_COLORS[(sq + row) % CELL_COLORS.length]} />
-            <SvgText x={col * cell + 3} y={row * cell + cell * 0.3} fontSize={cell * 0.24} fontWeight="bold" fill="#7C5A3A">
+            <Rect x={col * cell} y={row * cell} width={cell} height={cell} fill={dark ? '#F6E3C6' : '#FFF8EC'} />
+            <SvgText x={col * cell + cell * 0.08} y={row * cell + cell * 0.28} fontSize={cell * 0.22} fontWeight="600" fill="#A47B52">
               {sq}
             </SvgText>
           </G>
         );
       })}
-      {/* 100 — the finish */}
+      {Array.from({ length: 11 }, (_, i) => (
+        <G key={`g${i}`}>
+          <Line x1={i * cell} y1={0} x2={i * cell} y2={size} stroke="#E2C9A6" strokeWidth={0.8} />
+          <Line x1={0} y1={i * cell} x2={size} y2={i * cell} stroke="#E2C9A6" strokeWidth={0.8} />
+        </G>
+      ))}
+      {/* Start and finish */}
       <Rect x={0} y={0} width={cell} height={cell} fill="#FDE68A" />
-      <SvgText x={cell / 2} y={cell * 0.66} fontSize={cell * 0.42} textAnchor="middle">
+      <SvgText x={cell / 2} y={cell * 0.7} fontSize={cell * 0.46} textAnchor="middle">
         👑
       </SvgText>
-      {/* Ladders */}
-      {Object.entries(LADDERS).map(([from, to]) => {
-        const A = c(Number(from));
-        const B = c(Number(to));
-        const dx = B.x - A.x;
-        const dy = B.y - A.y;
-        const len = Math.hypot(dx, dy);
-        const px = (-dy / len) * cell * 0.2;
-        const py = (dx / len) * cell * 0.2;
-        const rungs = Math.max(2, Math.floor(len / (cell * 0.38)));
-        return (
-          <G key={`l${from}`}>
-            <Line x1={A.x + px + 2} y1={A.y + py + 2} x2={B.x + px + 2} y2={B.y + py + 2} stroke="rgba(0,0,0,0.25)" strokeWidth={4} />
-            <Line x1={A.x - px + 2} y1={A.y - py + 2} x2={B.x - px + 2} y2={B.y - py + 2} stroke="rgba(0,0,0,0.25)" strokeWidth={4} />
-            {Array.from({ length: rungs }, (_, i) => {
-              const t = (i + 0.5) / rungs;
-              const x = A.x + dx * t;
-              const y = A.y + dy * t;
-              return <Line key={i} x1={x + px} y1={y + py} x2={x - px} y2={y - py} stroke="#92400E" strokeWidth={3} strokeLinecap="round" />;
-            })}
-            <Line x1={A.x + px} y1={A.y + py} x2={B.x + px} y2={B.y + py} stroke="#7C2D12" strokeWidth={4.5} strokeLinecap="round" />
-            <Line x1={A.x - px} y1={A.y - py} x2={B.x - px} y2={B.y - py} stroke="#7C2D12" strokeWidth={4.5} strokeLinecap="round" />
-            <Line x1={A.x + px} y1={A.y + py} x2={B.x + px} y2={B.y + py} stroke="#F59E0B" strokeWidth={1.6} strokeLinecap="round" />
-            <Line x1={A.x - px} y1={A.y - py} x2={B.x - px} y2={B.y - py} stroke="#F59E0B" strokeWidth={1.6} strokeLinecap="round" />
-          </G>
-        );
-      })}
-      {/* Snakes: head on the higher square, an S-curve down to the tail */}
-      {Object.entries(SNAKES).map(([head, tail], i) => {
-        const A = c(Number(head));
-        const B = c(Number(tail));
-        const dx = B.x - A.x;
-        const dy = B.y - A.y;
-        const len = Math.hypot(dx, dy);
-        const nx = -dy / len;
-        const ny = dx / len;
-        const amp = Math.min(cell * 1.1, len * 0.3);
-        const c1x = A.x + dx * 0.33 + nx * amp;
-        const c1y = A.y + dy * 0.33 + ny * amp;
-        const c2x = A.x + dx * 0.66 - nx * amp;
-        const c2y = A.y + dy * 0.66 - ny * amp;
-        const d = `M${A.x} ${A.y} C${c1x} ${c1y} ${c2x} ${c2y} ${B.x} ${B.y}`;
-        const w = cell * 0.26;
-        const angle = (Math.atan2(c1y - A.y, c1x - A.x) * 180) / Math.PI + 180;
-        const col = i % SNAKE_COLORS.length;
-        return (
-          <G key={`s${head}`}>
-            <Path d={d} stroke="rgba(0,0,0,0.25)" strokeWidth={w + 4} fill="none" strokeLinecap="round" transform="translate(2 2)" />
-            <Path d={d} stroke={SNAKE_COLORS[col][1]} strokeWidth={w + 3} fill="none" strokeLinecap="round" />
-            <Path d={d} stroke={`url(#sn${col})`} strokeWidth={w} fill="none" strokeLinecap="round" />
-            <Path d={d} stroke="rgba(255,255,255,0.45)" strokeWidth={w * 0.32} strokeDasharray={`${w * 0.4},${w * 0.7}`} fill="none" strokeLinecap="round" />
-            <G transform={`translate(${A.x} ${A.y}) rotate(${angle})`}>
-              <Path d={`M${-cell * 0.3} 0 l${-cell * 0.12} ${-cell * 0.05} m${cell * 0.12} ${cell * 0.05} l${-cell * 0.12} ${cell * 0.05}`} stroke="#DC2626" strokeWidth={1.6} fill="none" />
-              <Ellipse cx={0} cy={0} rx={cell * 0.26} ry={cell * 0.2} fill={SNAKE_COLORS[col][1]} />
-              <Ellipse cx={-1} cy={0} rx={cell * 0.23} ry={cell * 0.17} fill={SNAKE_COLORS[col][0]} />
-              <Circle cx={-cell * 0.08} cy={-cell * 0.08} r={cell * 0.06} fill="#fff" />
-              <Circle cx={-cell * 0.08} cy={cell * 0.08} r={cell * 0.06} fill="#fff" />
-              <Circle cx={-cell * 0.1} cy={-cell * 0.08} r={cell * 0.03} fill="#111" />
-              <Circle cx={-cell * 0.1} cy={cell * 0.08} r={cell * 0.03} fill="#111" />
-            </G>
-          </G>
-        );
-      })}
+      {Object.entries(LADDERS).map(([f, to]) => (
+        <LadderArt key={`l${f}`} from={c(Number(f))} to={c(to)} cell={cell} />
+      ))}
+      {Object.entries(SNAKES).map(([h, tl], i) => (
+        <SnakeArt key={`s${h}`} head={c(Number(h))} tail={c(tl)} cell={cell} skin={SKINS[i % SKINS.length]} id={`skin${i % SKINS.length}`} />
+      ))}
     </Svg>
   );
 });
 
 /**
  * Snakes & Ladders: the board, every player's token (walking square by square after the die
- * lands, then climbing or sliding), whose turn it is, and the Roll button on my turn.
+ * lands, then climbing or sliding), whose turn it is, chances left, and Roll on my turn.
  */
 export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyState; seconds: number; busy: boolean; onRoll: () => void }) {
   const { t } = useTranslation();
   const { width } = useWindowDimensions();
   const g = state.game;
   const s = g.state;
-  const size = Math.min(width - spacing.lg * 2 - 12, 420);
+  const size = Math.min(width - spacing.lg * 2 - 14, 420);
   const cell = size / 10;
-  const tokenSize = cell * 0.5;
+  const tokenSize = cell * 0.56;
   const order = s.order ?? state.players.map((p) => p.userId);
   const pos = s.pos ?? {};
   const turnPlayer = state.players.find((p) => p.userId === s.turn);
   const colorOf = (uid?: string) => TOKEN_COLORS[Math.max(0, order.indexOf(uid ?? '')) % TOKEN_COLORS.length];
   const isMyTurn = s.turn === state.me.userId;
+  const outOf = (uid: string) => !state.players.find((p) => p.userId === uid)?.active;
 
+  /** Centre of a square, nudged only when other tokens share it. */
   const xyOf = (uid: string, sq: number) => {
-    const i = Math.max(0, order.indexOf(uid));
-    const [ox, oy] = OFFSETS[i % OFFSETS.length];
-    if (sq <= 0) {
-      const { row, col } = snlCell(1);
-      return { x: col * cell + cell / 2 + ox * cell - tokenSize / 2, y: row * cell + cell / 2 + oy * cell - tokenSize / 2 };
-    }
-    const { row, col } = snlCell(sq);
+    const square = Math.max(1, sq);
+    const sharers = order.filter((u) => Math.max(1, pos[u] ?? 0) === square && (pos[u] ?? 0) > 0);
+    const k = sharers.indexOf(uid);
+    const [ox, oy] = sharers.length > 1 && k >= 0 ? SHARE[k % SHARE.length] : [0, 0];
+    const { row, col } = snlCell(square);
     return { x: col * cell + cell / 2 + ox * cell - tokenSize / 2, y: row * cell + cell / 2 + oy * cell - tokenSize / 2 };
   };
+  const centreOf = (sq: number) => {
+    const { row, col } = snlCell(Math.max(1, sq));
+    return { x: col * cell + cell / 2 - tokenSize / 2, y: row * cell + cell / 2 - tokenSize / 2 };
+  };
 
-  // One animated position per player; the last move walks, everything else settles.
   const anims = useRef<Record<string, Animated.ValueXY>>({});
-  const shown = useRef<Record<string, number>>({});
+  const hops = useRef<Record<string, Animated.Value>>({});
   const seenAt = useRef<number | undefined>(s.last?.at);
-  const [moving, setMoving] = useState(false);
+  const [moving, setMoving] = useState<string | null>(null);
   for (const uid of order) {
-    if (!anims.current[uid]) {
-      anims.current[uid] = new Animated.ValueXY(xyOf(uid, pos[uid] ?? 0));
-      shown.current[uid] = pos[uid] ?? 0;
-    }
+    if (!anims.current[uid]) anims.current[uid] = new Animated.ValueXY(xyOf(uid, pos[uid] ?? 0));
+    if (!hops.current[uid]) hops.current[uid] = new Animated.Value(0);
   }
 
   const last = s.last;
   useEffect(() => {
     const isNew = last && last.at !== seenAt.current;
     for (const uid of order) {
-      const target = pos[uid] ?? 0;
       if (isNew && uid === last!.userId) continue;
-      if (shown.current[uid] !== target) {
-        shown.current[uid] = target;
-        Animated.spring(anims.current[uid], { toValue: xyOf(uid, target), friction: 8, useNativeDriver: false }).start();
-      }
+      Animated.spring(anims.current[uid], { toValue: xyOf(uid, pos[uid] ?? 0), friction: 8, useNativeDriver: false }).start();
     }
     if (!isNew || !last) return;
     seenAt.current = last.at;
     const uid = last.userId;
     const a = anims.current[uid];
+    const hop = hops.current[uid];
     if (!a) return;
     const steps = snlSteps(last.from, last.mid ?? last.to);
-    const seq: Animated.CompositeAnimation[] = [Animated.delay(750)];
-    if (last.from === 0 && steps.length) a.setValue(xyOf(uid, 0));
+    if (last.from === 0 && steps.length) a.setValue(centreOf(1));
+    const seq: Animated.CompositeAnimation[] = [Animated.delay(780)];
+    // Each square: move to its centre with a little hop.
     for (const sq of steps) {
-      seq.push(Animated.timing(a, { toValue: xyOf(uid, sq), duration: 170, easing: Easing.out(Easing.quad), useNativeDriver: false }));
+      seq.push(
+        Animated.parallel([
+          Animated.timing(a, { toValue: centreOf(sq), duration: 200, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
+          Animated.sequence([
+            Animated.timing(hop, { toValue: 1, duration: 100, easing: Easing.out(Easing.quad), useNativeDriver: false }),
+            Animated.timing(hop, { toValue: 0, duration: 100, easing: Easing.in(Easing.quad), useNativeDriver: false }),
+          ]),
+        ]),
+      );
     }
     if (last.to !== (last.mid ?? last.to)) {
-      seq.push(Animated.delay(200));
-      seq.push(Animated.timing(a, { toValue: xyOf(uid, last.to), duration: 900, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }));
+      seq.push(Animated.delay(260));
+      seq.push(Animated.timing(a, { toValue: centreOf(last.to), duration: 1100, easing: Easing.inOut(Easing.cubic), useNativeDriver: false }));
     }
-    setMoving(true);
-    Animated.sequence(seq).start(() => {
-      shown.current[uid] = last.to;
-      setMoving(false);
-    });
+    seq.push(Animated.spring(a, { toValue: xyOf(uid, last.to), friction: 7, useNativeDriver: false }));
+    setMoving(uid);
+    Animated.sequence(seq).start(() => setMoving(null));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [last?.at, JSON.stringify(pos)]);
 
@@ -208,17 +267,27 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
 
   return (
     <View>
-      <GoldFrame radius={18} width={2.5} colors={['#5C3A1A', '#8B5A2B', '#5C3A1A']} innerStyle={{ padding: 6, alignItems: 'center' }}>
-        <View style={{ width: size, height: size, borderRadius: 8, overflow: 'hidden' }}>
+      <GoldFrame radius={20} width={2} colors={['#3E2723', '#5D4037', '#3E2723']} innerStyle={{ padding: 7, alignItems: 'center' }}>
+        <View style={{ width: size, height: size, borderRadius: 10, overflow: 'hidden' }}>
           <BoardArt size={size} />
           {order.map((uid) => {
             const c = colorOf(uid);
-            const on = (pos[uid] ?? 0) > 0 || (moving && last?.userId === uid);
+            const on = !outOf(uid) && ((pos[uid] ?? 0) > 0 || moving === uid);
             return (
               <Animated.View
                 key={uid}
                 pointerEvents="none"
-                style={[styles.token, { opacity: on ? 1 : 0, transform: anims.current[uid].getTranslateTransform() }]}
+                style={[
+                  styles.token,
+                  {
+                    opacity: on ? 1 : 0,
+                    transform: [
+                      ...anims.current[uid].getTranslateTransform(),
+                      { translateY: hops.current[uid].interpolate({ inputRange: [0, 1], outputRange: [0, -cell * 0.35] }) },
+                      { scale: hops.current[uid].interpolate({ inputRange: [0, 1], outputRange: [1, 1.12] }) },
+                    ],
+                  },
+                ]}
               >
                 <Token color={c.hex} dark={c.dark} size={tokenSize} glow={uid === s.turn} />
               </Animated.View>
@@ -243,7 +312,7 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
         onAct={onRoll}
         waitingLabel={isMyTurn ? t('party.board.moving') : t('party.board.waitTurn')}
       >
-        <Dice value={last?.roll ?? 1} rollKey={last?.at} size={58} />
+        <Dice value={last?.roll ?? 1} rollKey={last?.at} size={56} />
       </TurnBar>
 
       <Row style={styles.pills}>
@@ -255,9 +324,10 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
               key={uid}
               player={p}
               color={colorOf(uid)}
-              value={String(pos[uid] ?? 0)}
+              value={outOf(uid) ? t('party.board.out') : String(pos[uid] ?? 0)}
               active={uid === s.turn}
               me={uid === state.me.userId}
+              extra={<Chances misses={s.misses?.[uid] ?? 0} />}
             />
           );
         })}

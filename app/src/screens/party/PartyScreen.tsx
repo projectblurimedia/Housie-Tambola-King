@@ -36,6 +36,8 @@ export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
   const leaving = useRef(false);
 
   const onEvent = (e: PartyEvent) => {
+    // Entries are paid at the start and the pot at the end: refresh the coin balance.
+    if (e.type === 'round' || e.type === 'finished' || e.type === 'closed') qc.invalidateQueries({ queryKey: ['me'] });
     if (e.type === 'show') buzz(e.first ? 'heavy' : 'light');
     else if (e.type === 'reveal' || e.type === 'finished') buzz('success');
     else if (e.type === 'round') buzz('light');

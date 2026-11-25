@@ -3,7 +3,11 @@ import { Animated, Easing, Pressable, Share, StyleSheet, View } from 'react-nati
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
+import * as Clipboard from 'expo-clipboard';
 import { Avatar } from '@/components/Avatar';
+import { CoinIcon } from '@/components/CoinIcon';
+import { showToast } from '@/state/toastStore';
+import { PARTY_LOOK } from './Premium';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { Button, Card, Row, T } from '@/components/ui';
 import { JOIN_LINK_BASE } from '@/constants/config';
@@ -104,6 +108,8 @@ export function PartyLobby({
   const isHost = state.game.hostId === state.me.userId;
   const players = state.players.filter((p) => p.active);
   const need = Math.max(0, PARTY_LIMITS[state.game.kind][0] - players.length);
+  const look = PARTY_LOOK[state.game.kind];
+  const copy = () => Clipboard.setStringAsync(state.game.code).then(() => showToast({ variant: 'success', title: t('common.copied') }));
   const share = () =>
     Share.share({ message: t('party.shareMessage', { game: title, code: state.game.code, link: JOIN_LINK_BASE + state.game.code }) }).catch(
       () => undefined,
@@ -111,20 +117,65 @@ export function PartyLobby({
 
   return (
     <View>
-      <LinearGradient colors={['#2A0A4F', '#6D28D9']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.codeCard}>
-        <T variant="tiny" color="#FDE68A" style={{ letterSpacing: 2 }}>
+      <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.codeCard}>
+        <T style={styles.codeWatermark}>{look.emoji}</T>
+        <T variant="tiny" color="rgba(255,255,255,0.85)" style={{ letterSpacing: 2 }}>
           {t('party.gameCode').toUpperCase()}
         </T>
-        <T style={styles.code} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
-          {state.game.code}
-        </T>
-        <Pressable onPress={share} style={({ pressed }) => [styles.shareBtn, pressed && { opacity: 0.8 }]}>
-          <Ionicons name="share-social" size={16} color="#3B1D00" />
-          <T variant="smallBold" color="#3B1D00">
-            {t('party.invite')}
+        <Row gap={spacing.sm} style={{ marginTop: 2 }}>
+          <T style={styles.code} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
+            {state.game.code}
           </T>
-        </Pressable>
+          <Pressable onPress={copy} hitSlop={10} style={({ pressed }) => [styles.copyBtn, pressed && { opacity: 0.7 }]} accessibilityLabel={t('party.copyCode')}>
+            <Ionicons name="copy-outline" size={18} color="#fff" />
+          </Pressable>
+        </Row>
+        <Row gap={spacing.sm} style={{ marginTop: spacing.sm }}>
+          <Pressable onPress={copy} style={({ pressed }) => [styles.codeAction, pressed && { opacity: 0.8 }]}>
+            <Ionicons name="copy" size={14} color="#fff" />
+            <T variant="smallBold" color="#fff">
+              {t('party.copyCode')}
+            </T>
+          </Pressable>
+          <Pressable onPress={share} style={({ pressed }) => [styles.codeAction, styles.codeActionMain, pressed && { opacity: 0.8 }]}>
+            <Ionicons name="share-social" size={14} color={look.colors[1]} />
+            <T variant="smallBold" color={look.colors[1]}>
+              {t('party.invite')}
+            </T>
+          </Pressable>
+        </Row>
       </LinearGradient>
+
+      {/* Entry + pot, and the game's rules (Ashta Chamma) */}
+      <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        <Row style={{ justifyContent: 'space-between' }}>
+          <Row gap={6}>
+            <CoinIcon size={18} />
+            <T variant="smallBold">{state.game.entryCoins ? t('party.entryEach', { count: state.game.entryCoins }) : t('party.freeGame')}</T>
+          </Row>
+          {state.game.entryCoins ? (
+            <T variant="smallBold" color={colors.goldDark}>
+              {t('party.potWillBe', { count: state.game.entryCoins * players.length })}
+            </T>
+          ) : null}
+        </Row>
+        {state.game.kind === 'chamma' ? (
+          <View style={styles.ruleChips}>
+            {[
+              t(state.game.options.start === 'board' ? 'party.chamma.startBoard' : 'party.chamma.startEnter'),
+              t(`party.chamma.safe_${state.game.options.safe ?? 'corners'}`),
+              state.game.options.teams ? t('party.chamma.optTeams') : null,
+              state.game.options.needCut === false ? t('party.chamma.noCutNeeded') : t('party.chamma.optCut'),
+            ]
+              .filter(Boolean)
+              .map((label) => (
+                <View key={label as string} style={[styles.ruleChip, { backgroundColor: colors.surfaceAlt }]}>
+                  <T variant="tiny">{label}</T>
+                </View>
+              ))}
+          </View>
+        ) : null}
+      </View>
 
       <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg, marginBottom: spacing.sm }}>
         <T variant="smallBold" muted style={{ letterSpacing: 0.6 }}>
@@ -282,6 +333,63 @@ export function PartyFinished({
   const podium = [top[1], top[0], top[2]].filter(Boolean) as PartyPlayer[];
   const height = (p: PartyPlayer) => (p === top[0] ? 96 : p === top[1] ? 72 : 56);
   const medal = (p: PartyPlayer) => (p === top[0] ? '🥇' : p === top[1] ? '🥈' : '🥉');
+  const actions = (
+    <View style={{ marginTop: spacing.lg, gap: spacing.sm }}>
+      {isHost ? (
+        <>
+          <Button title={t('party.playAgain')} variant="gold" icon="refresh" loading={busy} onPress={onAgain} />
+          <Button title={t('party.endGame')} variant="secondary" icon="stop-circle-outline" onPress={onEnd} />
+        </>
+      ) : (
+        <T variant="small" muted center>
+          {t('party.waitingAgain')}
+        </T>
+      )}
+      <Button title={t('party.leave')} variant="ghost" icon="exit-outline" onPress={onLeave} />
+    </View>
+  );
+
+  // Board games: just the winner(s) — and the coins they took.
+  if (isBoardGame(state.game.kind)) {
+    const winnerIds = state.game.state.winners ?? (state.game.state.winnerId ? [state.game.state.winnerId] : []);
+    const winners = winnerIds.map((id) => state.players.find((p) => p.userId === id)).filter(Boolean) as PartyPlayer[];
+    const iWon = winnerIds.includes(state.me.userId);
+    const payout = state.game.state.payout;
+    const look = PARTY_LOOK[state.game.kind];
+    return (
+      <View>
+        <Animated.View style={{ opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.85, 1] }) }] }}>
+          <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.winnerCard}>
+            <T style={styles.codeWatermark}>🏆</T>
+            <T variant="tiny" color="rgba(255,255,255,0.85)" style={{ letterSpacing: 2 }}>
+              {(iWon ? t('party.youWon') : t('party.gameOver')).toUpperCase()}
+            </T>
+            <Row gap={6} style={{ marginTop: spacing.md }}>
+              {winners.map((w) => (
+                <Avatar key={w.userId} avatarKey={w.avatarKey} size={78} ring="#FDE68A" />
+              ))}
+            </Row>
+            <T style={styles.winnerName} center numberOfLines={2}>
+              {winners.map((w) => (w.userId === state.me.userId ? t('party.you') : w.name)).join(' & ')}
+            </T>
+            <T variant="small" color="rgba(255,255,255,0.9)">
+              {winners.length > 1 ? t('party.winTeam') : t('party.wins')} 🏆
+            </T>
+            {payout?.pot ? (
+              <View style={styles.payoutPill}>
+                <CoinIcon size={18} />
+                <T variant="smallBold" color="#3B1D00">
+                  {winners.length > 1 ? t('party.wonEach', { count: payout.each }) : t('party.wonCoins', { count: payout.pot })}
+                </T>
+              </View>
+            ) : null}
+          </LinearGradient>
+        </Animated.View>
+        {actions}
+      </View>
+    );
+  }
+
   return (
     <View>
       <Animated.View style={{ opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1] }) }] }}>
@@ -347,7 +455,14 @@ export function PartyFinished({
 
 const styles = StyleSheet.create({
   roundPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
-  codeCard: { borderRadius: radius.xl, padding: spacing.lg, alignItems: 'center' },
+  codeCard: { borderRadius: 22, padding: spacing.lg, alignItems: 'center', overflow: 'hidden' },
+  codeWatermark: { position: 'absolute', right: -10, bottom: -20, fontSize: 110, lineHeight: 130, opacity: 0.18 },
+  copyBtn: { width: 34, height: 34, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.22)', alignItems: 'center', justifyContent: 'center' },
+  codeAction: { flexDirection: 'row', alignItems: 'center', gap: 6, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 999, backgroundColor: 'rgba(255,255,255,0.2)' },
+  codeActionMain: { backgroundColor: '#fff' },
+  infoCard: { marginTop: spacing.md, borderRadius: radius.lg, borderWidth: 1, padding: spacing.md, gap: spacing.sm },
+  ruleChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  ruleChip: { paddingHorizontal: 10, paddingVertical: 4, borderRadius: 999 },
   code: { fontFamily: fonts.display, fontSize: 40, lineHeight: 50, letterSpacing: 8, color: '#fff', marginTop: 2 },
   shareBtn: {
     flexDirection: 'row',
@@ -374,6 +489,9 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   removeBtn: { position: 'absolute', right: -2, top: -2, width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center' },
+  winnerCard: { borderRadius: 24, padding: spacing.lg, alignItems: 'center', overflow: 'hidden' },
+  winnerName: { fontFamily: fonts.display, fontSize: 26, lineHeight: 34, color: '#fff', marginTop: spacing.sm },
+  payoutPill: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: spacing.md, backgroundColor: '#FDE68A', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 999 },
   finishCard: { borderRadius: radius.xl, padding: spacing.lg, alignItems: 'center' },
   podium: { width: '100%', marginTop: 6, borderTopLeftRadius: radius.md, borderTopRightRadius: radius.md, alignItems: 'center', justifyContent: 'center' },
 });

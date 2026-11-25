@@ -56,7 +56,7 @@ export function Dice({ value, rollKey, size = 64 }: { value: number; rollKey: st
     if (!rollKey) return;
     spin.setValue(0);
     const flicker = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 70);
-    Animated.timing(spin, { toValue: 1, duration: 700, easing: Easing.out(Easing.cubic), useNativeDriver: true }).start(() => {
+    Animated.timing(spin, { toValue: 1, duration: 760, easing: Easing.out(Easing.quad), useNativeDriver: true }).start(() => {
       clearInterval(flicker);
       setFace(value || 1);
     });
@@ -68,9 +68,11 @@ export function Dice({ value, rollKey, size = 64 }: { value: number; rollKey: st
     <Animated.View
       style={{
         transform: [
-          { translateY: spin.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0, -size * 0.6, 0] }) },
-          { rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['-540deg', '0deg'] }) },
-          { scale: spin.interpolate({ inputRange: [0, 0.4, 1], outputRange: [0.9, 1.15, 1] }) },
+          { perspective: 500 },
+          { translateY: spin.interpolate({ inputRange: [0, 0.35, 0.7, 0.85, 1], outputRange: [0, -size * 0.8, 0, -size * 0.15, 0] }) },
+          { rotateX: spin.interpolate({ inputRange: [0, 1], outputRange: ['720deg', '0deg'] }) },
+          { rotateY: spin.interpolate({ inputRange: [0, 1], outputRange: ['-360deg', '0deg'] }) },
+          { rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['-90deg', '0deg'] }) },
         ],
       }}
     >
@@ -91,6 +93,17 @@ export function Dice({ value, rollKey, size = 64 }: { value: number; rollKey: st
         ))}
       </LinearGradient>
     </Animated.View>
+  );
+}
+
+/** Chances left (3 hearts): a heart greys out each time the server had to play for them. */
+export function Chances({ misses }: { misses: number }) {
+  return (
+    <Row gap={1}>
+      {[0, 1, 2].map((i) => (
+        <Ionicons key={i} name={i < 3 - misses ? 'heart' : 'heart-outline'} size={10} color={i < 3 - misses ? '#F43F5E' : 'rgba(255,255,255,0.35)'} />
+      ))}
+    </Row>
   );
 }
 

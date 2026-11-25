@@ -425,7 +425,8 @@ try {
     const LADDERS = { 1: 38, 4: 14, 9: 31, 21: 42, 28: 84, 36: 44, 51: 67, 71: 91, 80: 100 };
     const SNAKES = { 16: 6, 47: 26, 49: 11, 56: 53, 62: 19, 64: 60, 87: 24, 93: 73, 95: 75, 98: 78 };
     const jump = (p) => LADDERS[p] ?? SNAKES[p] ?? p;
-    const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 5 });
+    const coinsBefore = { host: await coinsOf(host), friend: await coinsOf(friend) };
+    const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 5, p_entry: 50 });
     await friend.rpc('join_party_by_code', { p_code: snl.code });
     await host.rpc('start_party', { p_game: snl.id });
     let snlState = await stateOf(host, snl.id);
@@ -443,6 +444,11 @@ try {
     check(movesOk, 'every roll is 1–6 and follows the ladders and snakes');
     const winner = snlState.players.find((p) => p.userId === snlState.game.state.winnerId);
     check(snlState.game.status === 'finished' && winner?.score === 100, 'first to 100 wins');
+    const hostWon = snlState.game.state.winnerId === snlState.me.userId;
+    const hostNow = await coinsOf(host), friendNow = await coinsOf(friend);
+    check(hostNow === coinsBefore.host + (hostWon ? 50 : -50) && friendNow === coinsBefore.friend + (hostWon ? -50 : 50),
+      `entry 50 coins each, winner takes the 100 pot (host ${coinsBefore.host}→${hostNow}, friend ${coinsBefore.friend}→${friendNow})`);
+    check(snlState.game.state.payout?.pot === 100, 'payout recorded on the game');
     await host.rpc('end_party', { p_game: snl.id });
 
     // Ashta Chamma: 2 players (opposite sides), seeds, entering on 4 / 8, cuts.
@@ -487,6 +493,30 @@ try {
     check(ringOk, 'no pawn enters the inner ring before its player has cut');
     check(true, `${cuts} cut(s) in 300 moves; game ${ac.game.status}`);
     await host.rpc('end_party', { p_game: ach.id });
+
+    // Ashta Chamma options: start on the board, straight-in safe squares, teams need 4.
+    const ach2 = await host.rpc('create_party', { p_kind: 'chamma', p_rounds: 1, p_entry: 0, p_options: { start: 'board', safe: 'straight', teams: true, needCut: false } });
+    await friend.rpc('join_party_by_code', { p_code: ach2.code });
+    await third.rpc('join_party_by_code', { p_code: ach2.code });
+    check(await expectError(host.rpc('start_party', { p_game: ach2.id }), 'TEAMS_NEED_4'), 'teams need exactly 4 players');
+    await host.rpc('end_party', { p_game: ach2.id });
+    const ach3 = await host.rpc('create_party', { p_kind: 'chamma', p_rounds: 1, p_entry: 0, p_options: { start: 'board', safe: 'straight', needCut: false } });
+    await friend.rpc('join_party_by_code', { p_code: ach3.code });
+    await host.rpc('start_party', { p_game: ach3.id });
+    const a3 = await stateOf(host, ach3.id);
+    check(Object.values(a3.game.state.pawns).every((p) => p.every((x) => x === 0)) && a3.game.state.safe === 'straight' && a3.game.state.needCut === false,
+      'options: all pawns start on the board, straight safe squares, no cut needed');
+
+    // 3 chances: nobody plays → after 3 missed turns the host is out and the friend wins.
+    console.log('  (waiting for 5 missed turns, ~110 s)');
+    let a3s = a3;
+    for (let i = 0; i < 70 && a3s.game.status === 'playing'; i++) {
+      await sleep(2000);
+      await friend.rpc('party_nudge', { p_game: ach3.id }).catch(() => undefined);
+      a3s = await stateOf(friend, ach3.id);
+    }
+    check(a3s.game.status === 'finished' && a3s.game.state.winnerId === (await stateOf(friend, ach3.id)).me.userId,
+      `3 missed turns put a player out; the other wins (misses ${JSON.stringify(Object.values(a3s.game.state.misses ?? {}))})`);
   } finally {
     await third.rpc('delete_my_account').catch(() => undefined);
   }

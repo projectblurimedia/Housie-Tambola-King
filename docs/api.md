@@ -63,11 +63,11 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `register_push_token` | `p_token, p_platform` | – | `INVALID_PUSH_TOKEN` |
 
 ## Party games (`authenticated`, points only)
-Find Seeta (3–15 players), Show (3–10), Snakes & Ladders (2–6) and Ashta Chamma (2–4). Board games are one game (rounds = 1); `start_party` raises `NEED_MORE_PLAYERS` below the minimum and `NOT_ENOUGH_ITEMS` for a custom Show category with fewer items than players. Roles / hands are in `party_secrets` (no client access); each player reads only their own.
+Find Seeta (3–15 players), Show (3–10), Snakes & Ladders (2–6) and Ashta Chamma (2–4). Board games are one game (rounds = 1). Entry coins are paid by everyone at `start_party` (`PLAYER_LOW_COINS` if anyone is short; Ashta Chamma teams need 4: `TEAMS_NEED_4`), the winners split the pot, `end_party` mid-game refunds. Board games: 3 server-played turns = out; `start_party` raises `NEED_MORE_PLAYERS` below the minimum and `NOT_ENOUGH_ITEMS` for a custom Show category with fewer items than players. Roles / hands are in `party_secrets` (no client access); each player reads only their own.
 
 | RPC | Args | Returns | Errors |
 |---|---|---|---|
-| `create_party` | `p_kind ('seeta'·'show'), p_rounds (3–20)` | `{id, code}` | `INVALID_PARTY_KIND`, `INVALID_ROUNDS`, `TOO_MANY_OPEN_PARTIES` (3) |
+| `create_party` | `p_kind, p_rounds (3–20; board games 1), p_entry (0–10,000 coins), p_options (Ashta Chamma: {start enter·board, safe corners·straight, teams, needCut})` | `{id, code}` | `INVALID_PARTY_KIND`, `INVALID_ROUNDS`, `INVALID_ENTRY`, `NOT_ENOUGH_COINS`, `TOO_MANY_OPEN_PARTIES` (3) |
 | `join_party_by_code` | `p_code` | party id (no approval; lobby only) | `PARTY_NOT_FOUND`, `PARTY_STARTED`, `PARTY_FULL` |
 | `get_party_state` | `p_game` | `{game{…, phase, turnNo, state, deadline}, players[{…, score, active, picked}], me{role, hand, pick}, serverNow}` | `NOT_A_MEMBER` |
 | `get_my_parties` | – | my open / finished party games | – |

@@ -1,28 +1,101 @@
-import React, { useState } from 'react';
-import { Pressable, StyleSheet, TextInput, View } from 'react-native';
+import React, { useEffect, useRef, useState } from 'react';
+import { Animated, Easing, Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useFocusEffect } from '@react-navigation/native';
 import { useQuery } from '@tanstack/react-query';
-import { Button, Card, centeredInput, Row, Screen, Stepper, T } from '@/components/ui';
-import { Rays } from '@/components/Wordmark';
-import { isBoardGame, PARTY_LIMITS, partyService } from '@/services/partyService';
+import { CoinIcon } from '@/components/CoinIcon';
+import { Button, centeredInput, Row, Screen, Stepper, T, Toggle } from '@/components/ui';
+import { useMe } from '@/hooks/useMe';
+import { isBoardGame, PARTY_LIMITS, partyService, type PartyOptions } from '@/services/partyService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
-import { GoldFrame, Medallion, PARTY_LOOK, ShineSweep } from './parts/Premium';
+import { PARTY_LOOK, ShineSweep } from './parts/Premium';
 
-/** A party game's details: what it is, how it goes, create (rounds for card games) or join with a code. */
+const ENTRY_PRESETS = [0, 10, 25, 50, 100];
+const SAFE_CELLS = {
+  corners: new Set([22, 14, 2, 10, 12, 6, 8, 16, 18]),
+  straight: new Set([22, 14, 2, 10, 12, 7, 11, 13, 17]),
+};
+
+/** A tiny 5×5 board showing which squares are safe in a layout. */
+function SafeDiagram({ mode, on }: { mode: 'corners' | 'straight'; on: boolean }) {
+  return (
+    <View style={styles.diagram}>
+      {Array.from({ length: 25 }, (_, i) => (
+        <View
+          key={i}
+          style={[
+            styles.diagramCell,
+            { backgroundColor: SAFE_CELLS[mode].has(i) ? (on ? '#FDE68A' : '#F59E0B') : on ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.08)' },
+          ]}
+        />
+      ))}
+    </View>
+  );
+}
+
+/** One of two choices: the chosen one fills with the game's colours. */
+function Choice({
+  active,
+  title,
+  desc,
+  colors,
+  onPress,
+  children,
+}: {
+  active: boolean;
+  title: string;
+  desc: string;
+  colors: [string, string];
+  onPress: () => void;
+  children?: React.ReactNode;
+}) {
+  const { colors: c } = useThemeColors();
+  const body = (
+    <>
+      {children}
+      <T variant="smallBold" color={active ? '#fff' : c.text} center style={{ marginTop: children ? 6 : 0 }}>
+        {title}
+      </T>
+      <T variant="tiny" color={active ? 'rgba(255,255,255,0.85)' : c.textMuted} center>
+        {desc}
+      </T>
+    </>
+  );
+  return (
+    <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
+      {active ? (
+        <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.choice}>
+          {body}
+        </LinearGradient>
+      ) : (
+        <View style={[styles.choice, { backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.border }]}>{body}</View>
+      )}
+    </Pressable>
+  );
+}
+
+/** A party game's details: what it is, how it goes, then create (with its options) or join. */
 export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const { kind } = route.params;
   const { t } = useTranslation();
   const { colors } = useThemeColors();
+  const me = useMe();
   const look = PARTY_LOOK[kind];
   const [min, max] = PARTY_LIMITS[kind];
   const board = isBoardGame(kind);
   const [rounds, setRounds] = useState(5);
+  const [entry, setEntry] = useState(0);
+  const [opts, setOpts] = useState<Required<Pick<PartyOptions, 'start' | 'safe' | 'teams' | 'needCut'>>>({
+    start: 'enter',
+    safe: 'corners',
+    teams: false,
+    needCut: true,
+  });
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState<'create' | 'join' | null>(null);
   const mine = useQuery({ queryKey: ['myParties'], queryFn: partyService.mine });
@@ -33,11 +106,24 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
     }, [refetchMine]),
   );
   const myGames = (mine.data ?? []).filter((g) => g.kind === kind);
+  const coins = Number(me.data?.coins ?? 0);
+
+  const drift = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(drift, { toValue: 1, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(drift, { toValue: 0, duration: 2600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [drift]);
 
   const create = async () => {
     setBusy('create');
     try {
-      const res = await partyService.create(kind, board ? 1 : rounds);
+      const res = await partyService.create(kind, board ? 1 : rounds, entry, kind === 'chamma' ? opts : null);
       navigation.navigate('Party', { partyId: res.id });
     } catch (err) {
       showToast({ variant: 'error', title: errorMessage(err) });
@@ -58,61 +144,63 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
     }
   };
 
-  const steps = [1, 2, 3, 4].map((n) => t(`party.${kind}.step${n}`));
-
   return (
     <Screen scroll title={t(`party.${kind}.title`)}>
       {/* Hero */}
-      <GoldFrame radius={26} colors={look.colors} innerStyle={styles.hero}>
-        <View style={styles.rays} pointerEvents="none">
-          <Rays size={560} opacity={0.1} count={22} />
+      <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.hero}>
+        <Animated.Text
+          style={[
+            styles.heroWatermark,
+            { transform: [{ rotate: drift.interpolate({ inputRange: [0, 1], outputRange: ['-14deg', '-4deg'] }) }, { scale: drift.interpolate({ inputRange: [0, 1], outputRange: [1, 1.07] }) }] },
+          ]}
+        >
+          {look.emoji}
+        </Animated.Text>
+        <View style={styles.heroBadge}>
+          <T style={{ fontSize: 26, lineHeight: 32 }} maxFontSizeMultiplier={1}>
+            {look.emoji}
+          </T>
         </View>
-        <Medallion emoji={look.emoji} size={92} />
-        <T style={styles.heroTitle} center>
-          {t(`party.${kind}.title`)}
-        </T>
-        <T variant="small" color="rgba(255,255,255,0.88)" center style={{ marginTop: 4, paddingHorizontal: spacing.sm }}>
+        <T style={styles.heroTitle}>{t(`party.${kind}.title`)}</T>
+        <T variant="small" color="rgba(255,255,255,0.9)" style={{ marginTop: 2, maxWidth: '82%' }}>
           {t(`party.${kind}.tagline`)}
         </T>
         <Row gap={6} style={{ marginTop: spacing.md }}>
-          <View style={styles.heroPill}>
-            <Ionicons name="people" size={13} color="#FDE68A" />
+          <View style={styles.heroChip}>
+            <Ionicons name="people" size={12} color="#fff" />
             <T variant="tiny" color="#fff">
               {t('party.players', { min, max })}
             </T>
           </View>
-          <View style={styles.heroPill}>
-            <Ionicons name="star" size={13} color="#FDE68A" />
+          <View style={styles.heroChip}>
+            <CoinIcon size={13} />
             <T variant="tiny" color="#fff">
-              {t('party.pointsOnly')}
+              {t('party.coinsOrFree')}
             </T>
           </View>
         </Row>
-      </GoldFrame>
+      </LinearGradient>
 
       {/* How it goes */}
       <T variant="smallBold" muted style={styles.label}>
         {t('party.howItWorks').toUpperCase()}
       </T>
-      <View style={[styles.stepsCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        {steps.map((s, i) => (
-          <Row key={i} gap={spacing.md} style={{ alignItems: 'flex-start' }}>
-            <View style={{ alignItems: 'center' }}>
-              <LinearGradient colors={[look.colors[1], look.colors[2]]} style={styles.stepNum}>
-                <T variant="tiny" color="#fff" maxFontSizeMultiplier={1}>
-                  {i + 1}
-                </T>
-              </LinearGradient>
-              {i < steps.length - 1 ? <View style={[styles.stepLine, { backgroundColor: colors.border }]} /> : null}
-            </View>
-            <T variant="small" style={{ flex: 1, paddingBottom: spacing.md }}>
-              {s}
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+        {[1, 2, 3, 4].map((n) => (
+          <Row key={n} gap={spacing.md} style={{ alignItems: 'flex-start', paddingVertical: 6 }}>
+            <LinearGradient colors={look.colors} style={styles.stepNum}>
+              <T variant="tiny" color="#fff" maxFontSizeMultiplier={1}>
+                {n}
+              </T>
+            </LinearGradient>
+            <T variant="small" style={{ flex: 1 }}>
+              {t(`party.${kind}.step${n}`)}
             </T>
           </Row>
         ))}
       </View>
 
-      {/* Your open games of this kind */}
+      {/* Your open games */}
       {myGames.length ? (
         <>
           <T variant="smallBold" muted style={styles.label}>
@@ -125,7 +213,9 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
                 onPress={() => navigation.navigate('Party', { partyId: g.id })}
                 style={({ pressed }) => [styles.mine, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.8 }]}
               >
-                <Medallion emoji={look.emoji} size={40} float={false} />
+                <LinearGradient colors={look.colors} style={styles.mineBadge}>
+                  <T style={{ fontSize: 18, lineHeight: 24 }}>{look.emoji}</T>
+                </LinearGradient>
                 <View style={{ flex: 1 }}>
                   <T variant="bodyMedium" style={{ letterSpacing: 2 }}>
                     {g.code}
@@ -145,9 +235,9 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
       <T variant="smallBold" muted style={styles.label}>
         {t('party.newGame').toUpperCase()}
       </T>
-      <Card>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, gap: spacing.md }]}>
         {board ? null : (
-          <Row gap={spacing.md} style={{ marginBottom: spacing.md }}>
+          <Row gap={spacing.md}>
             <View style={{ flex: 1 }}>
               <T variant="bodyMedium">{t('party.rounds')}</T>
               <T variant="tiny" muted>
@@ -157,20 +247,114 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
             <Stepper value={rounds} min={3} max={20} onChange={setRounds} width={36} />
           </Row>
         )}
+
+        {/* Entry coins */}
+        <View>
+          <Row style={{ justifyContent: 'space-between' }}>
+            <T variant="bodyMedium">{t('party.entry')}</T>
+            <Row gap={4}>
+              <CoinIcon size={14} />
+              <T variant="tiny" muted>
+                {t('party.youHave', { count: coins })}
+              </T>
+            </Row>
+          </Row>
+          <T variant="tiny" muted>
+            {t('party.entryDesc')}
+          </T>
+          <Row style={{ justifyContent: 'space-between', marginTop: spacing.sm }}>
+            {ENTRY_PRESETS.map((v) => {
+              const on = entry === v;
+              const short = v > coins;
+              return (
+                <Pressable key={v} onPress={() => setEntry(v)} disabled={short} style={({ pressed }) => [{ width: '18.5%', opacity: short ? 0.4 : 1 }, pressed && { transform: [{ scale: 0.95 }] }]}>
+                  {on ? (
+                    <LinearGradient colors={look.colors} style={styles.entryChip}>
+                      {v ? <CoinIcon size={13} /> : null}
+                      <T variant="smallBold" color="#fff" maxFontSizeMultiplier={1}>
+                        {v ? v : t('party.free')}
+                      </T>
+                    </LinearGradient>
+                  ) : (
+                    <View style={[styles.entryChip, { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }]}>
+                      {v ? <CoinIcon size={13} /> : null}
+                      <T variant="smallBold" maxFontSizeMultiplier={1}>
+                        {v ? v : t('party.free')}
+                      </T>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })}
+          </Row>
+        </View>
+
+        {/* Ashta Chamma rules */}
+        {kind === 'chamma' ? (
+          <>
+            <View>
+              <T variant="bodyMedium" style={{ marginBottom: 6 }}>
+                {t('party.chamma.optStart')}
+              </T>
+              <Row gap={spacing.sm}>
+                <Choice active={opts.start === 'enter'} colors={look.colors} title={t('party.chamma.startEnter')} desc={t('party.chamma.startEnterDesc')} onPress={() => setOpts({ ...opts, start: 'enter' })} />
+                <Choice active={opts.start === 'board'} colors={look.colors} title={t('party.chamma.startBoard')} desc={t('party.chamma.startBoardDesc')} onPress={() => setOpts({ ...opts, start: 'board' })} />
+              </Row>
+            </View>
+            <View>
+              <T variant="bodyMedium" style={{ marginBottom: 6 }}>
+                {t('party.chamma.optSafe')}
+              </T>
+              <Row gap={spacing.sm}>
+                {(['corners', 'straight'] as const).map((m) => (
+                  <Choice
+                    key={m}
+                    active={opts.safe === m}
+                    colors={look.colors}
+                    title={t(`party.chamma.safe_${m}`)}
+                    desc={t(`party.chamma.safe_${m}_desc`)}
+                    onPress={() => setOpts({ ...opts, safe: m })}
+                  >
+                    <SafeDiagram mode={m} on={opts.safe === m} />
+                  </Choice>
+                ))}
+              </Row>
+            </View>
+            <Row gap={spacing.md}>
+              <View style={{ flex: 1 }}>
+                <T variant="bodyMedium">{t('party.chamma.optTeams')}</T>
+                <T variant="tiny" muted>
+                  {t('party.chamma.optTeamsDesc')}
+                </T>
+              </View>
+              <Toggle value={opts.teams} onValueChange={(teams) => setOpts({ ...opts, teams })} />
+            </Row>
+            <Row gap={spacing.md}>
+              <View style={{ flex: 1 }}>
+                <T variant="bodyMedium">{t('party.chamma.optCut')}</T>
+                <T variant="tiny" muted>
+                  {t('party.chamma.optCutDesc')}
+                </T>
+              </View>
+              <Toggle value={opts.needCut} onValueChange={(needCut) => setOpts({ ...opts, needCut })} />
+            </Row>
+          </>
+        ) : null}
+
         <Pressable onPress={create} disabled={busy !== null} style={({ pressed }) => [pressed && { transform: [{ scale: 0.98 }] }]}>
-          <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.createBtn}>
+          <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.createBtn}>
             <ShineSweep />
-            <Ionicons name="sparkles" size={18} color="#3B1D00" />
+            <Ionicons name="add-circle" size={20} color="#fff" />
             <T style={styles.createText}>{busy === 'create' ? t('common.loading') : t('party.create')}</T>
           </LinearGradient>
         </Pressable>
-      </Card>
+      </View>
 
       {/* Join */}
       <T variant="smallBold" muted style={styles.label}>
         {t('party.joinTitle').toUpperCase()}
       </T>
-      <Card>
+      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
         <Row gap={spacing.sm}>
           <TextInput
             value={code}
@@ -181,35 +365,30 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
             autoCorrect={false}
             style={[styles.code, centeredInput, { color: colors.text, backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
           />
-          <Button title={t('join.join')} onPress={join} loading={busy === 'join'} disabled={code.length !== 6} style={{ height: 52 }} />
+          <Button title={t('join.join')} onPress={join} loading={busy === 'join'} disabled={code.length !== 6} style={{ height: 50 }} />
         </Row>
-      </Card>
+      </View>
       <View style={{ height: spacing.xl }} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
-  hero: { padding: spacing.lg, alignItems: 'center' },
-  rays: { position: 'absolute', top: -220, left: '50%', marginLeft: -280 },
-  heroTitle: { fontFamily: fonts.display, fontSize: 26, lineHeight: 34, color: '#fff', marginTop: spacing.sm, letterSpacing: 0.5 },
-  heroPill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.3)',
-    borderWidth: 1,
-    borderColor: 'rgba(253,230,138,0.35)',
-  },
+  hero: { borderRadius: 22, padding: spacing.lg, overflow: 'hidden' },
+  heroWatermark: { position: 'absolute', right: -14, bottom: -24, fontSize: 130, lineHeight: 150, opacity: 0.2 },
+  heroBadge: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
+  heroTitle: { fontFamily: fonts.display, fontSize: 24, lineHeight: 32, color: '#fff', marginTop: spacing.sm },
+  heroChip: { flexDirection: 'row', alignItems: 'center', gap: 4, paddingHorizontal: 9, paddingVertical: 4, borderRadius: 999, backgroundColor: 'rgba(0,0,0,0.2)' },
   label: { marginTop: spacing.lg, marginBottom: spacing.sm, letterSpacing: 0.8 },
-  stepsCard: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.md, paddingBottom: 0 },
-  stepNum: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
-  stepLine: { width: 2, flex: 1, marginVertical: 3, borderRadius: 1 },
+  card: { borderRadius: radius.lg, borderWidth: 1, padding: spacing.md },
+  stepNum: { width: 24, height: 24, borderRadius: 12, alignItems: 'center', justifyContent: 'center', marginTop: 1 },
   mine: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, padding: spacing.md, borderRadius: radius.lg, borderWidth: 1 },
-  createBtn: { height: 54, borderRadius: 27, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
-  createText: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22, color: '#3B1D00' },
-  code: { flex: 1, height: 52, borderRadius: radius.md, borderWidth: 1, fontFamily: fonts.bold, fontSize: 20, letterSpacing: 4 },
+  mineBadge: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
+  entryChip: { height: 38, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
+  choice: { borderRadius: radius.md, padding: spacing.sm, alignItems: 'center', minHeight: 70, justifyContent: 'center' },
+  diagram: { width: 46, height: 46, flexDirection: 'row', flexWrap: 'wrap', gap: 1.5 },
+  diagramCell: { width: 8, height: 8, borderRadius: 2 },
+  createBtn: { height: 52, borderRadius: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
+  createText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 22, color: '#fff' },
+  code: { flex: 1, height: 50, borderRadius: radius.md, borderWidth: 1, fontFamily: fonts.bold, fontSize: 20, letterSpacing: 4 },
 });
