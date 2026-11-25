@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
 import { PrizeList } from '@/components/PrizeList';
 import { formatRupees } from '@/components/Money';
+import { isFreeRoom } from '@/state/stakeStore';
 import { Card, Loading, Row, T } from '@/components/ui';
 import { roomService } from '@/services/roomService';
 import { spacing, useThemeColors } from '@/theme';
@@ -27,9 +28,11 @@ export function ResultsCard({ gameId, meId, highlight }: { gameId: string; meId?
       ) : null}
       <Row style={{ justifyContent: 'space-between' }}>
         <T variant="h2">🏁 {t('results.title', { n: r.gameNo })}</T>
-        <T variant="smallBold" color={colors.goldDark}>
-          {t('lobby.pot')} {formatRupees(r.pot)}
-        </T>
+        {isFreeRoom() ? null : (
+          <T variant="smallBold" color={colors.goldDark}>
+            {t('lobby.pot')} {formatRupees(r.pot)}
+          </T>
+        )}
       </Row>
       <View style={{ gap: 6 }}>
         {(r.players ?? []).map((p) => (
@@ -41,7 +44,7 @@ export function ResultsCard({ gameId, meId, highlight }: { gameId: string; meId?
             <T variant="tiny" muted>
               🎫 {p.tickets}
             </T>
-            <NetAmount value={p.net} size={16} />
+            {isFreeRoom() ? null : <NetAmount value={p.net} size={16} />}
           </Row>
         ))}
       </View>

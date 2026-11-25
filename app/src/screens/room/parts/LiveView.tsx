@@ -12,6 +12,7 @@ import * as Haptics from 'expo-haptics';
 import { Avatar } from '@/components/Avatar';
 import { CalledBoard } from '@/components/CalledBoard';
 import { formatRupees } from '@/components/Money';
+import { isFreeRoom } from '@/state/stakeStore';
 import { MiniBall, NumberBall } from '@/components/NumberBall';
 import { PrizeList, PrizeRow } from '@/components/PrizeList';
 import { TicketView } from '@/components/TicketView';
@@ -220,6 +221,11 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
     ),
   ];
   const chatUnread = useChatUnread(room.id, me.id);
+  const respondJoin = useMutation({
+    mutationFn: ({ userId, accept }: { userId: string; accept: boolean }) => roomService.respondJoin(room.id, userId, accept),
+    onSuccess: () => qc.invalidateQueries({ queryKey: roomKey(room.id) }),
+    onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
+  });
   const askPause = useMutation({
     mutationFn: () => roomService.requestPause(game.id),
     onSuccess: () => showToast({ variant: 'success', title: t('game.askPauseSent') }),
@@ -293,9 +299,11 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
                           {called.length}/90
                         </T>
                       </View>
-                      <T variant="smallBold" color="#FDE68A">
-                        {t('lobby.pot')} {formatRupees(game.pot)}
-                      </T>
+                      {isFreeRoom() ? null : (
+                        <T variant="smallBold" color="#FDE68A">
+                          {t('lobby.pot')} {formatRupees(game.pot)}
+                        </T>
+                      )}
                     </Row>
                     <View style={styles.progress}>
                       <View
@@ -320,6 +328,35 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
         </SafeAreaView>
       </LinearGradient>
 
+      {/* Host: people asking to join mid-game — accept / decline right here, the game goes on. */}
+      {isHost && state.joinRequests.length ? (
+        <View style={[styles.joinStrip, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {state.joinRequests.map((r) => (
+            <Row key={r.userId} gap={spacing.sm}>
+              <Avatar avatarKey={r.avatarKey} size={30} />
+              <T variant="smallBold" style={{ flex: 1 }} numberOfLines={1}>
+                {t('game.wantsToJoin', { name: r.name.split(' ')[0] })}
+              </T>
+              <Pressable
+                onPress={() => respondJoin.mutate({ userId: r.userId, accept: false })}
+                disabled={respondJoin.isPending}
+                style={[styles.joinBtn, { backgroundColor: colors.surfaceAlt }]}
+                accessibilityLabel={t('join.decline')}
+              >
+                <Ionicons name="close" size={18} color={colors.error} />
+              </Pressable>
+              <Pressable
+                onPress={() => respondJoin.mutate({ userId: r.userId, accept: true })}
+                disabled={respondJoin.isPending}
+                style={[styles.joinBtn, { backgroundColor: colors.success }]}
+                accessibilityLabel={t('join.accept')}
+              >
+                <Ionicons name="checkmark" size={18} color="#fff" />
+              </Pressable>
+            </Row>
+          ))}
+        </View>
+      ) : null}
       {/* Host: players asking to pause — stays until the host pauses or closes it. */}
       {isHost && pauseAskers.length && !game.paused ? (
         <View style={styles.pauseAsk}>
@@ -379,10 +416,32 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
       >
         {tab === 'tickets' ? (
           state.myTickets.length === 0 ? (
-            <Card>
-              <T muted center>
-                {t('game.watching')}
+            // Watching this game (joined mid-game / no tickets): who is playing right now.
+            <Card style={{ gap: spacing.sm }}>
+              <Row gap={6}>
+                <Ionicons name="eye" size={16} color={colors.primary} />
+                <T variant="smallBold" style={{ flex: 1 }}>
+                  {t('game.watching')}
+                </T>
+              </Row>
+              <T variant="tiny" muted>
+                {t('game.playingNow')}
               </T>
+              <View style={styles.players}>
+                {state.members
+                  .filter((m) => m.tickets > 0)
+                  .map((m) => (
+                    <View key={m.userId} style={[styles.playerChip, { backgroundColor: colors.surfaceAlt }]}>
+                      <Avatar avatarKey={m.avatarKey} size={26} />
+                      <T variant="tiny" numberOfLines={1} style={{ maxWidth: 90 }}>
+                        {m.name.split(' ')[0]}
+                      </T>
+                      <T variant="tiny" color={colors.primary}>
+                        🎫{m.tickets}
+                      </T>
+                    </View>
+                  ))}
+              </View>
             </Card>
           ) : (
             <>
@@ -523,6 +582,10 @@ const styles = StyleSheet.create({
     borderColor: 'rgba(253,230,138,0.6)',
   },
   bell: { fontSize: 34 },
+  joinStrip: { marginHorizontal: spacing.md, marginTop: spacing.sm, borderWidth: 1, borderRadius: radius.lg, padding: spacing.sm, gap: spacing.sm },
+  joinBtn: { width: 34, height: 34, borderRadius: 17, alignItems: 'center', justifyContent: 'center' },
+  players: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  playerChip: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingLeft: 2, paddingRight: 10, paddingVertical: 2 },
   pauseAsk: {
     flexDirection: 'row',
     alignItems: 'center',

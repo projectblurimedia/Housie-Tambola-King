@@ -6,6 +6,7 @@ import type { PrizeType } from '@/game/engine/ticket';
 import { radius, spacing, useThemeColors } from '@/theme';
 import { Avatar } from './Avatar';
 import { formatRupees, Money } from './Money';
+import { isFreeRoom } from '@/state/stakeStore';
 import { T } from './ui';
 
 export interface PrizeRow {
@@ -66,7 +67,7 @@ export function PrizeList({
                       <Avatar avatarKey={w.avatarKey} size={18} />
                       <T variant="small" color={w.isMe ? colors.success : colors.textMuted} numberOfLines={1}>
                         {w.isMe ? t('common.you') : w.name}
-                        {w.amount ? ` · ${formatRupees(w.amount)}` : ''}
+                        {w.amount && !isFreeRoom() ? ` · ${formatRupees(w.amount)}` : ''}
                       </T>
                     </View>
                   ))}
@@ -77,7 +78,7 @@ export function PrizeList({
                 </T>
               )}
             </View>
-            {showAmounts && row.amount !== undefined ? <Money amount={row.amount} /> : null}
+            {showAmounts && !isFreeRoom() && row.amount !== undefined ? <Money amount={row.amount} /> : null}
           </View>
         );
       })}

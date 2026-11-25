@@ -19,6 +19,8 @@ export interface Me {
   gamesPlayed: number;
   prizesWon: number;
   amountWon: number;
+  /** Play coins (no money). */
+  coins: number;
   createdAt: string;
 }
 
@@ -87,6 +89,10 @@ export interface Room {
    * on an earlier number and claims within K numbers of completing it wins it instead.
    */
   lateClaimCalls: number;
+  /** free = no price / amounts; coins = play coins; amount = casual ₹ just for scoring. */
+  stakeMode: 'free' | 'coins' | 'amount';
+  /** Most tickets one player may take per game (host's setting, 1–10). */
+  maxTickets: number;
 }
 
 /**
@@ -113,6 +119,24 @@ export interface ChatMessage {
   at: string;
   /** 'join' / 'leave' lines are written by the server when someone joins or leaves. */
   kind?: 'user' | 'join' | 'leave';
+  /** Deleted for everyone (body is null then). */
+  deleted?: boolean;
+}
+
+/** How far each member has read the room chat (for seen ticks). */
+export interface ChatRead {
+  userId: string;
+  lastReadId: number;
+  at?: string;
+}
+
+export interface CoinLedgerRow {
+  id: number;
+  delta: number;
+  reason: 'welcome' | 'ticket' | 'refund' | 'prize' | 'admin';
+  note: string | null;
+  roomTitle: string | null;
+  at: string;
 }
 
 export interface Game {

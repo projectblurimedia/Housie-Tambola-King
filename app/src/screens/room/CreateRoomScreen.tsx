@@ -141,6 +141,10 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [visibility, setVisibility] = useState<RoomVisibility>('private');
   const [maxPlayers, setMaxPlayers] = useState(10);
   const [price, setPrice] = useState('10');
+  /** Play for: free (no price), coins (play coins), or ₹ just for scoring. */
+  const [stake, setStake] = useState<'free' | 'coins' | 'amount'>('free');
+  /** Most tickets one player may take per game. */
+  const [maxTickets, setMaxTickets] = useState(3);
   const [rule, setRule] = useState<ClaimRule>('normal');
   const [autoHint, setAutoHint] = useState(false);
   const [hintMode, setHintMode] = useState<HintMode>('struck');
@@ -173,7 +177,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         kind,
         visibility,
         maxPlayers,
-        ticketPrice: priceNum,
+        ticketPrice: stake === 'free' ? 0 : stake === 'coins' ? Math.round(priceNum) : priceNum,
         callIntervalSeconds: speed,
         seriesLength: kind === 'series' ? (limitGames ? seriesLength : 0) : 1,
         prizes: DEFAULT_PRIZES,
@@ -183,6 +187,8 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         chatEnabled,
         checkSeconds,
         lateClaimCalls,
+        stakeMode: stake,
+        maxTickets,
       });
       qc.invalidateQueries({ queryKey: ['myRooms'] });
       navigation.replace('Room', { roomId });
@@ -264,12 +270,32 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
         </View>
       </Step>
 
-      <Step n={4} title={t('create.ticketPrice')} hint={t('create.ticketPriceHelp')}>
+      <Step n={4} title={t('create.stakeTitle')} hint={t('create.stakeHint')}>
+        <Row gap={spacing.sm} style={{ alignItems: 'stretch', marginBottom: spacing.md }}>
+          {(['free', 'coins', 'amount'] as const).map((m) => (
+            <ChoiceTile
+              key={m}
+              active={stake === m}
+              icon={m === 'free' ? 'gift' : m === 'coins' ? 'logo-bitcoin' : 'cash-outline'}
+              title={t(`create.stake_${m}`)}
+              desc={t(`create.stake_${m}_desc`)}
+              onPress={() => setStake(m)}
+            />
+          ))}
+        </Row>
+        <SettingLine icon="layers" title={t('create.maxTickets')} desc={t('create.maxTicketsDesc')}>
+          <Stepper value={maxTickets} min={1} max={10} onChange={setMaxTickets} width={40} />
+        </SettingLine>
+        {stake === 'free' ? null : (
+        <>
+        <T variant="smallBold" muted style={{ marginTop: spacing.md, marginBottom: 6 }}>
+          {stake === 'coins' ? t('create.ticketPriceCoins') : t('create.ticketPrice')}
+        </T>
         {/* Big amount in a gold frame; type any amount… */}
         <LinearGradient colors={goldGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.priceFrame}>
           <View style={[styles.priceInner, { backgroundColor: colors.surfaceAlt }]}>
             <Row gap={4} style={{ justifyContent: 'center' }}>
-              <T style={[styles.rupee, { color: colors.goldDark }]}>₹</T>
+              <T style={[styles.rupee, { color: colors.goldDark }]}>{stake === 'coins' ? '🪙' : '₹'}</T>
               <TextInput
                 value={price}
                 onChangeText={(v) => setPrice(v.replace(/[^0-9.]/g, '').slice(0, 8))}
@@ -296,18 +322,20 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
                 {on ? (
                   <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.preset, { borderColor: '#FDE68A' }]}>
                     <T variant="bodyMedium" color="#fff">
-                      ₹{p}
+                      {stake === 'coins' ? `🪙${p}` : `₹${p}`}
                     </T>
                   </LinearGradient>
                 ) : (
                   <View style={[styles.preset, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>
-                    <T variant="bodyMedium">₹{p}</T>
+                    <T variant="bodyMedium">{stake === 'coins' ? `🪙${p}` : `₹${p}`}</T>
                   </View>
                 )}
               </Pressable>
             );
           })}
         </Row>
+        </>
+        )}
       </Step>
 
       <Step n={5} title={t('create.claimRule')} hint={t('create.ruleHint')}>

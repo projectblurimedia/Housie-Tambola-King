@@ -1,16 +1,32 @@
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, FlatList, KeyboardAvoidingView, PanResponder, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import {
+  Animated,
+  BackHandler,
+  Easing,
+  FlatList,
+  KeyboardAvoidingView,
+  Modal,
+  PanResponder,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  TextInput,
+  useWindowDimensions,
+  View,
+} from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
+import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { IconButton, Row, T } from '@/components/ui';
 import { appendChat, chatKey } from '@/hooks/useRoom';
 import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
 import { useChatStore } from '@/state/chatStore';
+import { TYPING_MS, useChatLiveStore } from '@/state/chatLiveStore';
 import { showToast } from '@/state/toastStore';
 import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { ChatMessage, RoomState } from '@/types/api';
@@ -30,14 +46,46 @@ export function useChatUnread(roomId: string, meId: string): number {
   const chat = useChat(roomId);
   const muted = useChatStore((s) => s.muted);
   const lastSeen = useChatStore((s) => s.lastSeen[roomId] ?? 0);
-  return (chat.data ?? []).filter((m) => (m.kind ?? 'user') === 'user' && !muted[m.userId] && m.id > lastSeen && m.userId !== meId).length;
+  return (chat.data ?? []).filter((m) => (m.kind ?? 'user') === 'user' && !m.deleted && !muted[m.userId] && m.id > lastSeen && m.userId !== meId)
+    .length;
+}
+
+/** Three dots bouncing one after another ("typing…"). */
+function TypingDots({ color }: { color: string }) {
+  const dots = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
+  useEffect(() => {
+    const loops = dots.map((d, i) =>
+      Animated.loop(
+        Animated.sequence([
+          Animated.delay(i * 140),
+          Animated.timing(d, { toValue: 1, duration: 280, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+          Animated.timing(d, { toValue: 0, duration: 280, easing: Easing.in(Easing.quad), useNativeDriver: true }),
+          Animated.delay((2 - i) * 140),
+        ]),
+      ),
+    );
+    loops.forEach((l) => l.start());
+    return () => loops.forEach((l) => l.stop());
+  }, [dots]);
+  return (
+    <Row gap={3}>
+      {dots.map((d, i) => (
+        <Animated.View
+          key={i}
+          style={[styles.dot, { backgroundColor: color, transform: [{ translateY: d.interpolate({ inputRange: [0, 1], outputRange: [0, -4] }) }] }]}
+        />
+      ))}
+    </Row>
+  );
 }
 
 /**
- * Room chat. A half-height sheet at the bottom (the game stays visible above it), opened at the
- * newest message. Join / leave lines show in the middle. With `showFab` it has its own floating
- * button (lobby); in a game it's opened from the side panel (`open` / `onClose`).
- * `readOnly` (ended rooms): history only, no send box.
+ * Room chat: a panel inside the screen (not a pop-up), half the phone by default — the game
+ * above stays usable — that fades in. Newest message at the bottom straight away (the list is
+ * drawn bottom-up). "X is typing…", ✓ / ✓✓ seen ticks, long-press for info / delete for
+ * everyone. Drag the header to resize (follows the finger): up = full screen, down = half /
+ * close. With `showFab` it has its own floating button (lobby); in a game it's opened from
+ * the game's chat button (`open` / `onClose`). `readOnly` (ended rooms): history only.
  */
 export function RoomChat({
   state,
@@ -65,27 +113,54 @@ export function RoomChat({
   const open = openProp ?? openSelf;
   const close = () => (onClose ? onClose() : setOpenSelf(false));
   const [text, setText] = useState('');
-  const listRef = useRef<FlatList<ChatMessage>>(null);
   const muted = useChatStore((s) => s.muted);
   const toggleMute = useChatStore((s) => s.toggleMute);
   const markSeen = useChatStore((s) => s.markSeen);
   const unread = useChatUnread(roomId, meId);
+  const typers = useChatLiveStore((s) => s.typing[roomId]) ?? [];
+  const reads = useChatLiveStore((s) => s.reads[roomId]) ?? {};
+  const [picked, setPicked] = useState<ChatMessage | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Half the phone by default; swipe the handle up for full screen, down for half / close.
+  // ── Size: half the phone, drag the header for full screen ──
   const { height: screenH } = useWindowDimensions();
   const halfH = Math.round(screenH * 0.55);
   const fullH = Math.round(screenH - insets.top - 8);
   const sheetH = useRef(new Animated.Value(halfH)).current;
   const [full, setFull] = useState(false);
   const fullRef = useRef(false);
+  const dragStart = useRef(halfH);
   const snap = (toFull: boolean) => {
     fullRef.current = toFull;
     setFull(toFull);
-    Animated.timing(sheetH, { toValue: toFull ? fullH : halfH, duration: 220, easing: Easing.out(Easing.cubic), useNativeDriver: false }).start(() =>
-      setTimeout(() => listRef.current?.scrollToEnd({ animated: false }), 30),
-    );
+    Animated.spring(sheetH, { toValue: toFull ? fullH : halfH, friction: 9, tension: 80, useNativeDriver: false }).start();
   };
-  // The phone's back button closes the chat (it's a panel, not a pop-up window).
+  const closeRef = useRef(close);
+  closeRef.current = close;
+  const snapRef = useRef(snap);
+  snapRef.current = snap;
+  const drag = useRef(
+    PanResponder.create({
+      onStartShouldSetPanResponder: () => false,
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 4 && Math.abs(g.dy) > Math.abs(g.dx),
+      onPanResponderGrant: () => {
+        sheetH.stopAnimation((v) => (dragStart.current = v));
+      },
+      // The sheet follows the finger.
+      onPanResponderMove: (_e, g) => {
+        sheetH.setValue(Math.max(halfH * 0.5, Math.min(fullH, dragStart.current - g.dy)));
+      },
+      onPanResponderRelease: (_e, g) => {
+        const now = dragStart.current - g.dy;
+        if (g.vy < -0.6 || now > (halfH + fullH) / 2) snapRef.current(true);
+        else if (g.vy > 0.8 && !fullRef.current) closeRef.current();
+        else if (now < halfH * 0.75) closeRef.current();
+        else snapRef.current(false);
+      },
+    }),
+  ).current;
+
+  // ── Back button, fade in / out ──
   useEffect(() => {
     if (!open) return;
     const sub = BackHandler.addEventListener('hardwareBackPress', () => {
@@ -99,51 +174,55 @@ export function RoomChat({
   useEffect(() => {
     if (open) {
       setMounted(true);
+      fullRef.current = false;
+      setFull(false);
+      sheetH.setValue(halfH);
       fade.setValue(0);
       Animated.timing(fade, { toValue: 1, duration: 220, easing: Easing.out(Easing.quad), useNativeDriver: false }).start();
     } else if (mounted) {
       Animated.timing(fade, { toValue: 0, duration: 180, easing: Easing.in(Easing.quad), useNativeDriver: false }).start(() => setMounted(false));
     }
   }, [open]); // eslint-disable-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (!open) return;
-    fullRef.current = false;
-    setFull(false);
-    sheetH.setValue(halfH);
-  }, [open, halfH, sheetH]);
-  const drag = useRef(
-    PanResponder.create({
-      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 6,
-      onPanResponderMove: (_e, g) => {
-        const base = fullRef.current ? fullH : halfH;
-        sheetH.setValue(Math.max(halfH * 0.6, Math.min(fullH, base - g.dy)));
-      },
-      onPanResponderRelease: (_e, g) => {
-        if (g.dy < -40) snap(true);
-        else if (g.dy > 60) {
-          if (fullRef.current) snap(false);
-          else close();
-        } else snap(fullRef.current);
-      },
-    }),
-  ).current;
 
-
+  // ── Messages, reads, typing ──
   const chat = useChat(roomId);
   const visible = useMemo(() => (chat.data ?? []).filter((m) => !muted[m.userId]), [chat.data, muted]);
+  // Drawn bottom-up: newest first in the data, so it opens at the latest message.
+  const bottomUp = useMemo(() => [...visible].reverse(), [visible]);
   const newest = chat.data?.length ? chat.data[chat.data.length - 1].id : 0;
 
-  // Fresh messages every time it opens.
   const refetchChat = chat.refetch;
   useEffect(() => {
-    if (open) refetchChat();
-  }, [open, refetchChat]);
+    if (!open) return;
+    refetchChat();
+    roomService
+      .getChatReads(roomId)
+      .then((r) => useChatLiveStore.getState().setReads(roomId, r))
+      .catch(() => undefined);
+  }, [open, refetchChat, roomId]);
 
   useEffect(() => {
-    if (open && newest) markSeen(roomId, newest);
-  }, [open, newest, roomId, markSeen]);
+    if (!open || !newest) return;
+    markSeen(roomId, newest);
+    if (!readOnly) roomService.markChatRead(roomId, newest).catch(() => undefined);
+  }, [open, newest, roomId, markSeen, readOnly]);
 
-  const toBottom = (animated: boolean) => listRef.current?.scrollToEnd({ animated });
+  // "typing…" expires after a few seconds without a new signal.
+  useEffect(() => {
+    if (!open || !typers.length) return;
+    const id = setInterval(() => useChatLiveStore.getState().pruneTyping(roomId), 1000);
+    return () => clearInterval(id);
+  }, [open, typers.length, roomId]);
+  const othersTyping = typers.filter((x) => x.userId !== meId && Date.now() - x.at < TYPING_MS);
+
+  const lastTypingSent = useRef(0);
+  const onType = (v: string) => {
+    setText(v.slice(0, 200));
+    if (v && Date.now() - lastTypingSent.current > 3000) {
+      lastTypingSent.current = Date.now();
+      roomService.chatTyping(roomId).catch(() => undefined);
+    }
+  };
 
   const send = useMutation({
     mutationFn: (body: string) => roomService.sendChat(roomId, body),
@@ -158,7 +237,15 @@ export function RoomChat({
     if (body && !send.isPending) send.mutate(body);
   };
 
+  const remove = useMutation({
+    mutationFn: (id: number) => roomService.deleteChatMessage(id),
+    onSuccess: (_r, id) => qc.setQueryData<ChatMessage[]>(chatKey(roomId), (old) => old?.map((m) => (m.id === id ? { ...m, deleted: true, body: '' } : m))),
+    onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
+  });
+
   const others = state.members.filter((m) => m.userId !== meId);
+  /** Who (other than me) has read up to this message. */
+  const seenBy = (id: number) => others.filter((m) => (reads[m.userId] ?? 0) >= id);
 
   return (
     <>
@@ -187,25 +274,27 @@ export function RoomChat({
         <KeyboardAvoidingView behavior="padding" style={StyleSheet.absoluteFill} pointerEvents="box-none">
           <View style={{ flex: 1 }} pointerEvents="none" />
           <Animated.View style={[styles.sheet, { height: sheetH, opacity: fade, backgroundColor: colors.surface }]}>
-            <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
-              {/* Drag handle: swipe up = full screen, down = half / close; tap = switch. */}
-              <Pressable onPress={() => snap(!full)} {...drag.panHandlers} style={styles.handleArea} accessibilityLabel={t('chat.expand')}>
-                <View style={styles.handle} />
-              </Pressable>
-              <View style={styles.head}>
-              <Ionicons name="chatbubbles" size={20} color="#fff" />
-              <View style={{ flex: 1 }}>
-                <T variant="h3" color="#fff">
-                  {t('chat.title')}
-                </T>
-                <T variant="tiny" color="rgba(255,255,255,0.8)">
-                  {t('chat.members', { count: state.members.length })}
-                </T>
-              </View>
-              <IconButton icon={full ? 'contract' : 'expand'} color="#fff" onPress={() => snap(!full)} />
-              <IconButton icon="close" color="#fff" onPress={close} />
-              </View>
-            </LinearGradient>
+            {/* The whole header is the drag handle (tap the bar to switch half / full). */}
+            <View {...drag.panHandlers}>
+              <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
+                <Pressable onPress={() => snap(!full)} style={styles.handleArea} accessibilityLabel={t('chat.expand')}>
+                  <View style={styles.handle} />
+                </Pressable>
+                <View style={styles.head}>
+                  <Ionicons name="chatbubbles" size={20} color="#fff" />
+                  <View style={{ flex: 1 }}>
+                    <T variant="h3" color="#fff">
+                      {t('chat.title')}
+                    </T>
+                    <T variant="tiny" color="rgba(255,255,255,0.8)">
+                      {t('chat.members', { count: state.members.length })}
+                    </T>
+                  </View>
+                  <IconButton icon={full ? 'contract' : 'expand'} color="#fff" onPress={() => snap(!full)} />
+                  <IconButton icon="close" color="#fff" onPress={close} />
+                </View>
+              </LinearGradient>
+            </View>
 
             {others.length && !readOnly ? (
               <View style={[styles.people, { borderBottomColor: colors.border }]}>
@@ -228,17 +317,14 @@ export function RoomChat({
             ) : null}
 
             <FlatList
-              ref={listRef}
-              data={visible}
+              data={bottomUp}
+              inverted
               keyExtractor={(m) => String(m.id)}
               style={{ flex: 1 }}
               contentContainerStyle={{ padding: spacing.md, gap: spacing.sm, flexGrow: 1 }}
               keyboardShouldPersistTaps="handled"
-              // Always open at the latest message, and follow new ones.
-              onContentSizeChange={() => toBottom(false)}
-              onLayout={() => toBottom(false)}
               ListEmptyComponent={
-                <View style={styles.empty}>
+                <View style={[styles.empty, { transform: [{ scaleY: -1 }] }]}>
                   <T style={{ fontSize: 34, lineHeight: 44 }}>💬</T>
                   <T muted center>
                     {chat.isLoading ? t('common.loading') : t('chat.empty')}
@@ -259,8 +345,14 @@ export function RoomChat({
                   );
                 }
                 const mine = item.userId === meId;
+                const seen = mine ? seenBy(item.id) : [];
+                const allSeen = mine && others.length > 0 && seen.length >= others.length;
                 return (
-                  <View style={[styles.msgRow, mine && { flexDirection: 'row-reverse' }]}>
+                  <Pressable
+                    onLongPress={() => !item.deleted && setPicked(item)}
+                    delayLongPress={300}
+                    style={[styles.msgRow, mine && { flexDirection: 'row-reverse' }]}
+                  >
                     {mine ? null : <Avatar avatarKey={item.avatarKey} size={28} />}
                     <View
                       style={[
@@ -275,15 +367,47 @@ export function RoomChat({
                           {item.name}
                         </T>
                       )}
-                      <T color={mine ? '#fff' : colors.text}>{item.body}</T>
-                      <T variant="tiny" color={mine ? 'rgba(255,255,255,0.7)' : colors.textMuted} style={{ alignSelf: 'flex-end' }}>
-                        {timeOf(item.at)}
-                      </T>
+                      {item.deleted ? (
+                        <Row gap={4}>
+                          <Ionicons name="ban" size={13} color={mine ? 'rgba(255,255,255,0.7)' : colors.textMuted} />
+                          <T variant="small" color={mine ? 'rgba(255,255,255,0.75)' : colors.textMuted} style={{ fontStyle: 'italic' }}>
+                            {t('chat.deleted')}
+                          </T>
+                        </Row>
+                      ) : (
+                        <T color={mine ? '#fff' : colors.text}>{item.body}</T>
+                      )}
+                      <Row gap={3} style={{ alignSelf: 'flex-end' }}>
+                        <T variant="tiny" color={mine ? 'rgba(255,255,255,0.7)' : colors.textMuted}>
+                          {timeOf(item.at)}
+                        </T>
+                        {mine && !item.deleted ? (
+                          <Ionicons
+                            name={seen.length ? 'checkmark-done' : 'checkmark'}
+                            size={14}
+                            color={allSeen ? '#7DD3FC' : 'rgba(255,255,255,0.75)'}
+                          />
+                        ) : null}
+                      </Row>
                     </View>
-                  </View>
+                  </Pressable>
                 );
               }}
             />
+
+            {othersTyping.length ? (
+              <Row gap={6} style={styles.typingRow}>
+                {othersTyping.slice(0, 3).map((x) => (
+                  <Avatar key={x.userId} avatarKey={x.avatarKey} size={20} />
+                ))}
+                <T variant="tiny" muted numberOfLines={1} style={{ flexShrink: 1 }}>
+                  {othersTyping.length === 1
+                    ? t('chat.typingOne', { name: othersTyping[0].name.split(' ')[0] })
+                    : t('chat.typingMany', { count: othersTyping.length })}
+                </T>
+                <TypingDots color={colors.primary} />
+              </Row>
+            ) : null}
 
             {readOnly ? (
               <View style={[styles.inputRow, { borderTopColor: colors.border, paddingBottom: spacing.md + insets.bottom }]}>
@@ -295,11 +419,10 @@ export function RoomChat({
               <Row style={[styles.inputRow, { borderTopColor: colors.border, paddingBottom: spacing.md + insets.bottom }]}>
                 <TextInput
                   value={text}
-                  onChangeText={(v) => setText(v.slice(0, 200))}
+                  onChangeText={onType}
                   placeholder={t('chat.placeholder')}
                   placeholderTextColor={colors.textMuted}
                   onSubmitEditing={submit}
-                  onFocus={() => setTimeout(() => toBottom(true), 250)}
                   returnKeyType="send"
                   style={[styles.input, { backgroundColor: colors.surfaceAlt, color: colors.text }]}
                 />
@@ -315,6 +438,64 @@ export function RoomChat({
           </Animated.View>
         </KeyboardAvoidingView>
       ) : null}
+
+      {/* Long press: message info (time, seen by) and delete for everyone. */}
+      <Modal transparent visible={picked !== null && !confirmDelete} animationType="fade" onRequestClose={() => setPicked(null)} statusBarTranslucent>
+        <Pressable style={[styles.infoBackdrop, { backgroundColor: colors.overlay }]} onPress={() => setPicked(null)}>
+          {picked ? (
+            <Pressable style={[styles.infoCard, { backgroundColor: colors.surface }]} onPress={(e) => e.stopPropagation()}>
+              <View style={[styles.infoQuote, { backgroundColor: colors.surfaceAlt }]}>
+                <T variant="tiny" color={colors.primary}>
+                  {picked.userId === meId ? t('common.you') : picked.name}
+                </T>
+                <T numberOfLines={3}>{picked.body}</T>
+              </View>
+              <Row gap={8}>
+                <Ionicons name="time-outline" size={16} color={colors.textMuted} />
+                <T variant="small" muted>
+                  {t('chat.sentAt', { time: `${new Date(picked.at).toLocaleDateString()} ${timeOf(picked.at)}` })}
+                </T>
+              </Row>
+              {picked.userId === meId ? (
+                <View style={{ gap: 6 }}>
+                  <Row gap={8}>
+                    <Ionicons name="checkmark-done" size={16} color="#38BDF8" />
+                    <T variant="smallBold">{t('chat.seenBy', { count: seenBy(picked.id).length })}</T>
+                  </Row>
+                  <Row gap={6} style={{ flexWrap: 'wrap' }}>
+                    {seenBy(picked.id).map((m) => (
+                      <Row key={m.userId} gap={4} style={[styles.seenChip, { backgroundColor: colors.surfaceAlt }]}>
+                        <Avatar avatarKey={m.avatarKey} size={20} />
+                        <T variant="tiny">{m.name.split(' ')[0]}</T>
+                      </Row>
+                    ))}
+                  </Row>
+                  <Pressable onPress={() => setConfirmDelete(true)} style={[styles.infoAction, { borderTopColor: colors.border }]}>
+                    <Ionicons name="trash-outline" size={18} color={colors.error} />
+                    <T variant="smallBold" color={colors.error}>
+                      {t('chat.deleteForEveryone')}
+                    </T>
+                  </Pressable>
+                </View>
+              ) : null}
+            </Pressable>
+          ) : null}
+        </Pressable>
+      </Modal>
+      <ConfirmModal
+        visible={confirmDelete}
+        icon="trash"
+        gradient={BRAND_GRADIENT}
+        title={t('chat.deleteForEveryone')}
+        message={t('chat.deleteConfirm')}
+        confirmLabel={t('room.delete')}
+        onCancel={() => setConfirmDelete(false)}
+        onConfirm={() => {
+          if (picked) remove.mutate(picked.id);
+          setConfirmDelete(false);
+          setPicked(null);
+        }}
+      />
     </>
   );
 }
@@ -332,8 +513,6 @@ const styles = StyleSheet.create({
   },
   fabInner: { width: 62, height: 62, borderRadius: 31, alignItems: 'center', justifyContent: 'center' },
   badge: { position: 'absolute', top: -2, right: -2, minWidth: 22, height: 22, borderRadius: 11, alignItems: 'center', justifyContent: 'center', paddingHorizontal: 5 },
-  backdrop: { flex: 1, justifyContent: 'flex-end', backgroundColor: 'rgba(0,0,0,0.25)' },
-  // About half the phone: the game is still visible above.
   sheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, overflow: 'hidden', elevation: 20 },
   handleArea: { alignItems: 'center', paddingTop: 8, paddingBottom: 2 },
   handle: { width: 46, height: 5, borderRadius: 3, backgroundColor: 'rgba(255,255,255,0.7)' },
@@ -345,7 +524,14 @@ const styles = StyleSheet.create({
   system: { alignSelf: 'center', flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 10, paddingVertical: 3 },
   msgRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6 },
   bubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7 },
+  typingRow: { paddingHorizontal: spacing.md, paddingBottom: 4 },
+  dot: { width: 6, height: 6, borderRadius: 3 },
   inputRow: { padding: spacing.sm, borderTopWidth: StyleSheet.hairlineWidth },
   input: { flex: 1, height: 44, borderRadius: 22, paddingHorizontal: 16, fontFamily: fonts.regular, fontSize: 15, includeFontPadding: false, paddingVertical: 0 },
   send: { width: 44, height: 44, borderRadius: 22, alignItems: 'center', justifyContent: 'center' },
+  infoBackdrop: { flex: 1, justifyContent: 'center', padding: spacing.lg },
+  infoCard: { borderRadius: radius.xl, padding: spacing.md, gap: spacing.sm },
+  infoQuote: { borderRadius: radius.md, padding: spacing.sm, gap: 2 },
+  seenChip: { borderRadius: 999, paddingLeft: 2, paddingRight: 8, paddingVertical: 2, alignItems: 'center' },
+  infoAction: { flexDirection: 'row', alignItems: 'center', gap: 8, borderTopWidth: StyleSheet.hairlineWidth, paddingTop: spacing.sm, marginTop: 4 },
 });

@@ -186,6 +186,12 @@ export function GameSettingsSheet({
                     })}
                   </Row>
                   <VoicePicker language={spoken} />
+                  <Row gap={6} style={{ marginTop: spacing.sm }}>
+                    <Ionicons name="information-circle-outline" size={15} color={colors.textMuted} />
+                    <T variant="tiny" muted style={{ flex: 1 }}>
+                      {t('game.voiceTip')}
+                    </T>
+                  </Row>
                 </>
               ) : null}
             </Section>

@@ -3,8 +3,11 @@ import { spokenCall, teluguNumber } from './calls';
 
 describe('spoken calls', () => {
   it('English says just the number', () => {
-    expect(spokenCall(35, 'en')).toBe('35');
-    expect(spokenCall(7, 'en')).toBe('7');
+    expect(spokenCall(35, 'en')).toBe('thirty five');
+    expect(spokenCall(30, 'en')).toBe('thirty');
+    expect(spokenCall(90, 'en')).toBe('ninety');
+    expect(spokenCall(11, 'en')).toBe('eleven');
+    expect(spokenCall(7, 'en')).toBe('seven');
   });
 
   it('Telugu spells the number in Telugu words', () => {

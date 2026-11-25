@@ -347,7 +347,12 @@ export function RoomSettingsCard({ state, isHost }: { state: RoomState; isHost: 
             value={room.lateClaimCalls > 0 ? t('create.lateClaimValue', { count: room.lateClaimCalls }) : t('common.off')}
           />
         ) : null}
-        <SummaryItem icon="pricetag" label={t('create.ticketPrice')} value={formatRupees(room.ticketPrice)} />
+        <SummaryItem
+          icon={room.stakeMode === 'coins' ? 'logo-bitcoin' : room.stakeMode === 'free' ? 'gift' : 'pricetag'}
+          label={t('create.stakeTitle')}
+          value={room.stakeMode === 'free' ? t('create.stake_free') : `${t(`create.stake_${room.stakeMode}`)} · ${formatRupees(room.ticketPrice)}`}
+        />
+        <SummaryItem icon="layers" label={t('create.maxTickets')} value={String(room.maxTickets ?? 3)} />
         <SummaryItem icon="people" label={t('create.maxPlayers')} value={String(room.maxPlayers)} />
         <SummaryItem
           icon={room.visibility === 'public' ? 'earth' : 'lock-closed'}
@@ -396,6 +401,8 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
   const [chat, setChat] = useState(room.chatEnabled);
   const [lateClaim, setLateClaim] = useState(room.lateClaimCalls ?? 0);
   const [speed, setSpeed] = useState(room.callIntervalSeconds);
+  const [stake, setStake] = useState<'free' | 'coins' | 'amount'>(room.stakeMode ?? 'amount');
+  const [maxTickets, setMaxTickets] = useState(room.maxTickets ?? 3);
   const isSeries = room.kind === 'series';
   /** Series: 0 = no limit; the game in the lobby is number gamesPlayed + 1. */
   const [limitGames, setLimitGames] = useState(room.seriesLength > 0);
@@ -416,6 +423,8 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
     setChat(room.chatEnabled);
     setLateClaim(room.lateClaimCalls ?? 0);
     setSpeed(room.callIntervalSeconds);
+    setStake(room.stakeMode ?? 'amount');
+    setMaxTickets(room.maxTickets ?? 3);
     setLimitGames(room.seriesLength > 0);
     setSeriesGames(Math.max(minGames, room.seriesLength || 5));
   }, [visible]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -426,7 +435,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
         title: title.trim() || room.title,
         visibility,
         maxPlayers,
-        ticketPrice: Number(price) || 0,
+        ticketPrice: stake === 'free' ? 0 : stake === 'coins' ? Math.round(Number(price) || 0) : Number(price) || 0,
         rule,
         checkSeconds,
         autoMark: autoHint,
@@ -434,8 +443,16 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
         chatEnabled: chat,
         lateClaimCalls: rule === 'normal' ? lateClaim : 0,
         callIntervalSeconds: speed,
+        stakeMode: stake,
+        maxTickets,
         seriesLength: isSeries ? (limitGames ? seriesGames : 0) : undefined,
-      }, { lateClaimCalls: room.lateClaimCalls ?? 0, callIntervalSeconds: room.callIntervalSeconds, seriesLength: room.seriesLength }),
+      }, {
+        lateClaimCalls: room.lateClaimCalls ?? 0,
+        callIntervalSeconds: room.callIntervalSeconds,
+        seriesLength: room.seriesLength,
+        stakeMode: room.stakeMode ?? 'amount',
+        maxTickets: room.maxTickets ?? 3,
+      }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: roomKey(room.id) });
       showToast({ variant: 'success', title: t('lobby.settingsSaved') });
@@ -478,12 +495,33 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
               }
             />
 
+            {/* Play for: Free / Coins / ₹ for fun (locked once anyone has tickets). */}
             <T variant="smallBold" muted style={styles.label}>
-              {t('create.ticketPrice')}
+              {t('create.stakeTitle')}
+            </T>
+            <Row gap={spacing.sm} style={{ flexWrap: 'wrap', opacity: priceLocked ? 0.5 : 1 }}>
+              {(['free', 'coins', 'amount'] as const).map((m) => (
+                <Chip key={m} label={t(`create.stake_${m}`)} active={stake === m} onPress={() => !priceLocked && setStake(m)} />
+              ))}
+            </Row>
+            <Row style={{ justifyContent: 'space-between', marginTop: spacing.lg }}>
+              <View style={{ flex: 1 }}>
+                <T variant="bodyMedium">{t('create.maxTickets')}</T>
+                <T variant="tiny" muted>
+                  {t('create.maxTicketsDesc')}
+                </T>
+              </View>
+              <Stepper value={maxTickets} min={1} max={10} onChange={setMaxTickets} width={44} />
+            </Row>
+
+            {stake === 'free' ? null : (
+            <>
+            <T variant="smallBold" muted style={styles.label}>
+              {stake === 'coins' ? t('create.ticketPriceCoins') : t('create.ticketPrice')}
             </T>
             <View style={[styles.priceBox, { borderColor: colors.gold, opacity: priceLocked ? 0.5 : 1 }]}>
               <T variant="h2" color={colors.goldDark}>
-                ₹
+                {stake === 'coins' ? '🪙' : '₹'}
               </T>
               <TextInput
                 value={price}
@@ -493,6 +531,8 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
                 style={[styles.priceInput, centeredInput, { color: colors.text }]}
               />
             </View>
+            </>
+            )}
             {priceLocked ? (
               <T variant="tiny" muted style={{ marginTop: 4 }}>
                 {t('lobby.priceLocked')}

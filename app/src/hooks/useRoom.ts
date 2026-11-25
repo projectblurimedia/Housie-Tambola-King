@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { QueryClient, useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
 import { roomService } from '@/services/roomService';
+import { useChatLiveStore } from '@/state/chatLiveStore';
 import type { ChatMessage, RoomState, Winner } from '@/types/api';
 import type { PrizeType } from '@/game/engine/ticket';
 
@@ -30,7 +31,8 @@ export type RoomEvent =
   | { type: 'join_request'; userId: string; name: string }
   | { type: 'chat'; message: ChatMessage }
   | { type: 'room_settings' }
-  | { type: 'pause_request'; gameId: string; userId: string; name: string };
+  | { type: 'pause_request'; gameId: string; userId: string; name: string }
+  | { type: 'player_issue'; userId: string; name: string; text: string };
 
 /** How late a number may be before this phone nudges the server clock itself. */
 const NUDGE_GRACE_MS = 2500;
@@ -215,6 +217,22 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
         refetch();
         emit({ type: 'claim_check', ...(payload as Omit<Extract<RoomEvent, { type: 'claim_check' }>, 'type'>) });
       })
+      // Chat: "typing…", read receipts, and messages deleted for everyone.
+      .on('broadcast', { event: 'typing' }, ({ payload }) => {
+        const p = payload as { userId: string; name: string; avatarKey: string };
+        useChatLiveStore.getState().setTyping(roomId, { ...p, at: Date.now() });
+      })
+      .on('broadcast', { event: 'chat_read' }, ({ payload }) => {
+        const p = payload as { userId: string; lastReadId: number };
+        useChatLiveStore.getState().setRead(roomId, p.userId, Number(p.lastReadId));
+      })
+      .on('broadcast', { event: 'chat_deleted' }, ({ payload }) => {
+        const id = (payload as { id: number }).id;
+        qc.setQueryData<ChatMessage[]>(chatKey(roomId), (old) => old?.map((m) => (m.id === id ? { ...m, deleted: true, body: '' } : m)));
+      })
+      .on('broadcast', { event: 'player_issue' }, ({ payload }) => {
+        emit({ type: 'player_issue', ...(payload as { userId: string; name: string; text: string }) });
+      })
       .on('broadcast', { event: 'pause_request' }, ({ payload }) => {
         emit({ type: 'pause_request', ...(payload as { gameId: string; userId: string; name: string }) });
       })
@@ -225,6 +243,8 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
       .on('broadcast', { event: 'chat' }, ({ payload }) => {
         const message = payload as ChatMessage;
         appendChat(qc, roomId, message);
+        // Their message arrived: they are no longer typing.
+        useChatLiveStore.setState((st) => ({ typing: { ...st.typing, [roomId]: (st.typing[roomId] ?? []).filter((x) => x.userId !== message.userId) } }));
         emit({ type: 'chat', message });
       })
       .on('broadcast', { event: 'room_ended' }, ({ payload }) => {

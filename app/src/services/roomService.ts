@@ -2,6 +2,8 @@ import { supabase } from '@/lib/supabase';
 import type { PrizeType } from '@/game/engine/ticket';
 import type {
   ChatMessage,
+  ChatRead,
+  CoinLedgerRow,
   HintMode,
   ClaimRule,
   GameResults,
@@ -36,6 +38,10 @@ export interface CreateRoomInput {
   hintMode: HintMode;
   /** Normal rule: how many numbers late an earlier-finished claim may come; 0 = off. */
   lateClaimCalls: number;
+  /** Free (no price) / Coins (play coins) / Amount (casual ₹ for scoring). */
+  stakeMode: 'free' | 'coins' | 'amount';
+  /** Most tickets per player, 1–10. */
+  maxTickets: number;
 }
 
 export interface RoomSettingsInput {
@@ -53,6 +59,8 @@ export interface RoomSettingsInput {
   callIntervalSeconds: number;
   /** Series rooms only: 0 = no limit, else 2–50 games. */
   seriesLength?: number;
+  stakeMode: 'free' | 'coins' | 'amount';
+  maxTickets: number;
 }
 
 /** The room's values before editing — only what changed is sent. */
@@ -60,6 +68,8 @@ export interface RoomSettingsBefore {
   lateClaimCalls: number;
   callIntervalSeconds: number;
   seriesLength: number;
+  stakeMode: 'free' | 'coins' | 'amount';
+  maxTickets: number;
 }
 
 export type ClaimResult = 'won' | 'shared' | 'too_late' | 'already_claimed' | 'already_yours' | 'not_complete' | 'auto';
@@ -87,12 +97,51 @@ export const roomService = {
     if (input.autoMark && input.hintMode === 'next') await this.setHintMode(created.roomId, 'next');
     // 0 (off) is the default on the server.
     if (input.rule === 'normal' && input.lateClaimCalls > 0) await this.setLateClaim(created.roomId, input.lateClaimCalls);
+    // Rooms start as '₹ amount' with 3 tickets each on the server.
+    if (input.stakeMode !== 'amount') await this.setStakeMode(created.roomId, input.stakeMode);
+    if (input.maxTickets !== 3) await this.setMaxTickets(created.roomId, input.maxTickets);
     return created;
   },
 
   /** Host, lobby: a series' number of games (0 = no limit). */
   async setSeriesLength(roomId: string, len: number): Promise<void> {
     unwrap(await supabase.rpc('set_series_length', { p_room: roomId, p_len: len }));
+  },
+
+  /** Host, lobby, before tickets: Free / Coins / ₹ amount. */
+  async setStakeMode(roomId: string, mode: 'free' | 'coins' | 'amount'): Promise<void> {
+    unwrap(await supabase.rpc('set_stake_mode', { p_room: roomId, p_mode: mode }));
+  },
+
+  /** Host, lobby: most tickets per player (1–10). */
+  async setMaxTickets(roomId: string, max: number): Promise<void> {
+    unwrap(await supabase.rpc('set_max_tickets', { p_room: roomId, p_max: max }));
+  },
+
+  async markChatRead(roomId: string, lastId: number): Promise<void> {
+    unwrap(await supabase.rpc('mark_chat_read', { p_room: roomId, p_last_id: lastId }));
+  },
+
+  async getChatReads(roomId: string): Promise<ChatRead[]> {
+    return (unwrap(await supabase.rpc('get_chat_reads', { p_room: roomId })) as ChatRead[] | null) ?? [];
+  },
+
+  /** "I'm typing" — the server tells the room; called at most every few seconds. */
+  async chatTyping(roomId: string): Promise<void> {
+    unwrap(await supabase.rpc('chat_typing', { p_room: roomId }));
+  },
+
+  async deleteChatMessage(id: number): Promise<void> {
+    unwrap(await supabase.rpc('delete_chat_message', { p_id: id }));
+  },
+
+  async coinLedger(): Promise<CoinLedgerRow[]> {
+    return (unwrap(await supabase.rpc('get_my_coin_ledger', {})) as CoinLedgerRow[] | null) ?? [];
+  },
+
+  /** A player tells the host about a problem (lobby); sent live to the host only. */
+  async tellHost(roomId: string, text: string): Promise<void> {
+    unwrap(await supabase.rpc('tell_host', { p_room: roomId, p_text: text }));
   },
 
   /** A player asks the host to pause the running game (once per 30 s). */
@@ -177,6 +226,8 @@ export const roomService = {
     await this.setHintMode(roomId, input.hintMode);
     if (input.lateClaimCalls !== before.lateClaimCalls) await this.setLateClaim(roomId, input.lateClaimCalls);
     if (input.callIntervalSeconds !== before.callIntervalSeconds) await this.setSpeed(roomId, input.callIntervalSeconds);
+    if (input.stakeMode !== before.stakeMode) await this.setStakeMode(roomId, input.stakeMode);
+    if (input.maxTickets !== before.maxTickets) await this.setMaxTickets(roomId, input.maxTickets);
     if (input.seriesLength !== undefined && input.seriesLength !== before.seriesLength) {
       await this.setSeriesLength(roomId, input.seriesLength);
     }

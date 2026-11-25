@@ -21,8 +21,24 @@ export function teluguNumber(n: number): string {
   return unit ? `${tens} ${unit}` : tens;
 }
 
+const EN_UNITS = ['', 'one', 'two', 'three', 'four', 'five', 'six', 'seven', 'eight', 'nine'];
+const EN_TEENS = ['ten', 'eleven', 'twelve', 'thirteen', 'fourteen', 'fifteen', 'sixteen', 'seventeen', 'eighteen', 'nineteen'];
+const EN_TENS = ['', '', 'twenty', 'thirty', 'forty', 'fifty', 'sixty', 'seventy', 'eighty', 'ninety'];
+
+/**
+ * 1–90 in English words, e.g. 30 → "thirty", 29 → "twenty nine". Digits ("30") let some phone
+ * engines read "three oh"; words are always read as one number.
+ */
+export function englishNumber(n: number): string {
+  if (n < 10) return EN_UNITS[n];
+  if (n < 20) return EN_TEENS[n - 10];
+  const tens = EN_TENS[Math.floor(n / 10)];
+  const unit = EN_UNITS[n % 10];
+  return unit ? `${tens} ${unit}` : tens;
+}
+
 export function spokenCall(n: number, language: SupportedLanguage = 'en'): string {
-  return language === 'te' ? teluguNumber(n) : String(n);
+  return language === 'te' ? teluguNumber(n) : englishNumber(n);
 }
 
 export function speechLanguageCode(language: SupportedLanguage): string {

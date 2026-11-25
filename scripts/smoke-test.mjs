@@ -118,6 +118,8 @@ try {
     p_ticket_price: 10, p_call_interval_seconds: 3, p_series_length: 2, p_prizes: prizes,
   });
   check(/^[A-Z2-9]{6}$/.test(room.code), `series room created (${room.code})`);
+  // Play coins for the whole game: tickets cost coins and prizes pay coins.
+  await host.rpc('set_stake_mode', { p_room: room.roomId, p_mode: 'coins' });
 
   const pub = await friend.rpc('list_public_rooms');
   check(pub.some((r) => r.id === room.roomId), 'room listed as public');
@@ -266,6 +268,13 @@ try {
   check(ledger.length === 1 && ledger[0].rows.length === 2, 'game-by-game ledger has game 1 for both players');
   const won = standings.reduce((s, r) => s + Number(r.won), 0);
   check(Math.abs(won - paid) < 0.01, `standings total won = payouts (₹${won})`);
+  // Coins: every player's balance = 1000 − tickets + prizes (game 1 only so far).
+  for (const [p, label] of [[host, 'host'], [friend, 'friend']]) {
+    const me2 = await p.rpc('get_me');
+    const row = standings.find((r) => r.userId === me2.id);
+    const expected = 1000 - Number(row.spent) + Number(row.won);
+    check(Math.abs(Number(me2.coins) - expected) < 0.01, `${label} coins = 1000 − ${row.spent} + ${row.won} = ${expected} (has ${me2.coins})`);
+  }
   for (const s of standings) console.log(`  ${s.name}: won ₹${s.won}, tickets ₹${s.spent}, net ₹${s.net}, ${s.wins} wins`);
 
   await host.rpc('end_room', { p_room: room.roomId });

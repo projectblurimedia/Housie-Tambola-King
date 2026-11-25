@@ -5,6 +5,7 @@ import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
 import { Avatar } from '@/components/Avatar';
 import { formatRupees } from '@/components/Money';
+import { useStakeStore } from '@/state/stakeStore';
 import { MiniBall } from '@/components/NumberBall';
 import { Card, EmptyState, Loading, Row, T } from '@/components/ui';
 import { roomService } from '@/services/roomService';
@@ -31,6 +32,8 @@ export function NetAmount({ value, size = 18 }: { value: number; size?: number }
 
 /** Room/series scoreboard: each player's +/− (best first); tap a row for the details. */
 export function StandingsList({ roomId, meId }: { roomId: string; meId?: string }) {
+  // Free rooms: only wins count; no amounts.
+  const free = useStakeStore((st) => st.mode) === 'free';
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const [open, setOpen] = useState<string | null>(null);
@@ -65,12 +68,13 @@ export function StandingsList({ roomId, meId }: { roomId: string; meId?: string 
                     {r.isMember === false ? ` · ${t('standings.left')}` : ''}
                   </T>
                 </View>
-                <NetAmount value={r.net} size={19} />
+                {free ? null : <NetAmount value={r.net} size={19} />}
                 <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
               </Row>
             </Pressable>
             {expanded ? (
               <View style={[styles.details, { borderTopColor: colors.border }]}>
+                {free ? null : (
                 <Row gap={spacing.sm}>
                   <View style={[styles.stat, { backgroundColor: 'rgba(22,163,74,0.1)' }]}>
                     <T variant="tiny" muted>
@@ -95,6 +99,7 @@ export function StandingsList({ roomId, meId }: { roomId: string; meId?: string 
                     <NetAmount value={r.net} size={16} />
                   </View>
                 </Row>
+                )}
                 {r.list.map((w, k) => (
                   <View key={k} style={[styles.win, { backgroundColor: colors.surfaceAlt }]}>
                     <Row style={{ justifyContent: 'space-between' }}>
@@ -117,7 +122,8 @@ export function StandingsList({ roomId, meId }: { roomId: string; meId?: string 
           </Card>
         );
       })}
-      {ledger.data?.length ? <GameByGame games={ledger.data} players={rows} meId={meId} /> : null}
+      {/* Free rooms have no money: no game-by-game money table. */}
+      {ledger.data?.length && !free ? <GameByGame games={ledger.data} players={rows} meId={meId} /> : null}
     </View>
   );
 }

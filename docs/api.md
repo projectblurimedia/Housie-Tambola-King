@@ -42,6 +42,15 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `request_pause` | `p_game` (member; running, not paused; once per 30 s) — broadcasts `pause_request {gameId, userId, name}` for the host | – | `NOT_IN_ROOM`, `GAME_NOT_RUNNING`, `PAUSE_ASKED_RECENTLY` |
 | `hide_room` | `p_room` — remove an ended / left room from My rooms (hidden_rooms) | – | `ROOM_STILL_OPEN` |
 | `get_chat` | `p_room` — messages since I (last) joined, with `kind` user / join / leave (join/leave lines are written by a trigger on room_members) | messages | `NOT_IN_ROOM` |
+| `set_stake_mode` | `p_room, p_mode (free / coins / amount)` (host, lobby, before tickets) | – | `NOT_HOST`, `INVALID_STAKE_MODE`, `GAME_ALREADY_STARTED`, `PRICE_LOCKED` |
+| `set_max_tickets` | `p_room, p_max (1–10)` (host, lobby) | – | `NOT_HOST`, `INVALID_TICKET_COUNT`, `GAME_ALREADY_STARTED` |
+| `set_my_tickets` | `p_game, p_count (1..rooms.max_tickets)` — each ticket = best of 40 (fewest numbers shared with my other tickets, no empty columns); coins rooms take ticket_price coins per ticket | tickets | `INVALID_TICKET_COUNT`, `NOT_ENOUGH_COINS`, … |
+| `tell_host` | `p_room, p_text` (member; 1 per 15 s) — broadcast `player_issue` to the host | – | `NOT_IN_ROOM`, `INVALID_MESSAGE`, `CHAT_TOO_FAST` |
+| `mark_chat_read` / `get_chat_reads` | `p_room, p_last_id` / `p_room` — read receipts (broadcast `chat_read`) | – / `[{userId, lastReadId}]` | `NOT_IN_ROOM` |
+| `chat_typing` | `p_room` — broadcast `typing` (nothing stored) | – | – |
+| `delete_chat_message` | `p_id` (own message) — broadcast `chat_deleted` | – | `NOT_YOUR_MESSAGE` |
+| `get_my_coin_ledger` | `p_limit` | `[{delta, reason, roomTitle, at}]` | – |
+| `admin_adjust_coins` | `p_user, p_delta, p_note` (admin; never below 0; audit-logged) | new balance | `NOT_ENOUGH_COINS`, `INVALID_AMOUNT` |
 | `set_late_claim` | `p_room, p_calls (0–90; 0 = off)` (host, not while a game is running; broadcasts `room_settings`) — Normal rule "Late claim" | – | `NOT_HOST`, `INVALID_LATE_CLAIM`, `GAME_ALREADY_STARTED` |
 | `send_chat` | `p_room, p_body (1–200 chars)` | message `{id, userId, name, avatarKey, body, at}` (also broadcast `chat`) | `CHAT_OFF`, `CHAT_TOO_FAST` (5 per 10 s), `INVALID_MESSAGE`, `NOT_IN_ROOM` |
 | `get_chat` | `p_room` | last 50 messages, oldest first | `NOT_IN_ROOM` |

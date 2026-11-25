@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Alert, Animated, Easing, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { Avatar } from '@/components/Avatar';
 import { Wordmark } from '@/components/Wordmark';
 import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
-import { formatRupees } from '@/components/Money';
+import { formatCoins, formatRupees } from '@/components/Money';
 import { Card, IconButton, Pill, Row, T } from '@/components/ui';
 import { useAppSettings, useMe } from '@/hooks/useMe';
 import { roomService } from '@/services/roomService';
@@ -411,6 +411,14 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
                 })()}
               />
             </View>
+            {/* Play coins balance (opens Profile, where the history is). */}
+            {me.data ? (
+              <Pressable onPress={() => navigation.navigate('Profile')} style={styles.coinChip} accessibilityLabel={t('coins.title')}>
+                <T variant="smallBold" color="#3B1D00">
+                  {formatCoins(me.data.coins ?? 0)}
+                </T>
+              </Pressable>
+            ) : null}
             <Pressable onPress={() => navigation.navigate('Profile')}>
               <Avatar avatarKey={me.data?.avatarKey ?? 'a1'} size={46} ring="#FDE68A" />
             </Pressable>
@@ -534,6 +542,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
 }
 
 const styles = StyleSheet.create({
+  coinChip: { backgroundColor: '#FDE68A', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 5, marginRight: spacing.sm, borderWidth: 1, borderColor: '#F5B700' },
   qaTile: { borderRadius: 20, overflow: 'hidden' },
   qaGradient: { height: 116, padding: 14, justifyContent: 'flex-end' },
   qaWatermark: { position: 'absolute', right: -12, bottom: -14 },

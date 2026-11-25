@@ -1,5 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Alert, Animated, Easing, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, Share, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Clipboard from 'expo-clipboard';
@@ -23,6 +23,8 @@ import { useWinnerStore } from '@/state/winnerStore';
 import { useClaimCheckStore } from '@/state/claimCheckStore';
 import { useSettingsStore } from '@/state/settingsStore';
 import { usePauseRequestStore } from '@/state/pauseRequestStore';
+import { ReadySheet } from './parts/ReadySheet';
+import { isFreeRoom, useStakeStore } from '@/state/stakeStore';
 import * as Haptics from 'expo-haptics';
 import { playPrizeSound, soundFor } from '@/services/sounds';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
@@ -226,27 +228,38 @@ function PulseButton({
   );
 }
 
-/** The pot as a small round gold coin with the amount, and how it's made up. */
+/**
+ * The pot, minimal and premium: a slim dark strip with a gold hairline — "POT" in small gold
+ * letters, the amount large, and how it's made up as a small pill. Free rooms: no money at all.
+ */
 function PotBadge({ pot, tickets, price }: { pot: number; tickets: number; price: number }) {
   const { t } = useTranslation();
-  const { colors } = useThemeColors();
+  if (isFreeRoom()) {
+    return (
+      <View style={styles.potStrip}>
+        <Ionicons name="sparkles" size={18} color="#FDE68A" />
+        <T variant="smallBold" color="#fff" style={{ flex: 1 }}>
+          {t('lobby.freeGame')}
+        </T>
+      </View>
+    );
+  }
   return (
-    <Row gap={spacing.md} style={{ justifyContent: 'center' }}>
-      <LinearGradient colors={['#FEF3C7', '#FBBF24', '#D97706']} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={styles.potCoin}>
-        <T style={{ fontSize: 22, lineHeight: 28 }}>💰</T>
-        <T variant="h3" color="#3B1D00" numberOfLines={1}>
+    <View style={styles.potStrip}>
+      <View style={{ flex: 1 }}>
+        <T variant="tiny" color="#FDE68A" style={{ letterSpacing: 2 }}>
+          {t('lobby.pot').toUpperCase()}
+        </T>
+        <T variant="h1" color="#fff" numberOfLines={1} adjustsFontSizeToFit>
           {formatRupees(pot)}
         </T>
-      </LinearGradient>
-      <View>
-        <T variant="smallBold" color={colors.goldDark}>
-          {t('lobby.pot')}
-        </T>
-        <T variant="tiny" muted>
+      </View>
+      <View style={styles.potPill}>
+        <T variant="tiny" color="#FDE68A">
           {t('lobby.potFormula', { tickets, price: formatRupees(price) })}
         </T>
       </View>
-    </Row>
+    </View>
   );
 }
 
@@ -305,7 +318,24 @@ function LobbyPanel({
     onError,
   });
   const openTickets = useMutation({ mutationFn: () => roomService.openTickets(game.id), onSuccess: refresh, onError });
-  const ready = useMutation({ mutationFn: () => roomService.setReady(game.id), onSuccess: refresh, onError });
+  // Step 3: the "get ready" card pops up once per game for players with tickets (the I'm ready
+  // button opens it again).
+  const [readyOpen, setReadyOpen] = useState(false);
+  const readyShownFor = useRef<string | null>(null);
+  useEffect(() => {
+    if (phase === 'ready' && myTickets > 0 && !iAmReady && readyShownFor.current !== game.id) {
+      readyShownFor.current = game.id;
+      setReadyOpen(true);
+    }
+  }, [phase, myTickets, iAmReady, game.id]);
+  const ready = useMutation({
+    mutationFn: () => roomService.setReady(game.id),
+    onSuccess: () => {
+      setReadyOpen(false);
+      refresh();
+    },
+    onError,
+  });
   const start = useMutation({ mutationFn: () => roomService.start(game.id), onSuccess: refresh, onError });
 
   const [removing, setRemoving] = useState<{ userId: string; name: string } | null>(null);
@@ -467,7 +497,7 @@ function LobbyPanel({
               </T>
             </Card>
           ) : (
-            <PulseButton title={t('lobby.readyButton')} icon="checkmark-done" onPress={() => ready.mutate()} loading={ready.isPending} />
+            <PulseButton title={t('lobby.readyButton')} icon="checkmark-done" onPress={() => setReadyOpen(true)} loading={ready.isPending} />
           )
         ) : (
           <T muted center>
@@ -543,6 +573,14 @@ function LobbyPanel({
         hint={t('lobby.setAmountsHint', { players: game.playerCount, tickets: game.ticketCount })}
         onSave={(amounts) => savePrizes.mutate(amounts)}
         onClose={() => setPrizeMode(null)}
+      />
+      <ReadySheet
+        visible={readyOpen && phase === 'ready' && !iAmReady && myTickets > 0}
+        state={state}
+        gameLabel={gameLabel(room, game.gameNo)}
+        busy={ready.isPending}
+        onReady={() => ready.mutate()}
+        onClose={() => setReadyOpen(false)}
       />
       <ConfirmModal
         visible={removing !== null}
@@ -665,19 +703,25 @@ function EndedPanel({
   const myRooms = useQuery({ queryKey: ['myRooms'], queryFn: roomService.myRooms });
   const deleteAt = myRooms.data?.find((r) => r.id === room.id)?.deleteAt;
   const daysLeft = deleteAt ? Math.max(0, Math.ceil((new Date(deleteAt).getTime() - Date.now()) / 86_400_000)) : null;
-  const askDelete = () =>
-    Alert.alert(t('room.delete'), t('room.deleteConfirm', { title: room.title }), [
-      { text: t('common.cancel'), style: 'cancel' },
-      { text: t('room.delete'), style: 'destructive', onPress: onRemove },
-    ]);
+  // The app's own confirmation (same style as NearbyU), never a system alert.
+  const [confirmDelete, setConfirmDelete] = useState(false);
+  const askDelete = () => setConfirmDelete(true);
   return (
     <View style={{ gap: spacing.md }}>
-      <LinearGradient colors={['#4C1D95', '#C026D3']} style={styles.endedBanner}>
-        <T style={{ fontSize: 44, lineHeight: 56 }}>{room.kind === 'series' ? '🏆' : '🎉'}</T>
-        <T variant="h1" color="#fff" center>
-          {room.kind === 'series' ? t('results.seriesOver') : t('results.gameOver')}
-        </T>
-      </LinearGradient>
+      {/* Minimal, premium "completed" card: gold trophy, title, one line. */}
+      <View style={styles.doneCard}>
+        <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.doneIcon}>
+          <Ionicons name="trophy" size={26} color="#3B1D00" />
+        </LinearGradient>
+        <View style={{ flex: 1 }}>
+          <T variant="h2" color="#fff">
+            {room.kind === 'series' ? t('results.seriesOver') : t('results.gameOver')}
+          </T>
+          <T variant="small" color="rgba(255,255,255,0.75)">
+            {room.kind === 'series' ? t('results.gamesPlayed', { count: room.gamesPlayed }) : t('results.thanksForPlaying')}
+          </T>
+        </View>
+      </View>
       {lastGameId ? <ResultsCard gameId={lastGameId} meId={me.id} /> : null}
       <T variant="h2">{t('room.tabStandings')}</T>
       <StandingsList roomId={room.id} meId={me.id} />
@@ -692,6 +736,18 @@ function EndedPanel({
       <Row gap={spacing.sm}>
         {room.chatEnabled ? <ActionTile icon="chatbubbles" label={t('chat.title')} tint={['#7C3AED', '#C026D3']} onPress={onChat} /> : null}
         <ActionTile icon="trash" label={t('room.delete')} tint={['#F87171', '#DC2626']} onPress={askDelete} />
+        <ConfirmModal
+          visible={confirmDelete}
+          icon="trash"
+          title={t('room.delete')}
+          message={t('room.deleteConfirm', { title: room.title })}
+          confirmLabel={t('room.delete')}
+          onCancel={() => setConfirmDelete(false)}
+          onConfirm={() => {
+            setConfirmDelete(false);
+            onRemove();
+          }}
+        />
       </Row>
       {daysLeft !== null ? (
         <Row gap={6} style={{ justifyContent: 'center' }}>
@@ -800,6 +856,13 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
         case 'paused':
           showToast({ variant: e.paused ? 'error' : 'info', title: e.paused ? t('game.pausedToast') : t('game.resumedToast') });
           break;
+        case 'player_issue':
+          // A player's problem in the lobby — only the host sees it.
+          if (isHostRef.current) {
+            showToast({ variant: 'error', title: `${e.name}: ${e.text}` });
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning).catch(() => undefined);
+          }
+          break;
         case 'pause_request':
           // Only the host can pause: a banner on the game screen (with a buzz) until they act.
           if (isHostRef.current) {
@@ -847,6 +910,12 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
   checkClaimsRef.current = !!state && state.room.checkClaims;
   const isHost = !!state && state.room.hostId === me.data?.id;
   isHostRef.current = isHost;
+  // Amounts inside this room follow its stake (free / coins / ₹); back to ₹ when we leave.
+  const stakeMode = state?.room.stakeMode ?? 'amount';
+  useEffect(() => {
+    useStakeStore.getState().setMode(stakeMode);
+  }, [stakeMode]);
+  useEffect(() => () => useStakeStore.getState().setMode('amount'), []);
   // Home's "My rooms" shows status / game number: mark it stale whenever those change here.
   const roomStatus = state?.room.status;
   const gamesPlayed = state?.room.gamesPlayed;
@@ -879,6 +948,8 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
     onSuccess: () => {
       setPickerOpen(false);
       qc.invalidateQueries({ queryKey: roomKey(roomId) });
+      // Coins rooms: the balance just changed.
+      qc.invalidateQueries({ queryKey: ['me'] });
     },
     onError: (err) => showToast({ variant: 'error', title: errorMessage(err) }),
   });
@@ -1025,6 +1096,8 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
         <TicketPicker
           visible={pickerOpen && !ended && state.game.status === 'lobby' && state.game.phase === 'tickets' && state.myTickets.length === 0}
           price={Number(state.room.ticketPrice)}
+          maxTickets={state.room.maxTickets ?? 3}
+          coins={me.data?.coins}
           gameLabel={gameLabel(state.room, state.game.gameNo)}
           busy={setTickets.isPending}
           onPick={(n) => setTickets.mutate(n)}
@@ -1047,6 +1120,18 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
 }
 
 const styles = StyleSheet.create({
+  potStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: '#1E0B3B',
+    borderRadius: radius.lg,
+    borderWidth: 1,
+    borderColor: 'rgba(253,230,138,0.55)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm + 2,
+  },
+  potPill: { backgroundColor: 'rgba(253,230,138,0.12)', borderRadius: 999, paddingHorizontal: 10, paddingVertical: 4 },
   actionTile: { alignItems: 'center', gap: 6, paddingVertical: spacing.md, borderRadius: 16, borderWidth: 1.5 },
   actionIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center' },
   // A little taller: room to breathe around the code.
@@ -1067,6 +1152,17 @@ const styles = StyleSheet.create({
   },
   potCard: { borderRadius: radius.xl, padding: spacing.lg, flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
   endedBanner: { borderRadius: radius.xl, padding: spacing.xl, alignItems: 'center' },
+  doneCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    backgroundColor: '#1E0B3B',
+    borderRadius: radius.xl,
+    borderWidth: 1,
+    borderColor: 'rgba(253,230,138,0.55)',
+    padding: spacing.md,
+  },
+  doneIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   waitWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },
   pulseGlow: { position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderRadius: 20, backgroundColor: '#F5B700' },
   readyCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 2 },

@@ -18,11 +18,22 @@ const IDLE_MS = 6000;
  */
 const LEAD_IN: Record<SupportedLanguage, string> = { en: 'Number', te: 'నంబర్' };
 
-/** Binds the phone's speech engine early (no sound), so the first call starts faster. */
+/**
+ * Whether this phone has any Telugu voice (null = not checked yet). Many phones don't: then a
+ * Telugu call would be silent, so the caller says the number in English instead.
+ */
+let hasTeluguVoice: boolean | null = null;
+
+/** Binds the phone's speech engine early (no sound) and checks which languages it can speak. */
 export function warmUpSpeech() {
   if (warmedUp) return;
   warmedUp = true;
-  Speech.getAvailableVoicesAsync().catch(() => undefined);
+  Speech.getAvailableVoicesAsync()
+    .then((voices) => {
+      // An empty list means the engine doesn't report voices — assume Telugu works.
+      hasTeluguVoice = voices.length === 0 ? true : voices.some((v) => v.language?.toLowerCase().startsWith('te'));
+    })
+    .catch(() => undefined);
 }
 
 function say(text: string, opts: Speech.SpeechOptions) {
@@ -40,7 +51,10 @@ function say(text: string, opts: Speech.SpeechOptions) {
  * (very fast speeds) does it skip ahead to the newest. After a quiet gap a short "Number" goes
  * first so the number itself is always heard in full.
  */
-export function speakNumber(n: number, language: SupportedLanguage, voiceId?: string | null, style: VoiceStyle = 'normal', queue = false) {
+export function speakNumber(n: number, wanted: SupportedLanguage, voiceId?: string | null, style: VoiceStyle = 'normal', queue = false) {
+  // No Telugu voice on this phone: say it in English rather than staying silent.
+  const language: SupportedLanguage = wanted === 'te' && hasTeluguVoice === false ? 'en' : wanted;
+  if (language !== wanted) voiceId = null;
   const { pitch, rate } = VOICE_STYLES[style] ?? VOICE_STYLES.normal;
   const opts: Speech.SpeechOptions = {
     language: speechLanguageCode(language),
@@ -56,6 +70,27 @@ export function speakNumber(n: number, language: SupportedLanguage, voiceId?: st
   const idle = !queue && pending === 0 && Date.now() - lastSpokeAt > IDLE_MS;
   lastSpokeAt = Date.now();
   if (idle) say(LEAD_IN[language] ?? LEAD_IN.en, opts);
+  if (language === 'te') {
+    // If the Telugu voice fails on this phone, repeat the number in English (and remember).
+    const en: Speech.SpeechOptions = { ...opts, language: speechLanguageCode('en'), voice: undefined };
+    pending += 1;
+    Speech.speak(spokenCall(n, 'te'), {
+      ...opts,
+      onDone: () => {
+        pending = Math.max(0, pending - 1);
+        lastSpokeAt = Date.now();
+      },
+      onStopped: () => {
+        pending = Math.max(0, pending - 1);
+      },
+      onError: () => {
+        pending = Math.max(0, pending - 1);
+        hasTeluguVoice = false;
+        say(spokenCall(n, 'en'), en);
+      },
+    });
+    return;
+  }
   say(spokenCall(n, language), opts);
 }
 

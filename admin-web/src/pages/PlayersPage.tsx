@@ -124,6 +124,8 @@ interface PlayerDetail {
     games_played: number;
     prizes_won: number;
     amount_won: number;
+    /** Play coins (no money). */
+    coins?: number;
     created_at: string;
   } | null;
   rooms: { id: string; code: string; title: string; kind: string; status: string; joinedAt: string; isHost: boolean }[];
@@ -134,6 +136,8 @@ export function PlayerDetailPage() {
   const { id } = useParams();
   const toast = useToast();
   const { data, loading, reload } = useAsync(() => rpc<PlayerDetail>('admin_get_player', { p_user: id }), [id]);
+  const [coinDelta, setCoinDelta] = useState('');
+  const [coinNote, setCoinNote] = useState('');
 
   if (loading && !data) return <p className="muted">Loading…</p>;
   if (!data?.profile) return <p className="error">Player not found.</p>;
@@ -165,6 +169,35 @@ export function PlayerDetailPage() {
           <div className="label">Won</div>
           <div className="value">{inr(p.amount_won)}</div>
         </div>
+        <div className="panel stat">
+          <div className="label">Coins</div>
+          <div className="value">🪙 {Number(p.coins ?? 0).toLocaleString('en-IN')}</div>
+        </div>
+      </div>
+      <div className="spacer" />
+      {/* Play coins: give (e.g. a player who ran out) or take back. Logged in the audit log. */}
+      <div className="panel" style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
+        <b>Adjust coins</b>
+        <div className="row">
+          <input type="number" placeholder="Amount (e.g. 500 or -200)" value={coinDelta} onChange={(e) => setCoinDelta(e.target.value)} style={{ maxWidth: 200 }} />
+          <input placeholder="Note (optional)" value={coinNote} onChange={(e) => setCoinNote(e.target.value)} style={{ flex: 1, minWidth: 160 }} />
+          <button
+            className="btn"
+            disabled={!Number(coinDelta)}
+            onClick={() =>
+              act(async () => {
+                await rpc('admin_adjust_coins', { p_user: p.id, p_delta: Number(coinDelta), p_note: coinNote || null });
+                setCoinDelta('');
+                setCoinNote('');
+              }, 'Coins updated')
+            }
+          >
+            Apply
+          </button>
+        </div>
+        <span className="muted" style={{ fontSize: 12 }}>
+          Positive gives coins, negative takes them (never below 0). Coins are for play only — they have no money value.
+        </span>
       </div>
       <div className="spacer" />
       <div className="panel">

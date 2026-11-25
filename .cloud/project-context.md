@@ -8,7 +8,7 @@ _Last updated: 2026-11-19_
 ### Core (owner's spec, 2026-11-17)
 - Home = **Create Room** / **Join Room**. Rooms are **public or private**, **Normal** (one game, play again) or **Series** (N games; next lobby opens automatically for all).
 - Host customises everything: max players, ticket price, speed, prizes — Fast 3/5/7, Lines 1–3 (default all), Columns Left/Center/Right = column groups 1–3/4–6/7–9 (default all), Full Housie (always).
-- **Casual ₹ amounts only, no real money, no wallet/coins, no payments.** Pot = tickets × price; prize amounts must equal the pot each game (auto-split by template proportions; host can edit).
+- **No real money, no payments.** Rooms are Free, play Coins (no money value, 2026-11-25), or casual ₹ amounts for scoring. Pot = tickets × price; prize amounts must equal the pot each game (auto-split by template proportions; host can edit).
 - Every game each player picks 1–4 tickets, confirmed once (no changes that game). Start needs ≥2 players with tickets.
 - Joining needs host approval; accepted mid-game = watch now, play next game.
 - Prizes chosen at creation without amounts; host sets prize set + amounts before every game.
@@ -45,6 +45,7 @@ _Last updated: 2026-11-19_
 - Game-by-game shows **net only** (+ green / − red) per game and in total. My rooms cards: no delete date / trash; inside an ended room: Room chat + Delete tiles and "deletes itself in N days" (no Quit once ended). Chat sheet: drag handle — swipe up full screen, down half / close.
 - Caller voice: numbers queue (no mid-word cut-off; skip ahead only when 2 are waiting); after 6 s of quiet a short "Number" / "నంబర్" lead-in absorbs the audio wake-up (game start, after resume); no silent warm-up utterance. In-game voice = English or Telugu only (EN+TE only in Caller Mode). Pause requests: host banner (live store + get_room_state.pauseRequests, migration 20261203000001). "Reconnecting" only after 5 s with no live connection or messages; the channel is rebuilt after errors. Dismiss / End button is last on the Play tab. Room-name placeholder rotates (Family / Friends / Office / Kitty Party / Diwali Housie).
 - Game screen: floating Room chat (bottom-left) and Pause/Resume or Ask to pause (bottom-right); no side panel. Caller voice (on/off, English or Telugu, voice) lives in the game settings sheet. Chat is an in-screen panel that fades (not a pop-up), so tickets above stay tappable; back button closes it. Status colours: Live green, You left red, ended grey, lobby purple. Hint colour defaults to purple (store v4 moves old pink once).
+- 2026-11-25 round (migrations 20261204000001 + 20261204000002, applied): **play coins** (profiles.coins, 1000 each, coin_ledger; rooms.stake_mode free / coins / amount; triggers pay on ticket insert, refund on lobby delete / cancelled game, pay prizes on settle; admin_adjust_coins in admin web); rooms.max_tickets (1–10, default 3) + compact ticket picker; tickets = best of 40 (avg 1.2 shared numbers per pair vs ~2.5 random; no empty columns); ready step pops a details card with I'm ready + "tell the host" (tell_host → player_issue); host accepts / declines join requests from a strip in the game; watchers see who's playing; chat: bottom-up list, typing, ✓/✓✓ seen, long-press info + delete for everyone, header drag follows the finger; English numbers spoken as words ("thirty"); no Telugu voice → English; no system alerts (ConfirmModal everywhere); minimal pot strip + completed card. **Not built (owner decision / law): buying coins, real-money wallet** — see the 2026-11-25 chat guidance.
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
@@ -54,7 +55,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (23 migrations, latest 20261203000001_pause_requests_in_state) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (25 migrations, latest 20261204000002_tell_host) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 24 unit tests; EAS project @projectblurimedia/housie-tambola-king; latest preview APK versionCode 5 (2026-11-19: PIN login, expo-audio, screen-orientation, blank native splash, new icon) via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |

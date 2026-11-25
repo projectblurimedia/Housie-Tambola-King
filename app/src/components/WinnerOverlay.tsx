@@ -13,6 +13,7 @@ import { Avatar } from './Avatar';
 import { Confetti } from './Confetti';
 import { PatternTicket } from './PatternTicket';
 import { formatRupees } from './Money';
+import { isFreeRoom } from '@/state/stakeStore';
 import { Rays } from './Wordmark';
 
 const SHOW_MS = 6500;
@@ -79,9 +80,11 @@ function WinnersList({ items, meId }: { items: PrizeWin[]; meId?: string }) {
               </View>
               {shared ? <Text style={styles.sub}>{t('winner.sharedNote')}</Text> : null}
             </View>
-            <LinearGradient colors={goldGradient} style={styles.totalPill}>
-              <Text style={styles.total}>{formatRupees(Math.round(total * 100) / 100)}</Text>
-            </LinearGradient>
+            {isFreeRoom() ? null : (
+              <LinearGradient colors={goldGradient} style={styles.totalPill}>
+                <Text style={styles.total}>{formatRupees(Math.round(total * 100) / 100)}</Text>
+              </LinearGradient>
+            )}
           </View>
         </PopIn>
       ))}
