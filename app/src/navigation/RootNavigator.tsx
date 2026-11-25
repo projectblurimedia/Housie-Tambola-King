@@ -16,6 +16,8 @@ import { CallerScreen } from '@/screens/caller/CallerScreen';
 import { ProfileScreen } from '@/screens/profile/ProfileScreen';
 import { EditProfileScreen } from '@/screens/profile/EditProfileScreen';
 import { HowToPlayScreen } from '@/screens/profile/HowToPlayScreen';
+import { PartyIntroScreen } from '@/screens/party/PartyIntroScreen';
+import { PartyScreen } from '@/screens/party/PartyScreen';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
@@ -45,6 +47,8 @@ export function RootNavigator() {
           <Stack.Screen name="Profile" component={ProfileScreen} />
           <Stack.Screen name="EditProfile" component={EditProfileScreen} />
           <Stack.Screen name="HowToPlay" component={HowToPlayScreen} />
+          <Stack.Screen name="PartyIntro" component={PartyIntroScreen} />
+          <Stack.Screen name="Party" component={PartyScreen} />
         </>
       )}
     </Stack.Navigator>

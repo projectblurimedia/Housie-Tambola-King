@@ -1,5 +1,5 @@
 import React from 'react';
-import { Pressable, ScrollView, StyleSheet, View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -10,12 +10,10 @@ import {
   PALETTE,
   PaletteKey,
   STRIKE_COLORS,
-  TICKET_COMBOS,
   TICKET_THEMES,
-  TicketCombo,
   toPalette,
 } from '@/theme/ticketThemes';
-import { fonts, radius, spacing, useThemeColors } from '@/theme';
+import { radius, spacing, useThemeColors } from '@/theme';
 import { TicketView } from './TicketView';
 import { T } from './ui';
 
@@ -23,52 +21,6 @@ import { T } from './ui';
 const SAMPLE = [4, 0, 21, 0, 45, 0, 63, 0, 85, 0, 12, 0, 33, 0, 57, 0, 71, 88, 7, 18, 0, 39, 48, 0, 66, 0, 0];
 const SAMPLE_STRUCK = new Set([4, 33, 57, 18, 66]);
 const SAMPLE_HINTED = new Set([21, 71]);
-
-/** A small ticket-looking card for one ready-made combo. */
-function ComboCard({ combo, selected, onPress }: { combo: TicketCombo; selected: boolean; onPress: () => void }) {
-  const { t } = useTranslation();
-  const { colors } = useThemeColors();
-  const theme = TICKET_THEMES[combo.theme];
-  const strike = STRIKE_COLORS[combo.strike];
-  const hint = HINT_COLORS[combo.hint];
-  return (
-    <Pressable onPress={onPress} style={({ pressed }) => [styles.comboWrap, { transform: [{ scale: pressed ? 0.96 : 1 }] }]}>
-      <View style={[styles.comboRing, { borderColor: selected ? colors.gold : 'transparent' }]}>
-        <LinearGradient colors={theme.frame} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.comboFrame}>
-          <View style={[styles.comboPaper, { backgroundColor: theme.paper }]}>
-            <View style={styles.comboRow}>
-              <LinearGradient colors={strike.disc} style={styles.comboDot}>
-                <View style={[styles.comboStrike, { backgroundColor: strike.line }]} />
-              </LinearGradient>
-              <View style={[styles.comboDot, { backgroundColor: theme.cell, borderColor: hint, borderWidth: 2.5 }]} />
-              <View style={[styles.comboDot, { backgroundColor: theme.blankCell }]} />
-            </View>
-            <View style={styles.comboRow}>
-              <View style={[styles.comboDot, { backgroundColor: theme.blankCell }]} />
-              <View style={[styles.comboDot, { backgroundColor: theme.cell, borderColor: theme.cellBorder, borderWidth: 1.5 }]} />
-              <LinearGradient colors={strike.disc} style={styles.comboDot}>
-                <View style={[styles.comboStrike, { backgroundColor: strike.line }]} />
-              </LinearGradient>
-            </View>
-          </View>
-        </LinearGradient>
-        {selected ? (
-          <View style={[styles.comboCheck, { backgroundColor: colors.gold }]}>
-            <Ionicons name="checkmark" size={14} color="#3B1D00" />
-          </View>
-        ) : null}
-      </View>
-      <T
-        variant="tiny"
-        center
-        style={{ fontFamily: selected ? fonts.bold : fonts.medium, marginTop: 4 }}
-        color={selected ? colors.text : colors.textMuted}
-      >
-        {t(`ticketStyle.combos.${combo.key}`)}
-      </T>
-    </Pressable>
-  );
-}
 
 function Swatches<K extends string>({
   label,
@@ -104,7 +56,7 @@ function Swatches<K extends string>({
   );
 }
 
-/** Ready-made looks + a live preview + custom ticket / strike / hint colours. */
+/** A live preview, the ticket shape, and custom ticket / strike / hint colours. */
 export function TicketStylePicker() {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -122,30 +74,9 @@ export function TicketStylePicker() {
   );
   const set = useSettingsStore((s) => s.set);
   const shape = useSettingsStore((s) => s.ticketShape);
-  const activeCombo = TICKET_COMBOS.find((c) => c.theme === ticketTheme && c.strike === strikeColor && c.hint === hintColor)?.key;
 
   return (
     <View style={{ gap: spacing.lg }}>
-      <View style={{ gap: 8 }}>
-        <T variant="smallBold" muted style={styles.label}>
-          {t('ticketStyle.looks')}
-        </T>
-        <ScrollView
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={{ gap: spacing.md, paddingVertical: 4, paddingRight: spacing.md }}
-        >
-          {TICKET_COMBOS.map((c) => (
-            <ComboCard
-              key={c.key}
-              combo={c}
-              selected={activeCombo === c.key}
-              onPress={() => set({ ticketTheme: c.theme, strikeColor: c.strike, hintColor: c.hint })}
-            />
-          ))}
-        </ScrollView>
-      </View>
-
       <View style={[styles.previewBox, { backgroundColor: colors.surfaceAlt }]}>
         <TicketView cells={SAMPLE} marked={SAMPLE_STRUCK} hinted={SAMPLE_HINTED} lastCalled={45} label="#1" compact />
         <T variant="tiny" muted center style={{ marginTop: spacing.sm }}>
@@ -255,23 +186,6 @@ const styles = StyleSheet.create({
   shapeOption: { flex: 1, alignItems: 'center', gap: 6, borderWidth: 2, borderRadius: radius.md, paddingVertical: 10 },
   shapeCell: { width: 18, height: 18, borderWidth: 1.5 },
   label: { textTransform: 'uppercase', letterSpacing: 0.6 },
-  comboWrap: { alignItems: 'center', width: 88 },
-  comboRing: { borderRadius: radius.md + 3, borderWidth: 2.5, padding: 2 },
-  comboFrame: { borderRadius: radius.md, padding: 3, width: 78 },
-  comboPaper: { borderRadius: radius.md - 3, padding: 6, gap: 5 },
-  comboRow: { flexDirection: 'row', justifyContent: 'space-between' },
-  comboDot: { width: 18, height: 18, borderRadius: 9, alignItems: 'center', justifyContent: 'center', overflow: 'hidden' },
-  comboStrike: { width: 12, height: 2, borderRadius: 1, transform: [{ rotate: '-40deg' }] },
-  comboCheck: {
-    position: 'absolute',
-    top: -6,
-    right: -6,
-    width: 22,
-    height: 22,
-    borderRadius: 11,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
   previewBox: { borderRadius: radius.lg, padding: spacing.md },
   swatches: { flexDirection: 'row', justifyContent: 'space-between' },
   themeSwatch: { width: 40, height: 40, borderRadius: 12, padding: 4, borderWidth: 2.5 },

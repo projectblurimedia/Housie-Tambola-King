@@ -12,7 +12,7 @@ import { ConfirmModal } from '@/components/ConfirmModal';
 import { VoicePicker } from '@/components/VoicePicker';
 import { TicketStylePicker } from '@/components/TicketStylePicker';
 import { CrownArt, Rays } from '@/components/Wordmark';
-import { Card, Row, Screen, Segmented, T, Toggle } from '@/components/ui';
+import { Card, Row, Screen, T, Toggle } from '@/components/ui';
 import { useMe } from '@/hooks/useMe';
 import { authService } from '@/services/authService';
 import { profileService } from '@/services/profileService';
@@ -39,6 +39,38 @@ const TINT = {
   terms: '#64748B',
   privacy: '#10B981',
 };
+
+const LANGS: [SupportedLanguage, string, string][] = [
+  ['en', 'Aa', 'English'],
+  ['te', 'అ', 'తెలుగు'],
+];
+const THEMES: [ThemeMode, IconName, string][] = [
+  ['system', 'phone-portrait', 'profile.themeSystem'],
+  ['light', 'sunny', 'profile.themeLight'],
+  ['dark', 'moon', 'profile.themeDark'],
+];
+
+/** A choice tile: the chosen one glows in the brand gradient with a gold edge and a tick. */
+function ChoiceTile({ active, onPress, children }: { active: boolean; onPress: () => void; children: React.ReactNode }) {
+  const { colors } = useThemeColors();
+  return (
+    <Pressable
+      onPress={onPress}
+      accessibilityRole="radio"
+      accessibilityState={{ selected: active }}
+      style={({ pressed }) => [{ flex: 1 }, pressed && { transform: [{ scale: 0.97 }] }]}
+    >
+      {active ? (
+        <LinearGradient colors={['#6D28D9', '#A855F7']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.choice, { borderColor: '#FDE68A' }]}>
+          {children}
+          <Ionicons name="checkmark-circle" size={16} color="#FDE68A" style={styles.choiceTick} />
+        </LinearGradient>
+      ) : (
+        <View style={[styles.choice, { backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}>{children}</View>
+      )}
+    </Pressable>
+  );
+}
 
 /** A section heading: small icon + uppercase title. */
 function Section({ icon, title }: { icon: IconName; title: string }) {
@@ -185,43 +217,45 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
       </View>
 
       <Section icon="color-palette" title={t('profile.lookTitle')} />
-      <Card style={{ gap: spacing.sm }}>
-        <T variant="smallBold" muted>
+      <Card>
+        <T variant="smallBold" muted style={{ marginBottom: spacing.sm }}>
           {t('profile.language')}
         </T>
-        <Segmented
-          value={settings.language}
-          onChange={(l) => changeLanguage.mutate(l)}
-          options={[
-            { value: 'en', label: 'English' },
-            { value: 'te', label: 'తెలుగు' },
-          ]}
-        />
-        <T variant="smallBold" muted style={{ marginTop: spacing.sm }}>
+        <Row gap={spacing.sm}>
+          {LANGS.map(([value, glyph, label]) => {
+            const on = settings.language === value;
+            return (
+              <ChoiceTile key={value} active={on} onPress={() => changeLanguage.mutate(value)}>
+                <T style={[styles.glyph, { color: on ? '#fff' : colors.primary }]} maxFontSizeMultiplier={1}>
+                  {glyph}
+                </T>
+                <T variant="smallBold" color={on ? '#fff' : colors.text}>
+                  {label}
+                </T>
+              </ChoiceTile>
+            );
+          })}
+        </Row>
+        <T variant="smallBold" muted style={{ marginTop: spacing.lg, marginBottom: spacing.sm }}>
           {t('profile.theme')}
         </T>
-        <Segmented<ThemeMode>
-          value={settings.themeMode}
-          onChange={(themeMode) => settings.set({ themeMode })}
-          options={[
-            { value: 'system', label: t('profile.themeSystem') },
-            { value: 'light', label: t('profile.themeLight') },
-            { value: 'dark', label: t('profile.themeDark') },
-          ]}
-        />
+        <Row gap={spacing.sm}>
+          {THEMES.map(([value, icon, key]) => {
+            const on = settings.themeMode === value;
+            return (
+              <ChoiceTile key={value} active={on} onPress={() => settings.set({ themeMode: value })}>
+                <Ionicons name={icon} size={22} color={on ? '#FDE68A' : colors.primary} />
+                <T variant="smallBold" color={on ? '#fff' : colors.text} numberOfLines={1}>
+                  {t(key)}
+                </T>
+              </ChoiceTile>
+            );
+          })}
+        </Row>
       </Card>
 
       <Section icon="volume-high" title={t('profile.soundVoice')} />
       <Card style={{ paddingVertical: spacing.xs }}>
-        <SettingRow icon="volume-high" label={t('profile.voice')} tint={TINT.voice}>
-          <Toggle value={settings.voice} onValueChange={(voice) => settings.set({ voice })} />
-        </SettingRow>
-        <Pressable onPress={() => setVoicesOpen((v) => !v)}>
-          <SettingRow icon="mic" label={t('profile.callerVoice')} tint={TINT.caller}>
-            <Ionicons name={voicesOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
-          </SettingRow>
-        </Pressable>
-        {voicesOpen ? <VoicePicker language={settings.language} /> : null}
         <SettingRow icon="musical-notes" label={t('profile.sounds')} tint={TINT.sounds}>
           <Toggle value={settings.sounds} onValueChange={(sounds) => settings.set({ sounds })} />
         </SettingRow>
@@ -231,6 +265,16 @@ export function ProfileScreen({ navigation }: ScreenProps<'Profile'>) {
         <SettingRow icon="phone-portrait" label={t('profile.haptics')} tint={TINT.haptics}>
           <Toggle value={settings.haptics} onValueChange={(haptics) => settings.set({ haptics })} />
         </SettingRow>
+        {/* Calling numbers aloud, then the caller's voice, come last. */}
+        <SettingRow icon="volume-high" label={t('profile.voice')} tint={TINT.voice}>
+          <Toggle value={settings.voice} onValueChange={(voice) => settings.set({ voice })} />
+        </SettingRow>
+        <Pressable onPress={() => setVoicesOpen((v) => !v)}>
+          <SettingRow icon="mic" label={t('profile.callerVoice')} tint={TINT.caller}>
+            <Ionicons name={voicesOpen ? 'chevron-up' : 'chevron-down'} size={18} color={colors.textMuted} />
+          </SettingRow>
+        </Pressable>
+        {voicesOpen ? <VoicePicker language={settings.language} /> : null}
       </Card>
 
       <Section icon="grid" title={t('ticketStyle.title')} />
@@ -291,6 +335,9 @@ const styles = StyleSheet.create({
   },
   stat: { flex: 1, alignItems: 'center', paddingVertical: spacing.md, paddingHorizontal: 4, borderRadius: radius.lg },
   statIcon: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center' },
+  choice: { alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: spacing.md, borderRadius: radius.lg, borderWidth: 1.5 },
+  choiceTick: { position: 'absolute', right: 6, top: 6 },
+  glyph: { fontFamily: fonts.bold, fontSize: 22, lineHeight: 28 },
   sectionLabel: { marginTop: spacing.lg, marginBottom: spacing.sm, paddingHorizontal: 4 },
   settingRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm },
   settingIcon: { width: 32, height: 32, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },

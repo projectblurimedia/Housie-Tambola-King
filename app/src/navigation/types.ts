@@ -14,6 +14,9 @@ export type RootStackParamList = {
   Profile: undefined;
   EditProfile: undefined;
   HowToPlay: undefined;
+  /** A party game's details: create (rounds) or join with a code. */
+  PartyIntro: { kind: 'seeta' | 'show' };
+  Party: { partyId: string };
 };
 
 export type ScreenProps<K extends keyof RootStackParamList> = NativeStackScreenProps<RootStackParamList, K>;

@@ -1,5 +1,8 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { FlatList, RefreshControl, View } from 'react-native';
+import { FlatList, View } from 'react-native';
+import { PullToRefresh } from '@/components/PullToRefresh';
+import { partyService } from '@/services/partyService';
+import { toAppError } from '@/services/errors';
 import { useTranslation } from 'react-i18next';
 import { useQuery } from '@tanstack/react-query';
 import { Ionicons } from '@expo/vector-icons';
@@ -42,6 +45,19 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
       if (res.status === 'pending') showToast({ variant: 'info', title: t('join.requestSent') });
       navigation.replace('Room', { roomId: res.roomId });
     } catch (err) {
+      // Not a Housie room? It may be a party game's code (Find Seeta / Show) — same links.
+      if (toAppError(err).code === 'ROOM_NOT_FOUND') {
+        try {
+          const partyId = await partyService.joinByCode(code);
+          navigation.replace('Party', { partyId });
+          return;
+        } catch (partyErr) {
+          if (toAppError(partyErr).code !== 'PARTY_NOT_FOUND') {
+            setError(errorMessage(partyErr));
+            return;
+          }
+        }
+      }
       setError(errorMessage(err));
     } finally {
       setLoading(false);
@@ -67,11 +83,11 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
 
   return (
     <Screen title={t('join.title')}>
+      <PullToRefresh refreshing={rooms.isRefetching} onRefresh={() => rooms.refetch()}>
       <FlatList
         data={rooms.data ?? []}
         keyExtractor={(r) => r.id}
         keyboardShouldPersistTaps="handled"
-        refreshControl={<RefreshControl refreshing={rooms.isRefetching} onRefresh={() => void rooms.refetch()} tintColor={colors.primary} />}
         ItemSeparatorComponent={() => <View style={{ height: spacing.sm }} />}
         contentContainerStyle={{ paddingBottom: spacing.xxl }}
         ListHeaderComponent={
@@ -145,6 +161,7 @@ export function JoinRoomScreen({ navigation, route }: ScreenProps<'JoinRoom'>) {
           </Card>
         )}
       />
+      </PullToRefresh>
       <ConfirmModal
         visible={confirmRoom !== null}
         icon="enter-outline"

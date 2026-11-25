@@ -326,6 +326,92 @@ try {
   await host.rpc('end_room', { p_room: croom.roomId });
   check((await coinsOf(host)) === hostAfterBuy + 50, 'dismissed room refunds its coins');
   check((await host.rpc('get_my_coin_ledger', {})).some((l) => l.reason === 'refund'), 'coin history records the refund');
+
+  // ── Party games: Find Seeta and Show (3 players, points only) ──
+  console.log('\n— Party games —');
+  const third = await guest('Party Third');
+  try {
+    const crew = [host, friend, third];
+    const stateOf = (p, id) => p.rpc('get_party_state', { p_game: id });
+
+    // Find Seeta
+    const seeta = await host.rpc('create_party', { p_kind: 'seeta', p_rounds: 3 });
+    await friend.rpc('join_party_by_code', { p_code: seeta.code });
+    check(await expectError(host.rpc('start_party', { p_game: seeta.id }), 'NEED_3_PLAYERS'), 'Find Seeta needs 3 players');
+    await third.rpc('join_party_by_code', { p_code: seeta.code });
+    await host.rpc('start_party', { p_game: seeta.id });
+    let states = await Promise.all(crew.map((p) => stateOf(p, seeta.id)));
+    const roles = states.map((s) => s.me.role);
+    check(roles.includes('ram') && roles.includes('seeta') && roles.includes('lakshmana'), `roles dealt (${roles.join(', ')})`);
+    check(states.every((s) => !JSON.stringify(s.game.state).includes('seeta"')), 'nobody can see Seeta before the guess');
+    const ramIdx = roles.indexOf('ram');
+    const seetaIdx = roles.indexOf('seeta');
+    const notRam = crew[(ramIdx + 1) % 3];
+    check(await expectError(notRam.rpc('seeta_guess', { p_game: seeta.id, p_target: states[seetaIdx].me.userId }), 'NOT_RAM'), 'only Ram can guess');
+    await crew[ramIdx].rpc('seeta_guess', { p_game: seeta.id, p_target: states[seetaIdx].me.userId });
+    states = await Promise.all(crew.map((p) => stateOf(p, seeta.id)));
+    const score = (s, i) => s.players.find((p) => p.userId === states[i].me.userId).score;
+    check(states[0].game.phase === 'reveal' && states[0].game.state.correct === true, 'right guess revealed');
+    check(score(states[0], ramIdx) === 1000 && score(states[0], seetaIdx) === 0, 'Ram keeps 1000, Seeta 0');
+    check(score(states[0], 3 - ramIdx - seetaIdx) === 800, 'Lakshmana gets 800');
+
+    // Show
+    const show = await host.rpc('create_party', { p_kind: 'show', p_rounds: 3 });
+    await friend.rpc('join_party_by_code', { p_code: show.code });
+    await third.rpc('join_party_by_code', { p_code: show.code });
+    await host.rpc('start_party', { p_game: show.id });
+    states = await Promise.all(crew.map((p) => stateOf(p, show.id)));
+    const cards = states.flatMap((s) => s.me.hand);
+    const counts = [0, 1, 2].map((c) => cards.filter((x) => x === c).length);
+    check(states.every((s) => s.me.hand.length === 4) && counts.every((n) => n === 4), 'Show deals 4 cards each, 4 of each colour');
+    check(await expectError(host.rpc('show_call', { p_game: show.id }), 'NOT_A_SHOW'), 'SHOW needs four of a colour');
+    const before3 = states.map((s) => s.me.hand.slice());
+    await Promise.all(crew.map((p) => p.rpc('show_pick', { p_game: show.id, p_index: 0 })));
+    states = await Promise.all(crew.map((p) => stateOf(p, show.id)));
+    // Seat order host(0) → friend(1) → third(2) → host: each first card moves to the next seat.
+    const seatOf = (i) => states[i].players.find((p) => p.userId === states[i].me.userId).seat;
+    const bySeat = [0, 1, 2].map((seat) => [0, 1, 2].find((i) => seatOf(i) === seat));
+    const passedOk = bySeat.every((i, seat) => {
+      const fromIdx = bySeat[(seat + 2) % 3];
+      return states[i].me.hand[0] === before3[fromIdx][0];
+    });
+    check(states[0].game.turnNo === 2 && passedOk, 'all picks pass to the next seat at once');
+    // Play turns until someone holds four of a kind (picking a card that breaks no pair).
+    let shower = -1;
+    for (let turn = 0; turn < 60 && shower < 0; turn++) {
+      states = await Promise.all(crew.map((p) => stateOf(p, show.id)));
+      shower = states.findIndex((s) => s.me.hand.every((c) => c === s.me.hand[0]));
+      if (shower >= 0) break;
+      await Promise.all(crew.map((p, i) => {
+        const h = states[i].me.hand;
+        const tally = (c) => h.filter((x) => x === c).length;
+        let pick = 0;
+        for (let k = 1; k < 4; k++) if (tally(h[k]) < tally(h[pick])) pick = k;
+        return p.rpc('show_pick', { p_game: show.id, p_index: pick });
+      }));
+    }
+    check(shower >= 0, 'someone collects four of a kind');
+    if (shower >= 0) {
+      await crew[shower].rpc('show_call', { p_game: show.id });
+      const order = [shower, (shower + 1) % 3, (shower + 2) % 3];
+      await crew[order[1]].rpc('show_call', { p_game: show.id });
+      await crew[order[2]].rpc('show_call', { p_game: show.id });
+      const fin = await stateOf(host, show.id);
+      const pts = (i) => fin.players.find((p) => p.userId === states[i].me.userId).score;
+      check(fin.game.phase === 'reveal' && pts(order[0]) === 200 && pts(order[1]) === 100 && pts(order[2]) === 0,
+        'SHOW race scored 200 / 100 / 0 (last one gets nothing)');
+    }
+    // Leaving mid-game below 3 players ends it.
+    await third.rpc('leave_party', { p_game: show.id });
+    check((await stateOf(host, show.id)).game.status === 'finished', 'fewer than 3 players ends the game');
+    await host.rpc('play_party_again', { p_game: show.id });
+    check((await stateOf(host, show.id)).game.status === 'lobby', 'host can play again');
+    await host.rpc('end_party', { p_game: show.id });
+    await host.rpc('end_party', { p_game: seeta.id });
+    check(await expectError(third.rpc('join_party_by_code', { p_code: seeta.code }), 'PARTY_NOT_FOUND'), 'an ended game cannot be joined');
+  } finally {
+    await third.rpc('delete_my_account').catch(() => undefined);
+  }
 } finally {
   await host.rpc('delete_my_account').catch(() => undefined);
   await friend.rpc('delete_my_account').catch(() => undefined);

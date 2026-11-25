@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Animated, Easing, Modal, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -8,12 +8,15 @@ import { useTranslation } from 'react-i18next';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { CoinIcon } from '@/components/CoinIcon';
 import { Avatar } from '@/components/Avatar';
+import { PullToRefresh } from '@/components/PullToRefresh';
 import { Wordmark } from '@/components/Wordmark';
 import { BRAND_GRADIENT, ConfirmModal } from '@/components/ConfirmModal';
 import { formatCoins, formatRupees } from '@/components/Money';
 import { Card, IconButton, Pill, Row, T } from '@/components/ui';
 import { useAppSettings, useMe } from '@/hooks/useMe';
 import { roomService } from '@/services/roomService';
+import { partyService, type PartyKind } from '@/services/partyService';
+import { PARTY_LOOK } from '@/screens/party/PartyIntroScreen';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { APP_NAME } from '@/constants/config';
@@ -233,6 +236,60 @@ const PEEK_SHRINK = 0.05;
  * every room in a separate full-screen list.
  */
 /** Home section heading, the same everywhere: gradient icon · title · thin rule · See all · N. */
+/** A party game card: rich gradient, a big emoji that gently bobs, title, one line, players. */
+function PartyCard({ kind, live, onPress, delay }: { kind: PartyKind; live: number; onPress: () => void; delay: number }) {
+  const { t } = useTranslation();
+  const look = PARTY_LOOK[kind];
+  const enter = useRef(new Animated.Value(0)).current;
+  const bob = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(enter, { toValue: 1, delay, friction: 6, useNativeDriver: true }).start();
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(bob, { toValue: 1, duration: 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(bob, { toValue: 0, duration: 1600, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => loop.stop();
+  }, [enter, bob, delay]);
+  return (
+    <Animated.View style={{ flex: 1, opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [24, 0] }) }] }}>
+      <Pressable onPress={onPress} style={({ pressed }) => [styles.partyTile, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
+        <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.partyGradient}>
+          <Animated.Text
+            style={[
+              styles.partyEmoji,
+              { transform: [{ translateY: bob.interpolate({ inputRange: [0, 1], outputRange: [0, -6] }) }, { rotate: bob.interpolate({ inputRange: [0, 1], outputRange: ['-6deg', '6deg'] }) }] },
+            ]}
+          >
+            {look.emoji}
+          </Animated.Text>
+          {live ? (
+            <View style={styles.partyLive}>
+              <T variant="tiny" color="#3B1D00">
+                {live}
+              </T>
+            </View>
+          ) : null}
+          <T variant="bodyMedium" color="#fff" numberOfLines={1}>
+            {t(`party.${kind}.title`)}
+          </T>
+          <T variant="tiny" color="rgba(255,255,255,0.88)" numberOfLines={2}>
+            {t(`party.${kind}.short`)}
+          </T>
+          <Row gap={4} style={{ marginTop: 6 }}>
+            <Ionicons name="people" size={12} color="#FDE68A" />
+            <T variant="tiny" color="#FDE68A">
+              {t('party.players', { min: 3, max: kind === 'seeta' ? 15 : 10 })}
+            </T>
+          </Row>
+        </LinearGradient>
+      </Pressable>
+    </Animated.View>
+  );
+}
+
 function SectionHeading({ icon, title, count, onSeeAll }: { icon: IconName; title: string; count?: number; onSeeAll?: () => void }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -367,20 +424,19 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
   const settings = useAppSettings();
   const publicRooms = useQuery({ queryKey: ['publicRooms'], queryFn: roomService.listPublic, refetchInterval: 15000 });
   const myRooms = useQuery({ queryKey: ['myRooms'], queryFn: roomService.myRooms });
+  const myParties = useQuery({ queryKey: ['myParties'], queryFn: partyService.mine });
   // Home stays loaded behind a room: refresh "My rooms" every time we come back to it
   // (a series restarted, moved on or ended while we were inside).
   const refetchMyRooms = myRooms.refetch;
   useFocusEffect(
     React.useCallback(() => {
       refetchMyRooms();
+      myParties.refetch();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [refetchMyRooms]),
   );
 
-  const refresh = () => {
-    me.refetch();
-    publicRooms.refetch();
-    myRooms.refetch();
-  };
+  const refresh = () => Promise.all([me.refetch(), publicRooms.refetch(), myRooms.refetch(), myParties.refetch()]);
 
   const [confirmRoom, setConfirmRoom] = useState<PublicRoomSummary | null>(null);
   const [joining, setJoining] = useState(false);
@@ -438,11 +494,8 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
         </SafeAreaView>
       </LinearGradient>
 
-      <ScrollView
-        contentContainerStyle={{ paddingBottom: spacing.xxl + insets.bottom }}
-        refreshControl={<RefreshControl refreshing={false} onRefresh={refresh} tintColor={colors.primary} />}
-        showsVerticalScrollIndicator={false}
-      >
+      <PullToRefresh refreshing={me.isRefetching || publicRooms.isRefetching || myRooms.isRefetching} onRefresh={refresh}>
+      <ScrollView contentContainerStyle={{ paddingBottom: spacing.xxl + insets.bottom }} showsVerticalScrollIndicator={false}>
         <Row gap={spacing.md} style={{ paddingHorizontal: spacing.lg, marginTop: spacing.lg, alignItems: 'stretch' }}>
           <BigAction
             icon="add-circle"
@@ -493,6 +546,21 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
           ))}
         </Row>
 
+        <View style={{ paddingHorizontal: spacing.lg, marginTop: spacing.xl }}>
+          <SectionHeading icon="sparkles" title={t('party.homeTitle')} />
+          <Row gap={spacing.md} style={{ alignItems: 'stretch' }}>
+            {(['seeta', 'show'] as PartyKind[]).map((k, i) => (
+              <PartyCard
+                key={k}
+                kind={k}
+                delay={200 + i * 120}
+                live={(myParties.data ?? []).filter((g) => g.kind === k && g.status !== 'finished').length}
+                onPress={() => navigation.navigate('PartyIntro', { kind: k })}
+              />
+            ))}
+          </Row>
+        </View>
+
         {settings.data?.maintenance_message ? (
           <Card style={{ margin: spacing.lg, marginBottom: 0, borderColor: colors.warning }}>
             <T variant="smallBold" color={colors.warning}>
@@ -533,6 +601,7 @@ export function HomeScreen({ navigation }: ScreenProps<'Home'>) {
           }
         />
       </ScrollView>
+      </PullToRefresh>
       <ConfirmModal
         visible={confirmRoom !== null}
         icon="enter-outline"
@@ -566,6 +635,10 @@ const styles = StyleSheet.create({
   coinEdge: { borderRadius: 999, padding: 1.5 },
   coinChip: { flexDirection: 'row', alignItems: 'center', gap: 3, borderRadius: 999, paddingLeft: 1.5, paddingRight: 6, paddingVertical: 1.5, backgroundColor: '#1E0B3B' },
   qaTile: { borderRadius: 20, overflow: 'hidden' },
+  partyTile: { borderRadius: 20, overflow: 'hidden' },
+  partyGradient: { padding: 14, minHeight: 150, justifyContent: 'flex-end' },
+  partyEmoji: { position: 'absolute', right: 10, top: 8, fontSize: 40, lineHeight: 50 },
+  partyLive: { position: 'absolute', left: 12, top: 12, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 5, backgroundColor: '#FDE68A', alignItems: 'center', justifyContent: 'center' },
   qaGradient: { height: 116, padding: 14, justifyContent: 'flex-end' },
   qaWatermark: { position: 'absolute', right: -12, bottom: -14 },
   qaIcon: {

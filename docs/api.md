@@ -62,6 +62,24 @@ Testing phase only: no proof of owning the number. Replace with SMS OTP before l
 | `list_public_rooms` / `get_my_rooms` | – | summaries | – |
 | `register_push_token` | `p_token, p_platform` | – | `INVALID_PUSH_TOKEN` |
 
+## Party games (`authenticated`, points only)
+Find Seeta (3–15 players) and Show (3–10). Roles / hands are in `party_secrets` (no client access); each player reads only their own.
+
+| RPC | Args | Returns | Errors |
+|---|---|---|---|
+| `create_party` | `p_kind ('seeta'·'show'), p_rounds (3–20)` | `{id, code}` | `INVALID_PARTY_KIND`, `INVALID_ROUNDS`, `TOO_MANY_OPEN_PARTIES` (3) |
+| `join_party_by_code` | `p_code` | party id (no approval; lobby only) | `PARTY_NOT_FOUND`, `PARTY_STARTED`, `PARTY_FULL` |
+| `get_party_state` | `p_game` | `{game{…, phase, turnNo, state, deadline}, players[{…, score, active, picked}], me{role, hand, pick}, serverNow}` | `NOT_A_MEMBER` |
+| `get_my_parties` | – | my open / finished party games | – |
+| `start_party` / `play_party_again` / `end_party` | `p_game` | – (host) | `NOT_HOST`, `NEED_3_PLAYERS`, `PARTY_STARTED` |
+| `leave_party` / `remove_party_player` | `p_game` (+ `p_user`) | – (mid-game: inactive; < 3 left ends the game) | `NOT_HOST` |
+| `seeta_guess` | `p_game, p_target` | – (Ram only; reveals all roles + scores) | `NOT_RAM`, `NOT_NOW`, `INVALID_TARGET` |
+| `show_pick` | `p_game, p_index (0–3)` | – (all picked → every card passes to the next seat) | `NOT_NOW`, `INVALID_CARD` |
+| `show_call` | `p_game` | – (first needs 4 of a colour; then everyone races) | `NOT_A_SHOW`, `NOT_NOW` |
+| `party_nudge` | `p_game` | – (acts on a passed deadline; pg_cron `party-tick` does too) | – |
+
+Private channel `party:<id>` (members only): `players`, `picked {userId}`, `round {roundNo}`, `turn {turn}`, `show {userId, first}`, `reveal`, `finished`, `lobby`, `closed`.
+
 ## Realtime
 Private channel `room:<roomId>` (members only, receive-only). Events: `call {gameId, n, index, nextCallAt}`, `prize {gameId, prize, amount, callIndex, winners[{userId, name, avatarKey, ticketSerial, numbers}]}`, `prize_settled {gameId, prize, each, winners, amount, callIndex, winnerList[…, amount]}` (check rooms announce on this), `claim_check {gameId, prize, callIndex, winners, deadline, round, earlier}` (`earlier` = a late claim replaced the previous winners), `speed {seconds}`, `paused {gameId, paused}`, `phase {gameId, phase}`, `chat {id, userId, name, avatarKey, body, at}`, `ready {gameId, userIds}`, `check_ack {gameId, round, userIds}`, `final_check {gameId, deadline, round}`, `room_settings`, `lobby {gameId, ticketCount, playerCount, pot}`, `members {memberCount, joined?}`, `state {gameId, gameNo, status}`, `game {gameId, gameNo}` (next lobby opened), `room_ended {reason}`.
 

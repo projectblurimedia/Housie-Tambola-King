@@ -62,3 +62,10 @@ Vibration is off by default (Profile or the in-game gear turns it on). The in-ga
 Players are their phone number: leaving and rejoining a room continues their totals. The Standings tab also shows a game-by-game table (each player's +/− per game, "–" if they didn't play) with totals.
 
 Saved per room: games played, tickets (₹ spent), wins, ₹ won, net, and every win (game no., prize, numbers).
+
+## Party games (points only, no coins or money)
+**Find Seeta** (3–15 players): each round roles are dealt at random from Ram, Seeta, Lakshmana 800, Bharatha 700, Shatrughna 600, Anjaneya 500, Sugreeva 450, Vibhishana 400, Jambavantha 350, Angada 300, Nala 250, Neela 200, Dasaratha 150, Janaka 100, Guha 50 (first n roles). Ram is revealed and guesses Seeta within 60 s (else a random guess). Right → Ram 1000, Seeta 0; wrong → Seeta 1000, Ram 0. Others always get their role's points.
+
+**Show** (3–10 players): n colours × 4 cards, shuffled, 4 each (nobody starts with four of a kind). Each turn (20 s, else a random card) everyone picks one card; when all have picked, every picked card goes to the next seat at once (into the slot the receiver gave away). Four of one colour → SHOW; then everyone has 8 s to tap SHOW. Points by tap order: (n−1−place)×100, so the last one gets 0, as does anyone who never tapped.
+
+Both: host picks 3–20 rounds; 9 s reveal between rounds; join by code / link without approval; host starts with 3+; fewer than 3 players left ends the game; host can play again.
