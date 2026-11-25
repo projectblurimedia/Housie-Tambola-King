@@ -89,6 +89,7 @@ export function Screen({
   refreshControl,
   style,
   headerColors,
+  backgroundColors,
 }: {
   children: React.ReactNode;
   scroll?: boolean;
@@ -100,12 +101,15 @@ export function Screen({
   style?: StyleProp<ViewStyle>;
   /** A different header gradient (e.g. a party game's own colours). */
   headerColors?: readonly [string, string, ...string[]];
+  /** A gradient page background (party games). */
+  backgroundColors?: readonly [string, string, ...string[]];
 }) {
   const { colors } = useThemeColors();
   const insets = useSafeAreaInsets();
   const inner = padded ? { paddingHorizontal: spacing.lg } : undefined;
   return (
     <View style={[{ flex: 1, backgroundColor: colors.background, paddingBottom: insets.bottom }, style]}>
+      {backgroundColors ? <LinearGradient colors={backgroundColors} style={StyleSheet.absoluteFill} /> : null}
       {title !== undefined ? (
         <Header title={title} right={right} onBack={onBack} colors={headerColors} />
       ) : (

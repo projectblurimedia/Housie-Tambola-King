@@ -174,5 +174,5 @@ const styles = StyleSheet.create({
   resultBadge: { width: 64, height: 64, borderRadius: 32, alignItems: 'center', justifyContent: 'center', borderWidth: 3, borderColor: '#FFF7D6' },
   resultNum: { fontFamily: fonts.display, fontSize: 32, lineHeight: 40, color: '#3B1D00' },
   resultLabel: { fontFamily: fonts.display, fontSize: 18, lineHeight: 24, color: '#FDE68A', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
-  lastValue: { fontFamily: fonts.display, fontSize: 14, lineHeight: 18, color: '#B45309' },
+  lastValue: { fontFamily: fonts.display, fontSize: 14, lineHeight: 18, color: '#FCD34D' },
 });

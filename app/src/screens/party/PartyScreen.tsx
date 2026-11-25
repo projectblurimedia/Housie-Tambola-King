@@ -2,7 +2,7 @@ import React, { useRef, useState } from 'react';
 import { View } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConfirmModal } from '@/components/ConfirmModal';
 import { Button, EmptyState, IconButton, Loading, Screen } from '@/components/ui';
 import { partyKey, useParty, type PartyEvent } from '@/hooks/useParty';
@@ -10,7 +10,7 @@ import { isBoardGame, partyService, type PartyPlayer, type PartyState } from '@/
 import { errorMessage } from '@/localization/errorMessages';
 import { useSettingsStore } from '@/state/settingsStore';
 import { showToast } from '@/state/toastStore';
-import { spacing } from '@/theme';
+import { spacing, ThemeOverride } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
 import { PartyFinished, PartyLobby, ScoreStrip, useNow } from './parts/PartyCommon';
 import { SeetaBoard } from './parts/SeetaBoard';
@@ -18,7 +18,7 @@ import { ShowBoard } from './parts/ShowBoard';
 import { SnakesBoard } from './parts/SnakesBoard';
 import { ChammaBoard } from './parts/ChammaBoard';
 import { CategoryPicker } from './parts/CategoryPicker';
-import { PARTY_LOOK } from './parts/Premium';
+import { PARTY_LOOK, PARTY_THEME } from './parts/Premium';
 import { RulesModal } from './parts/RulesModal';
 import { PartyWinner } from './parts/PartyWinner';
 
@@ -29,7 +29,18 @@ const buzz = (kind: 'light' | 'heavy' | 'success') => {
 };
 
 /** One party game (Find Seeta or Show): lobby → rounds → final scores, all live. */
-export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
+export function PartyScreen(props: ScreenProps<'Party'>) {
+  // Reads the cached game (filled by useParty inside) to theme the whole screen in its colours.
+  const cached = useQuery<PartyState>({ queryKey: partyKey(props.route.params.partyId), enabled: false });
+  const kind = cached.data?.game.kind;
+  return (
+    <ThemeOverride colors={kind ? PARTY_THEME[kind].palette : null}>
+      <PartyContent {...props} />
+    </ThemeOverride>
+  );
+}
+
+function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
   const { partyId } = route.params;
   const { t } = useTranslation();
   const qc = useQueryClient();
@@ -102,7 +113,7 @@ export function PartyScreen({ navigation, route }: ScreenProps<'Party'>) {
 
   const g = state.game;
   return (
-    <Screen scroll title={title} headerColors={PARTY_LOOK[g.kind].colors} right={<IconButton icon="information-circle-outline" color="#fff" onPress={() => setRulesOpen(true)} />}>
+    <Screen scroll title={title} headerColors={PARTY_LOOK[g.kind].colors} backgroundColors={PARTY_THEME[g.kind].page} right={<IconButton icon="information-circle-outline" color="#fff" onPress={() => setRulesOpen(true)} />}>
       {g.status === 'lobby' ? (
         <PartyLobby
           state={state}

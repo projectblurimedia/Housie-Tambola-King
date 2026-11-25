@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, StyleProp, StyleSheet, View, ViewStyle } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import type { PartyKind } from '@/services/partyService';
+import { darkColors, type ThemeColors } from '@/theme/colors';
 import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
 /** Each party game's look: a deep jewel-tone gradient, an accent, its emblem (illustrations: gameArt.ts). */
@@ -120,3 +121,26 @@ const styles = StyleSheet.create({
   medInner: { flex: 1, backgroundColor: 'rgba(10,5,20,0.55)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.15)' },
   sweep: { position: 'absolute', top: 0, bottom: 0, width: 60 },
 });
+
+/**
+ * Each party game's whole-screen palette (background, cards, text, borders) in its own colours,
+ * used through ThemeOverride so pages, cards and pop-ups all match the header.
+ */
+const partyPalette = (bg: string, surface: string, surfaceAlt: string, border: string, primary: string): ThemeColors => ({
+  ...darkColors,
+  primary,
+  goldDark: '#FCD34D',
+  background: bg,
+  surface,
+  surfaceAlt,
+  border,
+  text: '#FFF8F0',
+  textMuted: 'rgba(255,248,240,0.68)',
+  overlay: 'rgba(0,0,0,0.65)',
+});
+export const PARTY_THEME: Record<PartyKind, { palette: ThemeColors; page: [string, string] }> = {
+  seeta: { palette: partyPalette('#2A0718', '#3D0F26', '#521633', '#6B2343', '#FB7185'), page: ['#3A0A22', '#1C0410'] },
+  show: { palette: partyPalette('#110F33', '#1E1B4B', '#2A2770', '#3B3790', '#818CF8'), page: ['#1B1850', '#0B0A24'] },
+  snakes: { palette: partyPalette('#03201E', '#06332F', '#0A4842', '#11605A', '#34D399'), page: ['#06302C', '#021513'] },
+  chamma: { palette: partyPalette('#241004', '#3A1A07', '#4F250C', '#6B3413', '#F59E0B'), page: ['#3A1A07', '#1A0B02'] },
+};

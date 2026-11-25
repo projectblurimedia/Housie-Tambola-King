@@ -324,7 +324,7 @@ const styles = StyleSheet.create({
   ring: { position: 'absolute', width: 78, height: 78, borderRadius: 39, borderWidth: 3, borderColor: '#F5B700' },
   round: { width: 72, height: 72, borderRadius: 36, padding: 4, overflow: 'hidden', borderWidth: 2, borderColor: '#92400E' },
   roundInner: { flex: 1, borderRadius: 32, backgroundColor: 'rgba(59,29,0,0.18)', alignItems: 'center', justifyContent: 'center' },
-  roundLabel: { fontFamily: fonts.display, fontSize: 13, lineHeight: 18, color: '#B45309', marginTop: 2 },
+  roundLabel: { fontFamily: fonts.display, fontSize: 13, lineHeight: 18, color: '#FCD34D', marginTop: 2 },
   dropGlow: { position: 'absolute', backgroundColor: 'rgba(253,230,138,0.35)' },
   dieBevel: { position: 'absolute', left: 3, top: 3, right: 3, bottom: 3, borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)' },
   glow: { shadowColor: '#FDE68A', shadowOpacity: 0.9, shadowRadius: 8, shadowOffset: { width: 0, height: 0 }, elevation: 6 },

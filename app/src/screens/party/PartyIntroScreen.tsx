@@ -12,9 +12,9 @@ import { useMe } from '@/hooks/useMe';
 import { isBoardGame, PARTY_LIMITS, partyService, type PartyOptions } from '@/services/partyService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
-import { fonts, radius, spacing, useThemeColors } from '@/theme';
+import { fonts, radius, spacing, ThemeOverride, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
-import { PARTY_LOOK, ShineSweep } from './parts/Premium';
+import { PARTY_LOOK, PARTY_THEME, ShineSweep } from './parts/Premium';
 import { GAME_ART } from './parts/gameArt';
 import { RulesModal } from './parts/RulesModal';
 
@@ -83,7 +83,16 @@ function Choice({
 }
 
 /** A party game's details: what it is, how it goes, then create (with its options) or join. */
-export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'>) {
+export function PartyIntroScreen(props: ScreenProps<'PartyIntro'>) {
+  // The whole page in the game's own colours (cards, text, pop-ups) — not just the header.
+  return (
+    <ThemeOverride colors={PARTY_THEME[props.route.params.kind].palette}>
+      <PartyIntroContent {...props} />
+    </ThemeOverride>
+  );
+}
+
+function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const { kind } = route.params;
   const { t } = useTranslation();
   const { colors } = useThemeColors();
@@ -153,6 +162,7 @@ export function PartyIntroScreen({ navigation, route }: ScreenProps<'PartyIntro'
       scroll
       title={t(`party.${kind}.title`)}
       headerColors={look.colors}
+      backgroundColors={PARTY_THEME[kind].page}
       right={<IconButton icon="information-circle-outline" color="#fff" onPress={() => setRulesOpen(true)} accessibilityLabel={t('party.howItWorks')} />}
     >
       {/* Hero: the game's illustration on its own colours, name, line, and quick facts */}
