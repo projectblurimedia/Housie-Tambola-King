@@ -327,6 +327,19 @@ try {
   check((await coinsOf(host)) === hostAfterBuy + 50, 'dismissed room refunds its coins');
   check((await host.rpc('get_my_coin_ledger', {})).some((l) => l.reason === 'refund'), 'coin history records the refund');
 
+  // ── ₹ Amount rooms: approved numbers only (scoring only; settled outside the app) ──
+  {
+    check((await host.rpc('my_amount_access', {})) === 0, 'new players have no ₹ Amount access');
+    const ar = await host.rpc('create_room', {
+      p_title: 'Smoke Amount', p_kind: 'normal', p_visibility: 'private', p_max_players: 5,
+      p_ticket_price: 10, p_call_interval_seconds: 3, p_series_length: 1, p_prizes: prizes,
+    });
+    check((await host.rpc('get_room_state', { p_room: ar.roomId })).room.stakeMode === 'free', 'new rooms start Free');
+    check(await expectError(host.rpc('set_stake_mode', { p_room: ar.roomId, p_mode: 'amount' }), 'AMOUNT_NOT_ALLOWED'),
+      'a player without access cannot make a ₹ Amount room');
+    await host.rpc('end_room', { p_room: ar.roomId });
+  }
+
   // ── Party games: Find Seeta and Show (3 players, points only) ──
   console.log('\n— Party games —');
   const third = await guest('Party Third');
@@ -378,15 +391,17 @@ try {
     check(states[0].game.turnNo === 2 && passedOk, 'all picks pass to the next seat at once');
     // Play turns until someone holds four of a kind (picking a card that breaks no pair).
     let shower = -1;
-    for (let turn = 0; turn < 60 && shower < 0; turn++) {
+    for (let turn = 0; turn < 200 && shower < 0; turn++) {
       states = await Promise.all(crew.map((p) => stateOf(p, show.id)));
       shower = states.findIndex((s) => s.me.hand.every((c) => c === s.me.hand[0]));
       if (shower >= 0) break;
       await Promise.all(crew.map((p, i) => {
         const h = states[i].me.hand;
         const tally = (c) => h.filter((x) => x === c).length;
-        let pick = 0;
-        for (let k = 1; k < 4; k++) if (tally(h[k]) < tally(h[pick])) pick = k;
+        // Pass one of the least useful cards, chosen at random (a fixed choice can loop for ever).
+        const least = Math.min(...h.map(tally));
+        const options = [0, 1, 2, 3].filter((k) => tally(h[k]) === least);
+        const pick = options[Math.floor(Math.random() * options.length)];
         return p.rpc('show_pick', { p_game: show.id, p_index: pick });
       }));
     }

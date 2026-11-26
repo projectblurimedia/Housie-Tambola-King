@@ -98,7 +98,8 @@ export const roomService = {
     // 0 (off) is the default on the server.
     if (input.rule === 'normal' && input.lateClaimCalls > 0) await this.setLateClaim(created.roomId, input.lateClaimCalls);
     // Rooms start as '₹ amount' with 3 tickets each on the server.
-    if (input.stakeMode !== 'amount') await this.setStakeMode(created.roomId, input.stakeMode);
+    // New rooms start Free on the server; Coins / ₹ Amount are set here (₹ Amount only for approved numbers).
+    if (input.stakeMode !== 'free') await this.setStakeMode(created.roomId, input.stakeMode);
     if (input.maxTickets !== 3) await this.setMaxTickets(created.roomId, input.maxTickets);
     return created;
   },
@@ -106,6 +107,11 @@ export const roomService = {
   /** Host, lobby: a series' number of games (0 = no limit). */
   async setSeriesLength(roomId: string, len: number): Promise<void> {
     unwrap(await supabase.rpc('set_series_length', { p_room: roomId, p_len: len }));
+  },
+
+  /** ₹ Amount access for me: 0 none, 1 may join ₹ rooms, 2 may also create them (set by the admin). */
+  async amountAccess(): Promise<number> {
+    return Number(unwrap(await supabase.rpc('my_amount_access')) ?? 0);
   },
 
   /** Host, lobby, before tickets: Free / Coins / ₹ amount. */

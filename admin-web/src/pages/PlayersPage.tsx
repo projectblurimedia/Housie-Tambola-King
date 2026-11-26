@@ -138,6 +138,7 @@ export function PlayerDetailPage() {
   const { data, loading, reload } = useAsync(() => rpc<PlayerDetail>('admin_get_player', { p_user: id }), [id]);
   const [coinDelta, setCoinDelta] = useState('');
   const [coinNote, setCoinNote] = useState('');
+  const access = useAsync(() => rpc<number>('admin_get_amount_access', { p_user: id }), [id]);
 
   if (loading && !data) return <p className="muted">Loading…</p>;
   if (!data?.profile) return <p className="error">Player not found.</p>;
@@ -197,6 +198,34 @@ export function PlayerDetailPage() {
         </div>
         <span className="muted" style={{ fontSize: 12 }}>
           Positive gives coins, negative takes them (never below 0). Coins are for play only — they have no money value.
+        </span>
+      </div>
+      <div className="spacer" />
+      {/* ₹ Amount rooms (scores only — players settle among themselves outside the app). */}
+      <div className="panel" style={{ display: 'grid', gap: 10, maxWidth: 520 }}>
+        <b>₹ Amount rooms</b>
+        <div className="row">
+          {[
+            [0, 'No access'],
+            [1, 'Can join'],
+            [2, 'Can create + join'],
+          ].map(([level, label]) => (
+            <button
+              key={level}
+              className={'btn' + (access.data === level ? ' success' : ' ghost')}
+              onClick={() =>
+                act(async () => {
+                  await rpc('admin_set_amount_access', { p_user: p.id, p_level: level });
+                  access.reload();
+                }, 'Access updated')
+              }
+            >
+              {label}
+            </button>
+          ))}
+        </div>
+        <span className="muted" style={{ fontSize: 12 }}>
+          Only approved numbers see the ₹ Amount option. Amounts are for scoring only — the app never collects or pays money.
         </span>
       </div>
       <div className="spacer" />
