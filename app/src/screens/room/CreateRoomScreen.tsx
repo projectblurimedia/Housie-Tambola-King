@@ -3,7 +3,7 @@ import { Pressable, StyleSheet, TextInput, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useTranslation } from 'react-i18next';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { CoinAmount, CoinIcon } from '@/components/CoinIcon';
 import { Button, Card, centeredInput, Row, Screen, Spacer, Stepper, T, TextField, Toggle } from '@/components/ui';
 import { AppIcon } from '@/components/Wordmark';
@@ -159,9 +159,6 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const [stake, setStake] = useState<'free' | 'coins' | 'amount'>('free');
   /** Most tickets one player may take per game. */
   const [maxTickets, setMaxTickets] = useState(3);
-  // ₹ Amount (scores only) is offered only to numbers the admin approved to create such rooms.
-  const access = useQuery({ queryKey: ['amountAccess'], queryFn: roomService.amountAccess, staleTime: 60_000 });
-  const canAmount = (access.data ?? 0) >= 2;
   const [rule, setRule] = useState<ClaimRule>('normal');
   const [autoHint, setAutoHint] = useState(false);
   const [hintMode, setHintMode] = useState<HintMode>('next');
@@ -289,7 +286,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
 
       <Step n={4} title={t('create.stakeTitle')} hint={t('create.stakeHint')}>
         <Row gap={spacing.sm} style={{ alignItems: 'stretch', marginBottom: spacing.md }}>
-          {(canAmount ? (['free', 'coins', 'amount'] as const) : (['free', 'coins'] as const)).map((m) => (
+          {(['free', 'coins', 'amount'] as const).map((m) => (
             <ChoiceTile
               key={m}
               active={stake === m}

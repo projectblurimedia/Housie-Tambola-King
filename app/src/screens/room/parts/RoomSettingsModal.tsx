@@ -3,7 +3,7 @@ import { KeyboardAvoidingView, Modal, Pressable, ScrollView, StyleSheet, TextInp
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTranslation } from 'react-i18next';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { CoinIcon } from '@/components/CoinIcon';
 import { Button, Card, centeredInput, Chip, IconButton, Row, Stepper, T, TextField, Toggle } from '@/components/ui';
 import { formatRupees } from '@/components/Money';
@@ -16,8 +16,8 @@ import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import { claimRule, ClaimRule, HintMode, RoomState, RoomVisibility } from '@/types/api';
 import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 
-/** A compact − value + pill (the value in the middle in bold). */
-function PillStepper({
+/** A small − value + control. */
+function MiniStepper({
   value,
   min,
   max,
@@ -37,16 +37,16 @@ function PillStepper({
     <Pressable
       onPress={() => onChange(next)}
       disabled={disabled}
-      hitSlop={6}
-      style={({ pressed }) => [styles.pillBtn, { backgroundColor: disabled ? colors.surfaceAlt : colors.primary, opacity: pressed ? 0.8 : 1 }]}
+      hitSlop={8}
+      style={({ pressed }) => [styles.miniBtn, { backgroundColor: disabled ? 'transparent' : colors.primary + '1F', opacity: pressed ? 0.6 : 1 }]}
     >
-      <Ionicons name={icon} size={18} color={disabled ? colors.textMuted : '#fff'} />
+      <Ionicons name={icon} size={15} color={disabled ? colors.border : colors.primary} />
     </Pressable>
   );
   return (
-    <View style={[styles.pill, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+    <View style={[styles.mini, { backgroundColor: colors.surface, borderColor: colors.border }]}>
       {btn('remove', value <= min, Math.max(min, value - step))}
-      <T variant="h3" center style={{ minWidth: 54 }} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
+      <T variant="smallBold" center style={{ minWidth: 40 }} numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
         {display}
       </T>
       {btn('add', value >= max, Math.min(max, value + step))}
@@ -54,90 +54,43 @@ function PillStepper({
   );
 }
 
-/**
- * One rule setting as its own card: a coloured icon, the name, a short "what it does", quick
- * choices as chips, the − value + pill, and a live line saying what the current value means.
- */
-function SettingCard({
+/** One compact setting line: small icon, name + what the value means, control on the right. */
+function OptionRow({
   icon,
-  tint,
+  color,
   title,
-  desc,
   meaning,
-  presets,
-  value,
-  min,
-  max,
-  step,
-  display,
-  onChange,
+  last,
+  children,
 }: {
   icon: keyof typeof Ionicons.glyphMap;
-  tint: [string, string];
+  color: string;
   title: string;
-  desc: string;
   meaning: string;
-  presets: { value: number; label: string }[];
-  value: number;
-  min: number;
-  max: number;
-  step: number;
-  display: string;
-  onChange: (n: number) => void;
+  last?: boolean;
+  children: React.ReactNode;
 }) {
   const { colors } = useThemeColors();
   return (
-    <View style={[styles.setCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-      <Row gap={spacing.md} style={{ alignItems: 'flex-start' }}>
-        <LinearGradient colors={tint} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.setIcon}>
-          <Ionicons name={icon} size={18} color="#fff" />
-        </LinearGradient>
-        <View style={{ flex: 1 }}>
-          <T variant="bodyMedium">{title}</T>
-          <T variant="tiny" muted>
-            {desc}
-          </T>
-        </View>
-      </Row>
-      <View style={styles.presetRow}>
-        {presets.map((p) => {
-          const on = p.value === value;
-          return (
-            <Pressable key={p.value} onPress={() => onChange(p.value)} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.8 }]}>
-              {on ? (
-                <LinearGradient colors={tint} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.preset}>
-                  <T variant="smallBold" color="#fff" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
-                    {p.label}
-                  </T>
-                </LinearGradient>
-              ) : (
-                <View style={[styles.preset, { backgroundColor: colors.surfaceAlt }]}>
-                  <T variant="smallBold" numberOfLines={1} adjustsFontSizeToFit maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
-                    {p.label}
-                  </T>
-                </View>
-              )}
-            </Pressable>
-          );
-        })}
+    <View style={[styles.optRow, !last && { borderBottomWidth: StyleSheet.hairlineWidth, borderBottomColor: colors.border }]}>
+      <View style={[styles.optDot, { backgroundColor: color + '22' }]}>
+        <Ionicons name={icon} size={15} color={color} />
       </View>
-      <Row style={{ justifyContent: 'space-between', marginTop: spacing.sm, gap: spacing.sm }}>
-        <Row gap={6} style={{ flex: 1 }}>
-          <Ionicons name="information-circle" size={15} color={tint[0]} />
-          <T variant="tiny" color={colors.text} style={{ flex: 1 }}>
-            {meaning}
-          </T>
-        </Row>
-        <PillStepper value={value} min={min} max={max} step={step} onChange={onChange} display={display} />
-      </Row>
+      <View style={{ flex: 1 }}>
+        <T variant="smallBold">{title}</T>
+        <T variant="tiny" muted numberOfLines={2}>
+          {meaning}
+        </T>
+      </View>
+      {children}
     </View>
   );
 }
 
 /**
- * The chosen rule's settings, always open and joined under its card: Time to check and Late claim
- * (Normal) as their own cards with quick choices, then Auto hint (Normal / Fastest finger) with
- * its two kinds. Auto has no settings.
+ * The chosen rule's settings, compact and always open under its card: one line each for Time to
+ * check and Late claim (Normal) and Auto hint (Normal / Fastest finger), each saying what its
+ * value means. Auto has no settings.
  */
 export function RuleOptions({
   rule,
@@ -165,70 +118,57 @@ export function RuleOptions({
   if (rule === 'auto') return null;
   const normal = rule === 'normal';
   return (
-    <View style={[styles.attached, { backgroundColor: colors.surfaceAlt, gap: spacing.sm }]}>
-      <Row gap={spacing.sm} style={{ marginBottom: 2 }}>
-        <Ionicons name="options" size={16} color={colors.primary} />
-        <T variant="smallBold" color={colors.primary} style={{ letterSpacing: 0.6 }}>
-          {t('create.ruleOptions', { rule: t(`create.rule_${rule}`) }).toUpperCase()}
-        </T>
-      </Row>
+    <View style={[styles.attached, { backgroundColor: colors.surfaceAlt }]}>
       {normal ? (
         <>
-          <SettingCard
+          <OptionRow
             icon="hourglass"
-            tint={['#8B5CF6', '#6D28D9']}
+            color="#7C3AED"
             title={t('create.checkTime')}
-            desc={t('create.checkTimeDesc')}
             meaning={checkSeconds === 0 ? t('create.checkMeansReady') : t('create.checkMeansSeconds', { count: checkSeconds })}
-            presets={[
-              { value: 0, label: t('create.untilReadyShort') },
-              { value: 10, label: '10s' },
-              { value: 20, label: '20s' },
-              { value: 30, label: '30s' },
-            ]}
-            value={checkSeconds}
-            min={0}
-            max={60}
-            step={5}
-            display={checkSeconds === 0 ? '∞' : `${checkSeconds}s`}
-            onChange={onCheckSeconds}
-          />
-          <SettingCard
+          >
+            <MiniStepper value={checkSeconds} min={0} max={60} step={5} onChange={onCheckSeconds} display={checkSeconds === 0 ? t('create.untilReadyShort') : `${checkSeconds}s`} />
+          </OptionRow>
+          <OptionRow
             icon="time"
-            tint={['#F59E0B', '#D97706']}
+            color="#D97706"
             title={t('create.lateClaim')}
-            desc={t('create.lateClaimDesc')}
             meaning={lateClaim === 0 ? t('create.lateClaimOffDesc') : t('create.lateClaimOnDesc', { count: lateClaim })}
-            presets={[
-              { value: 0, label: t('common.off') },
-              { value: 1, label: '1' },
-              { value: 2, label: '2' },
-              { value: 3, label: '3' },
-            ]}
-            value={lateClaim}
-            min={0}
-            max={90}
-            step={1}
-            display={lateClaim === 0 ? t('common.off') : String(lateClaim)}
-            onChange={onLateClaim}
-          />
+          >
+            <MiniStepper value={lateClaim} min={0} max={90} step={1} onChange={onLateClaim} display={lateClaim === 0 ? t('common.off') : String(lateClaim)} />
+          </OptionRow>
         </>
       ) : null}
-      <View style={[styles.setCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Row gap={spacing.md}>
-          <LinearGradient colors={autoHint ? ['#EC4899', '#BE185D'] : [colors.surfaceAlt, colors.surfaceAlt]} style={styles.setIcon}>
-            <Ionicons name="bulb" size={18} color={autoHint ? '#fff' : colors.textMuted} />
-          </LinearGradient>
-          <View style={{ flex: 1 }}>
-            <T variant="bodyMedium">{t('create.autoHint')}</T>
-            <T variant="tiny" muted>
-              {t('create.autoHintDesc')}
-            </T>
-          </View>
-          <Toggle value={autoHint} onValueChange={onAutoHint} />
-        </Row>
-        {autoHint ? <HintModePicker value={hintMode} onChange={onHintMode} /> : null}
-      </View>
+      <OptionRow
+        icon="bulb"
+        color="#DB2777"
+        title={t('create.autoHint')}
+        meaning={!autoHint ? t('create.autoHintDesc') : hintMode === 'next' ? t('create.hintNextShort') : t('create.hintStruckShort')}
+        last={!autoHint}
+      >
+        <Toggle value={autoHint} onValueChange={onAutoHint} />
+      </OptionRow>
+      {autoHint ? (
+        <View style={[styles.hintSeg, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+          {(['next', 'struck'] as const).map((m) => {
+            const on = hintMode === m;
+            return (
+              <Pressable
+                key={m}
+                onPress={() => onHintMode(m)}
+                style={[styles.hintSegItem, on && { backgroundColor: colors.primary }]}
+                accessibilityRole="radio"
+                accessibilityState={{ selected: on }}
+              >
+                <Ionicons name={m === 'next' ? 'flash' : 'layers'} size={13} color={on ? '#fff' : colors.textMuted} />
+                <T variant="tiny" color={on ? '#fff' : colors.text} numberOfLines={1} style={{ fontFamily: fonts.semibold }}>
+                  {m === 'next' ? t('create.hintNext') : t('create.hintStruck')}
+                </T>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -485,8 +425,6 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
   const qc = useQueryClient();
   const { room } = state;
   const priceLocked = (state.game?.ticketCount ?? 0) > 0;
-  const access = useQuery({ queryKey: ['amountAccess'], queryFn: roomService.amountAccess, staleTime: 60_000 });
-  const canAmount = (access.data ?? 0) >= 2;
 
   const [title, setTitle] = useState(room.title);
   const [visibility, setVisibility] = useState<RoomVisibility>(room.visibility);
@@ -598,7 +536,7 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
               {t('create.stakeTitle')}
             </T>
             <Row gap={spacing.sm} style={{ flexWrap: 'wrap', opacity: priceLocked ? 0.5 : 1 }}>
-              {(canAmount || room.stakeMode === 'amount' ? (['free', 'coins', 'amount'] as const) : (['free', 'coins'] as const)).map((m) => (
+              {(['free', 'coins', 'amount'] as const).map((m) => (
                 <Chip key={m} label={t(`create.stake_${m}`)} active={stake === m} onPress={() => !priceLocked && setStake(m)} />
               ))}
             </Row>
@@ -706,6 +644,12 @@ export function RoomSettingsModal({ visible, state, onClose }: { visible: boolea
 }
 
 const styles = StyleSheet.create({
+  optRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingVertical: 10 },
+  optDot: { width: 30, height: 30, borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
+  mini: { flexDirection: 'row', alignItems: 'center', borderRadius: 999, borderWidth: 1, padding: 2 },
+  miniBtn: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
+  hintSeg: { flexDirection: 'row', borderRadius: 999, borderWidth: 1, padding: 3, gap: 3, marginBottom: 4 },
+  hintSegItem: { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 4, paddingVertical: 7, borderRadius: 999 },
   setCard: { borderRadius: radius.md, borderWidth: 1, padding: spacing.md },
   setIcon: { width: 36, height: 36, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   presetRow: { flexDirection: 'row', gap: 6, marginTop: spacing.sm },
@@ -725,7 +669,8 @@ const styles = StyleSheet.create({
     borderColor: '#FDE68A',
     borderBottomLeftRadius: radius.lg,
     borderBottomRightRadius: radius.lg,
-    padding: spacing.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: 4,
   },
   openBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, borderRadius: 999, paddingHorizontal: 12, paddingVertical: 5 },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: spacing.sm },

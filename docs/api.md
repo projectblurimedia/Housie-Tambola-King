@@ -84,9 +84,6 @@ Find Seeta (3–15 players), Show (3–10), Snakes & Ladders (2–6) and Ashta C
 
 Private channel `party:<id>` (members only): `players`, `picked {userId}`, `move {userId, …}`, `throw {userId, throw, seeds}`, `turn {userId}`, `round {roundNo}`, `turn {turn}`, `show {userId, first}`, `reveal`, `finished`, `lobby`, `closed`.
 
-## ₹ Amount access
-`my_amount_access()` → 0 none / 1 may join ₹ Amount rooms / 2 may also create them. `set_stake_mode(…, 'amount')` and joining a ₹ room raise `AMOUNT_NOT_ALLOWED` without access. Admin: `admin_set_amount_access(p_user, p_level)` (audit-logged), `admin_get_amount_access(p_user)`, `admin_list_amount_access()`. New rooms default to Free.
-
 ## Realtime
 Private channel `room:<roomId>` (members only, receive-only). Events: `call {gameId, n, index, nextCallAt}`, `prize {gameId, prize, amount, callIndex, winners[{userId, name, avatarKey, ticketSerial, numbers}]}`, `prize_settled {gameId, prize, each, winners, amount, callIndex, winnerList[…, amount]}` (check rooms announce on this), `claim_check {gameId, prize, callIndex, winners, deadline, round, earlier}` (`earlier` = a late claim replaced the previous winners), `speed {seconds}`, `paused {gameId, paused}`, `phase {gameId, phase}`, `chat {id, userId, name, avatarKey, body, at}`, `ready {gameId, userIds}`, `check_ack {gameId, round, userIds}`, `final_check {gameId, deadline, round}`, `room_settings`, `lobby {gameId, ticketCount, playerCount, pot}`, `members {memberCount, joined?}`, `state {gameId, gameNo, status}`, `game {gameId, gameNo}` (next lobby opened), `room_ended {reason}`.
 

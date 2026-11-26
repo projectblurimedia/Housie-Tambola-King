@@ -327,16 +327,15 @@ try {
   check((await coinsOf(host)) === hostAfterBuy + 50, 'dismissed room refunds its coins');
   check((await host.rpc('get_my_coin_ledger', {})).some((l) => l.reason === 'refund'), 'coin history records the refund');
 
-  // ── ₹ Amount rooms: approved numbers only (scoring only; settled outside the app) ──
+  // ── ₹ Amount rooms: anyone can make one (scores only; settled outside the app) ──
   {
-    check((await host.rpc('my_amount_access', {})) === 0, 'new players have no ₹ Amount access');
     const ar = await host.rpc('create_room', {
       p_title: 'Smoke Amount', p_kind: 'normal', p_visibility: 'private', p_max_players: 5,
       p_ticket_price: 10, p_call_interval_seconds: 3, p_series_length: 1, p_prizes: prizes,
     });
     check((await host.rpc('get_room_state', { p_room: ar.roomId })).room.stakeMode === 'free', 'new rooms start Free');
-    check(await expectError(host.rpc('set_stake_mode', { p_room: ar.roomId, p_mode: 'amount' }), 'AMOUNT_NOT_ALLOWED'),
-      'a player without access cannot make a ₹ Amount room');
+    await host.rpc('set_stake_mode', { p_room: ar.roomId, p_mode: 'amount' });
+    check((await host.rpc('get_room_state', { p_room: ar.roomId })).room.stakeMode === 'amount', 'any player can make a ₹ Amount room');
     await host.rpc('end_room', { p_room: ar.roomId });
   }
 

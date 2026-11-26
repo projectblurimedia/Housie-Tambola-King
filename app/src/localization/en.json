@@ -679,8 +679,7 @@
     "INVALID_MOVE": "That pawn can’t move with this throw.",
     "INVALID_ENTRY": "Choose an entry between 0 and 10,000 coins.",
     "TEAMS_NEED_4": "Teams need exactly 4 players.",
-    "PLAYER_LOW_COINS": "Someone doesn’t have enough coins for the entry.",
-    "AMOUNT_NOT_ALLOWED": "₹ Amount rooms are only for numbers the admin has approved."
+    "PLAYER_LOW_COINS": "Someone doesn’t have enough coins for the entry."
   },
   "update": {
     "title": "Updating app…",
