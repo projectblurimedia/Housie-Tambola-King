@@ -21,6 +21,7 @@ import { CategoryPicker } from './parts/CategoryPicker';
 import { PARTY_LOOK, PARTY_THEME } from './parts/Premium';
 import { RulesModal } from './parts/RulesModal';
 import { PartyWinner } from './parts/PartyWinner';
+import { PartyChat } from './parts/PartyChat';
 
 const buzz = (kind: 'light' | 'heavy' | 'success') => {
   if (!useSettingsStore.getState().haptics) return;
@@ -173,6 +174,7 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
 
   const g = state.game;
   return (
+    <View style={{ flex: 1 }}>
     <Screen scroll title={title} headerColors={PARTY_LOOK[g.kind].colors} backgroundColors={PARTY_THEME[g.kind].page} right={<IconButton icon="information-circle-outline" color="#fff" onPress={() => setRulesOpen(true)} />}>
       {g.status === 'lobby' ? (
         <PartyLobby
@@ -249,7 +251,8 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
           </View>
         </>
       )}
-      <View style={{ height: spacing.xl }} />
+      {/* Room for the floating chat button below the last item. */}
+      <View style={{ height: 96 }} />
       <RulesModal kind={g.kind} visible={rulesOpen} onClose={() => setRulesOpen(false)} />
       <PartyWinner state={state} />
 
@@ -269,5 +272,7 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
         onCancel={() => setConfirm(null)}
       />
     </Screen>
+      <PartyChat partyId={partyId} meId={state.me.userId} />
+    </View>
   );
 }

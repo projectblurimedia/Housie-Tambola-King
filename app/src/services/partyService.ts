@@ -4,7 +4,7 @@ import { unwrap } from './errors';
 export type PartyKind = 'seeta' | 'show' | 'snakes' | 'chamma';
 
 /** Players per game: [min, max]. Board games are one game (no rounds). */
-export const PARTY_LIMITS: Record<PartyKind, [number, number]> = { seeta: [3, 15], show: [3, 10], snakes: [2, 6], chamma: [2, 4] };
+export const PARTY_LIMITS: Record<PartyKind, [number, number]> = { seeta: [3, 15], show: [3, 10], snakes: [2, 10], chamma: [2, 4] };
 export const isBoardGame = (k: PartyKind) => k === 'snakes' || k === 'chamma';
 export type PartyStatus = 'lobby' | 'playing' | 'finished' | 'closed';
 /** lobby · seeta: guess, reveal · show: pass, show, reveal · done */
@@ -91,6 +91,8 @@ export interface ShowItem {
 
 /** Show's card category: built-in, or the host's own items. */
 export interface PartyOptions {
+  // Snakes & Ladders: which of the 5 boards
+  board?: number;
   // Ashta Chamma
   start?: 'enter' | 'board';
   safe?: 'corners' | 'straight';
@@ -123,6 +125,15 @@ export interface PartyState {
   players: PartyPlayer[];
   me: { userId: string; role: string | null; hand: number[] | null; pick: number | null; coins: number };
   serverNow: string;
+}
+
+export interface PartyChatMessage {
+  id: number;
+  userId: string;
+  name: string;
+  avatarKey: string;
+  body: string;
+  at: string;
 }
 
 export interface MyParty {
@@ -183,6 +194,12 @@ export const partyService = {
   },
   async movePawn(id: string, pawn: number): Promise<void> {
     unwrap(await supabase.rpc('chamma_move', { p_game: id, p_pawn: pawn }));
+  },
+  async chat(id: string): Promise<PartyChatMessage[]> {
+    return ((unwrap(await supabase.rpc('get_party_chat', { p_game: id })) as PartyChatMessage[] | null) ?? []);
+  },
+  async sendChat(id: string, body: string): Promise<PartyChatMessage> {
+    return unwrap(await supabase.rpc('send_party_chat', { p_game: id, p_body: body })) as PartyChatMessage;
   },
   async nudge(id: string): Promise<void> {
     unwrap(await supabase.rpc('party_nudge', { p_game: id }));

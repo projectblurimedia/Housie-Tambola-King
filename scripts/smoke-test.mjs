@@ -439,7 +439,7 @@ try {
 
     // Snakes & Ladders: 2 players, roll until someone reaches 100.
     const coinsBefore = { host: await coinsOf(host), friend: await coinsOf(friend) };
-    const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 5, p_entry: 50 });
+    const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 5, p_entry: 50, p_options: { board: 2 } });
     await friend.rpc('join_party_by_code', { p_code: snl.code });
     await host.rpc('start_party', { p_game: snl.id });
     let snlState = await stateOf(host, snl.id);
@@ -449,7 +449,8 @@ try {
     const nL = Object.keys(board?.ladders ?? {}).length, nS = Object.keys(board?.snakes ?? {}).length;
     const ends = [...Object.entries(board.ladders), ...Object.entries(board.snakes)].flat().map(Number);
     check(nL >= 6 && nS >= 6 && !Object.values(board.ladders).includes(100) && new Set(ends).size === ends.length,
-      `a new board for this game (${nL} ladders, ${nS} snakes, none to 100, no shared ends)`);
+      `the chosen board (${nL} ladders, ${nS} snakes, none to 100, no shared ends)`);
+    check(board.ladders['19'] === 59 && board.snakes['98'] === 79, 'board 3 of 5 is the one the host picked');
     check(Object.entries(board.snakes).some(([h, t]) => h - t >= 50), 'the board has a big snake');
     const jump = (p) => board.ladders[p] ?? board.snakes[p] ?? p;
     const duo = { [snlState.me.userId]: host, [(await stateOf(friend, snl.id)).me.userId]: friend };
@@ -459,9 +460,12 @@ try {
       await who.rpc('snakes_roll', { p_game: snl.id });
       snlState = await stateOf(host, snl.id);
       const l = snlState.game.state.last;
-      if (!(l.roll >= 1 && l.roll <= 6 && l.to === jump(l.mid) && (l.mid === l.from + l.roll || (l.mid === l.from && l.from + l.roll > 100)))) movesOk = false;
+      const entered = l.from > 0 || (l.roll === 1 ? l.mid === 1 : l.mid === 0);
+      if (!(l.roll >= 1 && l.roll <= 6 && entered && l.to === jump(l.mid) && (l.from === 0 || l.mid === l.from + l.roll || (l.mid === l.from && l.from + l.roll > 100)))) movesOk = false;
     }
-    check(movesOk, 'every roll is 1–6 and follows the ladders and snakes');
+    check(movesOk, 'every roll is 1–6, a 1 brings a token onto the board, and moves follow the ladders and snakes');
+    await friend.rpc('send_party_chat', { p_game: snl.id, p_body: 'Good luck!' });
+    check((await host.rpc('get_party_chat', { p_game: snl.id })).some((m) => m.body === 'Good luck!'), 'party games have chat');
     const winner = snlState.players.find((p) => p.userId === snlState.game.state.winnerId);
     check(snlState.game.status === 'finished' && winner?.score === 100, 'first to 100 wins');
     const hostWon = snlState.game.state.winnerId === snlState.me.userId;
@@ -535,8 +539,10 @@ try {
       await friend.rpc('party_nudge', { p_game: ach3.id }).catch(() => undefined);
       a3s = await stateOf(friend, ach3.id);
     }
-    check(a3s.game.status === 'finished' && a3s.game.state.winnerId === (await stateOf(friend, ach3.id)).me.userId,
-      `3 missed turns put a player out; the other wins (misses ${JSON.stringify(Object.values(a3s.game.state.misses ?? {}))})`);
+    const misses = a3s.game.state.misses ?? {};
+    const outId = Object.keys(misses).find((u) => misses[u] >= 3);
+    check(a3s.game.status === 'finished' && !!outId && a3s.game.state.winnerId !== outId && (misses[a3s.game.state.winnerId] ?? 0) < 3,
+      `3 missed turns put a player out; the other wins (misses ${JSON.stringify(Object.values(misses))})`);
   } finally {
     await third.rpc('delete_my_account').catch(() => undefined);
   }

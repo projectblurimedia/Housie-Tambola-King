@@ -80,6 +80,7 @@ Find Seeta (3–15 players), Show (3–10), Snakes & Ladders (2–6) and Ashta C
 | `snakes_roll` | `p_game` | – (your turn; die 1–6, ladders / snakes, 6 = again) | `NOT_YOUR_TURN`, `NOT_NOW` |
 | `chamma_throw` | `p_game` | – (4 seeds; none up = 8) | `NOT_YOUR_TURN`, `NOT_NOW` |
 | `chamma_move` | `p_game, p_pawn (0–3)` | – | `INVALID_PAWN`, `INVALID_MOVE`, `NOT_YOUR_TURN` |
+| `send_party_chat` / `get_party_chat` | `p_game` (+ `p_body` 1–200) | message / last 80 since I joined (broadcast `chat` on party:<id>) | `INVALID_MESSAGE`, `CHAT_TOO_FAST`, `NOT_A_MEMBER` |
 | `party_nudge` | `p_game` | – (acts on a passed deadline; pg_cron `party-tick` does too) | – |
 
 Private channel `party:<id>` (members only): `players`, `picked {userId}`, `move {userId, …}`, `throw {userId, throw, seeds}`, `turn {userId}`, `round {roundNo}`, `turn {turn}`, `show {userId, first}`, `reveal`, `finished`, `lobby`, `closed`.

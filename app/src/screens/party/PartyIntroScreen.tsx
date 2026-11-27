@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -17,6 +17,8 @@ import type { ScreenProps } from '@/navigation/types';
 import { PARTY_LOOK, PARTY_THEME, ShineSweep } from './parts/Premium';
 import { GAME_ART } from './parts/gameArt';
 import { RulesModal } from './parts/RulesModal';
+import { BoardThumb } from './parts/SnakesBoard';
+import { SNL_BOARDS } from '@/game/engine/board';
 
 const ENTRY_PRESETS = [0, 10, 25, 50, 100];
 const SAFE_CELLS = {
@@ -102,6 +104,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const board = isBoardGame(kind);
   const [rounds, setRounds] = useState(5);
   const [entry, setEntry] = useState(0);
+  const [boardNo, setBoardNo] = useState(0);
   const [opts, setOpts] = useState<Required<Pick<PartyOptions, 'start' | 'safe' | 'teams' | 'needCut'>>>({
     start: 'enter',
     safe: 'corners',
@@ -136,7 +139,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const create = async () => {
     setBusy('create');
     try {
-      const res = await partyService.create(kind, board ? 1 : rounds, entry, kind === 'chamma' ? opts : null);
+      const res = await partyService.create(kind, board ? 1 : rounds, entry, kind === 'chamma' ? opts : kind === 'snakes' ? { board: boardNo } : null);
       navigation.navigate('Party', { partyId: res.id });
     } catch (err) {
       showToast({ variant: 'error', title: errorMessage(err) });
@@ -289,6 +292,33 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
           </Row>
         </View>
 
+        {/* Snakes & Ladders: pick one of the 5 boards */}
+        {kind === 'snakes' ? (
+          <View>
+            <T variant="bodyMedium">{t('party.snakes.chooseBoard')}</T>
+            <T variant="tiny" muted>
+              {t('party.snakes.chooseBoardDesc')}
+            </T>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
+              {SNL_BOARDS.map((b, i) => {
+                const on = boardNo === i;
+                return (
+                  <Pressable key={i} onPress={() => setBoardNo(i)} style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
+                    <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : [colors.border, colors.border]} style={styles.boardEdge}>
+                      <BoardThumb index={i} board={b} size={on ? 150 : 132} />
+                    </LinearGradient>
+                    {on ? (
+                      <View style={styles.boardTick}>
+                        <Ionicons name="checkmark" size={14} color="#3B1D00" />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+          </View>
+        ) : null}
+
         {/* Ashta Chamma rules */}
         {kind === 'chamma' ? (
           <>
@@ -388,6 +418,8 @@ const styles = StyleSheet.create({
   choice: { borderRadius: radius.md, padding: spacing.sm, alignItems: 'center', minHeight: 70, justifyContent: 'center' },
   diagram: { width: 46, height: 46, flexDirection: 'row', flexWrap: 'wrap', gap: 1.5 },
   diagramCell: { width: 8, height: 8, borderRadius: 2 },
+  boardEdge: { borderRadius: 11, padding: 3 },
+  boardTick: { position: 'absolute', right: 8, top: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FDE68A', alignItems: 'center', justifyContent: 'center' },
   createBtn: { height: 52, borderRadius: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
   createText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 22, color: '#3B1D00' },
   code: { flex: 1, height: 50, borderRadius: radius.md, borderWidth: 1, fontFamily: fonts.bold, fontSize: 20, letterSpacing: 4 },

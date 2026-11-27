@@ -101,3 +101,33 @@ export function playStrikeSound() {
     // No audio in this build.
   }
 }
+
+export type GameSound = 'dice' | 'step' | 'ladder' | 'snake';
+const GAME_SOURCES: Record<GameSound, number> = {
+  dice: require('../../assets/sounds/dice.wav'),
+  step: require('../../assets/sounds/step.wav'),
+  ladder: require('../../assets/sounds/ladder.wav'),
+  snake: require('../../assets/sounds/snake.wav'),
+};
+const gamePlayers: Partial<Record<GameSound, Player>> = {};
+const GAME_VOLUME: Record<GameSound, number> = { dice: 0.9, step: 0.55, ladder: 0.85, snake: 0.85 };
+
+/**
+ * Board-game effects (Snakes & Ladders): dice rattle, a hop per square, ladder climb, snake bite.
+ * Only when the player has Sounds on (Profile); silent on builds without the audio module.
+ */
+export function playGameSound(kind: GameSound) {
+  // eslint-disable-next-line @typescript-eslint/no-require-imports
+  const { useSettingsStore } = require('@/state/settingsStore') as typeof import('@/state/settingsStore');
+  if (!useSettingsStore.getState().sounds) return;
+  const mod = loadAudio();
+  if (!mod) return;
+  try {
+    const player = gamePlayers[kind] ?? (gamePlayers[kind] = mod.createAudioPlayer(GAME_SOURCES[kind]));
+    player.volume = GAME_VOLUME[kind];
+    Promise.resolve(player.seekTo(0)).catch(() => undefined);
+    player.play();
+  } catch {
+    // No audio in this build.
+  }
+}

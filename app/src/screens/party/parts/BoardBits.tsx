@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
+import Svg, { Circle, Defs, Ellipse, LinearGradient as SvgGradient, Path, RadialGradient, Stop } from 'react-native-svg';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/components/Avatar';
@@ -18,7 +19,47 @@ export const TOKEN_COLORS = [
   { hex: '#FACC15', dark: '#A16207' },
   { hex: '#A855F7', dark: '#6B21A8' },
   { hex: '#EC4899', dark: '#9D174D' },
+  { hex: '#F97316', dark: '#9A3412' },
+  { hex: '#14B8A6', dark: '#0F766E' },
+  { hex: '#F8FAFC', dark: '#64748B' },
+  { hex: '#1F2937', dark: '#030712' },
 ] as const;
+
+let pawnSeq = 0;
+
+/**
+ * A glossy board-game pawn (Ludo style): round head on a flared body and a flat base, lit
+ * from the top-left, with a soft shadow — drawn in vector so it stays crisp at any size.
+ */
+export function Pawn({ color, dark, size, glow }: { color: string; dark: string; size: number; glow?: boolean }) {
+  const id = useRef(`pawn${++pawnSeq}`).current;
+  return (
+    <View style={[{ width: size, height: size * 1.2 }, glow && styles.glow]}>
+      <Svg width={size} height={size * 1.2} viewBox="0 0 40 48">
+        <Defs>
+          <RadialGradient id={`${id}h`} cx="38%" cy="32%" r="70%">
+            <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.95} />
+            <Stop offset="0.35" stopColor={color} />
+            <Stop offset="1" stopColor={dark} />
+          </RadialGradient>
+          <SvgGradient id={`${id}b`} x1="0" y1="0" x2="1" y2="0">
+            <Stop offset="0" stopColor={dark} />
+            <Stop offset="0.4" stopColor={color} />
+            <Stop offset="0.65" stopColor={color} />
+            <Stop offset="1" stopColor={dark} />
+          </SvgGradient>
+        </Defs>
+        <Ellipse cx={21} cy={44} rx={15} ry={3.6} fill="#000" opacity={0.3} />
+        <Ellipse cx={20} cy={41} rx={14} ry={4.6} fill={dark} />
+        <Path d="M8 41 Q11 27 16 22 L24 22 Q29 27 32 41 Z" fill={`url(#${id}b)`} stroke={dark} strokeWidth={0.8} />
+        <Ellipse cx={20} cy={22.5} rx={7.5} ry={2.6} fill={dark} />
+        <Circle cx={20} cy={14} r={9.5} fill={`url(#${id}h)`} stroke={dark} strokeWidth={0.8} />
+        <Ellipse cx={16.5} cy={10} rx={3.4} ry={2.2} fill="#fff" opacity={0.75} />
+        <Path d="M14 30 Q15 26 17 24" stroke="#fff" strokeOpacity={0.45} strokeWidth={1.4} fill="none" strokeLinecap="round" />
+      </Svg>
+    </View>
+  );
+}
 
 /** A glossy playing piece: coloured coin, white rim, a light spot. */
 export function Token({ color, dark, size, glow }: { color: string; dark: string; size: number; glow?: boolean }) {
@@ -101,12 +142,39 @@ export function Dice({ value, rollKey, size = 64 }: { value: number; rollKey: st
  * a little on each landing, its shadow growing as it falls), settles on the number with a gold
  * pop, then fades so the token's walk is clear.
  */
-export function DiceDrop({ value, rollKey, size }: { value: number; rollKey: string | number | undefined; size: number }) {
+export function DiceDrop({
+  value,
+  rollKey,
+  size,
+  spinning,
+}: {
+  value: number;
+  rollKey: string | number | undefined;
+  size: number;
+  /** Tapped Roll, waiting for the result: the die tumbles in the middle right away. */
+  spinning?: boolean;
+}) {
   const p = useRef(new Animated.Value(1)).current;
   const pop = useRef(new Animated.Value(0)).current;
   const fade = useRef(new Animated.Value(0)).current;
+  const spin = useRef(new Animated.Value(0)).current;
   const [face, setFace] = useState(value || 1);
   const first = useRef(true);
+
+  useEffect(() => {
+    if (!spinning) return;
+    fade.setValue(1);
+    pop.setValue(0);
+    p.setValue(0.35);
+    const loop = Animated.loop(Animated.timing(spin, { toValue: 1, duration: 420, easing: Easing.linear, useNativeDriver: true }));
+    loop.start();
+    const flicker = setInterval(() => setFace(1 + Math.floor(Math.random() * 6)), 90);
+    return () => {
+      loop.stop();
+      spin.setValue(0);
+      clearInterval(flicker);
+    };
+  }, [spinning, spin, fade, pop, p]);
   useEffect(() => {
     if (first.current) {
       first.current = false;
@@ -155,6 +223,7 @@ export function DiceDrop({ value, rollKey, size }: { value: number; rollKey: str
           transform: [
             { translateY: p.interpolate({ inputRange: [0, 0.35, 0.55, 0.72, 0.84, 1], outputRange: [-size * 2.4, 0, -size * 0.55, 0, -size * 0.14, 0] }) },
             { rotate: p.interpolate({ inputRange: [0, 0.35, 0.72, 1], outputRange: ['-300deg', '-60deg', '-10deg', '0deg'] }) },
+            { rotate: spin.interpolate({ inputRange: [0, 1], outputRange: ['0deg', '360deg'] }) },
             { scaleY: p.interpolate({ inputRange: [0, 0.33, 0.36, 0.42, 0.7, 0.73, 0.78, 1], outputRange: [1, 1, 0.84, 1, 1, 0.92, 1, 1] }) },
             { scale: pop.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.18, 1] }) },
           ],

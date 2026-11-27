@@ -2,9 +2,10 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { partyService, type PartyState } from '@/services/partyService';
+import { partyService, type PartyChatMessage, type PartyState } from '@/services/partyService';
 
 export const partyKey = (id: string) => ['party', id] as const;
+export const partyChatKey = (id: string) => ['partyChat', id] as const;
 
 export type PartyEvent =
   | { type: 'show'; userId: string; first: boolean }
@@ -70,6 +71,11 @@ export function useParty(id: string, onEvent?: (e: PartyEvent) => void) {
     on('finished', () => ({ type: 'finished' }));
     on('closed', () => ({ type: 'closed' }));
     on('show', (p) => ({ type: 'show', userId: String(p.userId), first: Boolean(p.first) }));
+    // Chat goes straight into the chat list (no reload of the game).
+    channel.on('broadcast', { event: 'chat' }, ({ payload }) => {
+      const msg = payload as PartyChatMessage;
+      qc.setQueryData<PartyChatMessage[]>(partyChatKey(id), (old) => (old?.some((m) => m.id === msg.id) ? old : [...(old ?? []), msg]));
+    });
 
     (async () => {
       await supabase.realtime.setAuth();

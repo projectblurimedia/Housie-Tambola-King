@@ -54,3 +54,27 @@ describe('ashta chamma', () => {
     expect(seedsValue([true, true, true, true])).toBe(4);
   });
 });
+
+describe('snakes & ladders boards', () => {
+  it('has 5 boards with upright ladders, no ladder to the top row, no shared ends', async () => {
+    const { SNL_BOARDS, snlCell } = await import('./board');
+    expect(SNL_BOARDS).toHaveLength(5);
+    for (const b of SNL_BOARDS) {
+      const ends = [...Object.entries(b.ladders), ...Object.entries(b.snakes)].flat().map(Number);
+      expect(new Set(ends).size).toBe(ends.length);
+      for (const [f, t] of Object.entries(b.ladders)) {
+        expect(t).toBeLessThan(97);
+        expect(Math.abs(snlCell(Number(f)).col - snlCell(t).col)).toBeLessThanOrEqual(1);
+      }
+      expect(Object.entries(b.snakes).filter(([h, t]) => snlCell(t).row - snlCell(Number(h)).row >= 5).length).toBeGreaterThanOrEqual(2);
+    }
+  });
+  it('spreads up to 10 tokens on one square, smaller as more share it', async () => {
+    const { shareLayout } = await import('./board');
+    expect(shareLayout(1).scale).toBe(1);
+    const ten = shareLayout(10);
+    expect(ten.offsets).toHaveLength(10);
+    expect(ten.scale).toBeLessThan(0.5);
+    expect(Math.max(...ten.offsets.map((o) => Math.abs(o.x)))).toBeLessThan(0.5);
+  });
+});

@@ -76,3 +76,61 @@ export const seedsValue = (seeds: readonly boolean[]) => {
   const up = seeds.filter(Boolean).length;
   return up === 0 ? 8 : up;
 };
+
+// ─── Snakes & Ladders: the 5 boards the host picks from (same as _snl_boards() in SQL) ──────
+export type SnlBoard = { ladders: Record<string, number>; snakes: Record<string, number> };
+export const SNL_BOARDS: SnlBoard[] = [
+  { ladders: { 2: 22, 3: 37, 39: 59, 45: 65, 68: 88, 69: 89 }, snakes: { 25: 6, 52: 28, 61: 21, 64: 43, 71: 11, 87: 35, 96: 76, 99: 77 } },
+  { ladders: { 5: 25, 8: 29, 15: 35, 49: 89, 61: 81, 68: 88 }, snakes: { 41: 20, 54: 33, 70: 30, 77: 17, 85: 56, 91: 71, 94: 66, 99: 23 } },
+  { ladders: { 5: 25, 9: 29, 19: 59, 35: 65, 53: 88, 54: 74 }, snakes: { 26: 7, 30: 10, 33: 8, 63: 24, 81: 40, 90: 32, 95: 75, 98: 79 } },
+  { ladders: { 7: 34, 9: 28, 17: 38, 21: 41, 33: 53, 47: 87, 68: 88 }, snakes: { 31: 11, 45: 15, 75: 55, 79: 19, 81: 61, 83: 65, 91: 49 } },
+  { ladders: { 5: 37, 7: 46, 20: 40, 30: 50, 51: 71, 56: 75, 64: 84 }, snakes: { 42: 2, 48: 28, 78: 18, 80: 41, 82: 59, 89: 29, 93: 67 } },
+];
+
+export type Pt = { x: number; y: number };
+
+/** Centre of a square on a board `size` px wide. */
+export function snlCentre(square: number, size: number): Pt {
+  const cell = size / 10;
+  const { row, col } = snlCell(square);
+  return { x: col * cell + cell / 2, y: row * cell + cell / 2 };
+}
+
+/**
+ * A snake's body curve (head → tail): a gentle S. The art and the "slide down the snake"
+ * animation both use this, so a bitten token follows the body exactly.
+ */
+export function snakeCurve(head: Pt, tail: Pt, cell: number) {
+  const dx = tail.x - head.x;
+  const dy = tail.y - head.y;
+  const len = Math.hypot(dx, dy) || 1;
+  const nx = -dy / len;
+  const ny = dx / len;
+  const amp = Math.min(cell * 0.9, len * 0.22);
+  const c1 = { x: head.x + dx * 0.33 + nx * amp, y: head.y + dy * 0.33 + ny * amp };
+  const c2 = { x: head.x + dx * 0.67 - nx * amp, y: head.y + dy * 0.67 - ny * amp };
+  const at = (t: number): Pt => {
+    const u = 1 - t;
+    return {
+      x: u * u * u * head.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * tail.x,
+      y: u * u * u * head.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * tail.y,
+    };
+  };
+  return { c1, c2, at };
+}
+
+/** Tokens sharing a square: offsets (in cells) and the size factor, for up to 10 of them. */
+export function shareLayout(n: number): { offsets: Pt[]; scale: number } {
+  if (n <= 1) return { offsets: [{ x: 0, y: 0 }], scale: 1 };
+  const cols = n <= 2 ? 2 : n <= 4 ? 2 : n <= 9 ? 3 : 4;
+  const rows = Math.ceil(n / cols);
+  const step = 0.82 / Math.max(cols, rows);
+  const offsets: Pt[] = [];
+  for (let i = 0; i < n; i++) {
+    const r = Math.floor(i / cols);
+    const c = i % cols;
+    const inRow = Math.min(cols, n - r * cols);
+    offsets.push({ x: (c - (inRow - 1) / 2) * step, y: (r - (rows - 1) / 2) * step });
+  }
+  return { offsets, scale: Math.max(0.34, 1.15 / Math.max(cols, rows)) };
+}

@@ -80,3 +80,59 @@ write('strike', 0.18, (b) => {
   tone(b, 0, 0.18, 84, { vol: 0.5, decay: 28, harmonics: [1, 0.25], attack: 0.002 });
   tone(b, 0.01, 0.15, 91, { vol: 0.2, decay: 35, harmonics: [1], attack: 0.002 });
 });
+
+// ─── Snakes & Ladders ─────────────────────────────────────────────────────────────
+/** Filtered noise burst (a "click" / rattle / hiss). */
+function noise(buf, startSec, durSec, { vol = 0.4, decay = 30, smooth = 0.6 } = {}) {
+  const s0 = Math.floor(startSec * RATE);
+  const n = Math.floor(durSec * RATE);
+  let last = 0;
+  for (let i = 0; i < n && s0 + i < buf.length; i++) {
+    const t = i / RATE;
+    last = smooth * last + (1 - smooth) * (Math.random() * 2 - 1);
+    buf[s0 + i] += vol * Math.exp(-decay * t) * last;
+  }
+}
+/** A tone whose pitch glides from one note to another. */
+function glide(buf, startSec, durSec, fromMidi, toMidi, { vol = 0.4, decay = 2, harmonics = [1, 0.3] } = {}) {
+  const s0 = Math.floor(startSec * RATE);
+  const n = Math.floor(durSec * RATE);
+  let phase = 0;
+  for (let i = 0; i < n && s0 + i < buf.length; i++) {
+    const t = i / RATE;
+    const m = fromMidi + (toMidi - fromMidi) * (i / n);
+    phase += (2 * Math.PI * freq(m)) / RATE;
+    let v = 0;
+    harmonics.forEach((h, k) => (v += h * Math.sin(phase * (k + 1))));
+    buf[s0 + i] += vol * Math.min(1, t / 0.01) * Math.exp(-decay * t) * v;
+  }
+}
+
+// Dice: a quick wooden rattle — irregular clicks getting closer, then the settle.
+write('dice', 0.75, (b) => {
+  let t = 0;
+  for (let i = 0; i < 9; i++) {
+    noise(b, t, 0.05, { vol: 0.5 - i * 0.03, decay: 70, smooth: 0.35 });
+    tone(b, t, 0.04, 70 + (i % 3) * 3, { vol: 0.12, decay: 90, harmonics: [1] });
+    t += 0.09 - i * 0.006;
+  }
+  noise(b, t + 0.03, 0.08, { vol: 0.6, decay: 45, smooth: 0.3 });
+});
+
+// Step: a soft wooden "tok" for each square a token hops.
+write('step', 0.12, (b) => {
+  tone(b, 0, 0.12, 79, { vol: 0.5, decay: 45, harmonics: [1, 0.2], attack: 0.002 });
+  noise(b, 0, 0.03, { vol: 0.15, decay: 120, smooth: 0.2 });
+});
+
+// Ladder: bright rising climb (quick notes up the scale) with a sparkle at the top.
+write('ladder', 1.1, (b) => {
+  [67, 69, 71, 72, 74, 76, 77, 79].forEach((m, i) => tone(b, i * 0.075, 0.25, m, { vol: 0.42, decay: 10, harmonics: [1, 0.35] }));
+  [88, 91, 96].forEach((m, i) => tone(b, 0.62 + i * 0.05, 0.45, m, { vol: 0.15, decay: 6, harmonics: [1] }));
+});
+
+// Snake: a hiss, then a sliding "wooo" down.
+write('snake', 1.3, (b) => {
+  noise(b, 0, 0.45, { vol: 0.35, decay: 3, smooth: 0.05 });
+  glide(b, 0.3, 0.95, 76, 52, { vol: 0.45, decay: 1.6, harmonics: [1, 0.5, 0.2] });
+});

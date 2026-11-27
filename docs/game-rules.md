@@ -72,7 +72,7 @@ Both: host picks 3–20 rounds; 9 s reveal between rounds; join by code / link w
 
 **Show categories**: the host picks Colours (default), Fruits, Animals, Flowers, Sweets, Vehicles, or their own category (3–10 items with an emoji each, saved on their phone); card n of the deal shows item n.
 
-**Snakes & Ladders** (2–6): a new board every game, saved on the game (state.board): 8 snakes (two big ones, 40–80 squares long) and 8 ladders, no ladder reaching 98–100, no two ends on the same square, no end in the same row as its other end. (Games from before 2026-11-25 kept the classic layout.) A 1–6 die; over 100 = stay; a 6 rolls again (max 3 in a row); first to 100 wins. 20 s per turn, then the server rolls.
+**Snakes & Ladders** (2–10): the host picks one of 5 fixed boards (_snl_boards / SNL_BOARDS: upright ladders, no two pieces overlapping, two big snakes each, no ladder above 96). Everyone starts off the board; a 1 brings a pawn onto square 1. A 1–6 die; over 100 = stay; a 6 rolls again (max 3 in a row); first to 100 wins. 20 s per turn, then the server rolls (3 such turns = out).
 
 **Ashta Chamma** (2–4): 5×5 board, 4 pawns each, 4 tamarind seeds: n up = n, none up = 8. A pawn comes in on its start square only with 4 (Chamma) or 8 (Ashta). Pawns go round the outer ring anticlockwise; only after its player has cut an opponent may a pawn enter the inner ring (clockwise) and the centre — until then it keeps circling. Safe (✕): the four start squares and the centre. Landing on an opponent elsewhere sends it home. 4, 8 or a cut throws again. All 4 pawns in the centre wins. 20 s to throw / move, then the server does it (furthest pawn that can move).
 
