@@ -450,7 +450,7 @@ try {
     const ends = [...Object.entries(board.ladders), ...Object.entries(board.snakes)].flat().map(Number);
     check(nL >= 6 && nS >= 6 && !Object.values(board.ladders).includes(100) && new Set(ends).size === ends.length,
       `the chosen board (${nL} ladders, ${nS} snakes, none to 100, no shared ends)`);
-    check(board.ladders['19'] === 59 && board.snakes['98'] === 79, 'board 3 of 5 is the one the host picked');
+    check(board.ladders['4'] === 44 && board.snakes['78'] === 2, 'board 3 of 5 is the one the host picked');
     check(Object.entries(board.snakes).some(([h, t]) => h - t >= 50), 'the board has a big snake');
     const jump = (p) => board.ladders[p] ?? board.snakes[p] ?? p;
     const duo = { [snlState.me.userId]: host, [(await stateOf(friend, snl.id)).me.userId]: friend };

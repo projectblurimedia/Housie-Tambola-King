@@ -18,6 +18,7 @@ import { PARTY_LOOK, PARTY_THEME, ShineSweep } from './parts/Premium';
 import { GAME_ART } from './parts/gameArt';
 import { RulesModal } from './parts/RulesModal';
 import { BoardThumb } from './parts/SnakesBoard';
+import { CodeInput } from './parts/CodeInput';
 import { SNL_BOARDS } from '@/game/engine/board';
 
 const ENTRY_PRESETS = [0, 10, 25, 50, 100];
@@ -385,18 +386,16 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
         {t('party.joinTitle').toUpperCase()}
       </T>
       <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border }]}>
-        <Row gap={spacing.sm}>
-          <TextInput
-            value={code}
-            onChangeText={(v) => setCode(v.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 6))}
-            placeholder="ABC123"
-            placeholderTextColor={colors.textMuted}
-            autoCapitalize="characters"
-            autoCorrect={false}
-            style={[styles.code, centeredInput, { color: colors.text, backgroundColor: colors.surfaceAlt, borderColor: colors.border }]}
-          />
-          <Button title={t('join.join')} onPress={join} loading={busy === 'join'} disabled={code.length !== 6} style={{ height: 50 }} />
-        </Row>
+        <T variant="tiny" muted style={{ marginBottom: spacing.sm }}>
+          {t('party.joinHint')}
+        </T>
+        <CodeInput value={code} onChange={setCode} accent={look.accent === '#FDE68A' ? '#F59E0B' : look.colors[1]} />
+        <Pressable onPress={join} disabled={code.length !== 6 || busy !== null} style={({ pressed }) => [{ marginTop: spacing.md, opacity: code.length === 6 ? 1 : 0.5 }, pressed && { transform: [{ scale: 0.98 }] }]}>
+          <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.joinBtn}>
+            <Ionicons name="enter" size={18} color="#fff" />
+            <T style={styles.joinText}>{busy === 'join' ? t('common.loading') : t('join.join')}</T>
+          </LinearGradient>
+        </Pressable>
       </View>
       <View style={{ height: spacing.xl }} />
     </Screen>
@@ -420,6 +419,8 @@ const styles = StyleSheet.create({
   diagramCell: { width: 8, height: 8, borderRadius: 2 },
   boardEdge: { borderRadius: 11, padding: 3 },
   boardTick: { position: 'absolute', right: 8, top: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FDE68A', alignItems: 'center', justifyContent: 'center' },
+  joinBtn: { height: 50, borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  joinText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 22, color: '#fff' },
   createBtn: { height: 52, borderRadius: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
   createText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 22, color: '#3B1D00' },
   code: { flex: 1, height: 50, borderRadius: radius.md, borderWidth: 1, fontFamily: fonts.bold, fontSize: 20, letterSpacing: 4 },

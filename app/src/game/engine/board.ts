@@ -80,11 +80,11 @@ export const seedsValue = (seeds: readonly boolean[]) => {
 // ─── Snakes & Ladders: the 5 boards the host picks from (same as _snl_boards() in SQL) ──────
 export type SnlBoard = { ladders: Record<string, number>; snakes: Record<string, number> };
 export const SNL_BOARDS: SnlBoard[] = [
-  { ladders: { 2: 22, 3: 37, 39: 59, 45: 65, 68: 88, 69: 89 }, snakes: { 25: 6, 52: 28, 61: 21, 64: 43, 71: 11, 87: 35, 96: 76, 99: 77 } },
-  { ladders: { 5: 25, 8: 29, 15: 35, 49: 89, 61: 81, 68: 88 }, snakes: { 41: 20, 54: 33, 70: 30, 77: 17, 85: 56, 91: 71, 94: 66, 99: 23 } },
-  { ladders: { 5: 25, 9: 29, 19: 59, 35: 65, 53: 88, 54: 74 }, snakes: { 26: 7, 30: 10, 33: 8, 63: 24, 81: 40, 90: 32, 95: 75, 98: 79 } },
-  { ladders: { 7: 34, 9: 28, 17: 38, 21: 41, 33: 53, 47: 87, 68: 88 }, snakes: { 31: 11, 45: 15, 75: 55, 79: 19, 81: 61, 83: 65, 91: 49 } },
-  { ladders: { 5: 37, 7: 46, 20: 40, 30: 50, 51: 71, 56: 75, 64: 84 }, snakes: { 42: 2, 48: 28, 78: 18, 80: 41, 82: 59, 89: 29, 93: 67 } },
+  { ladders: { 4: 37, 5: 26, 11: 69, 13: 53, 20: 40, 27: 47, 35: 55 }, snakes: { 81: 41, 87: 66, 92: 71, 93: 73, 96: 44, 98: 22 } },
+  { ladders: { 14: 54, 15: 46, 22: 42, 25: 85, 57: 77, 60: 79 }, snakes: { 38: 4, 41: 20, 87: 67, 90: 28, 95: 66, 98: 43 } },
+  { ladders: { 4: 44, 8: 32, 26: 74, 30: 51, 48: 68, 57: 77 }, snakes: { 56: 25, 69: 49, 78: 2, 81: 21, 85: 65, 91: 73 } },
+  { ladders: { 4: 25, 10: 30, 18: 83, 20: 42, 36: 76, 44: 77 }, snakes: { 54: 34, 68: 29, 75: 26, 80: 60, 82: 59, 91: 31, 94: 72 } },
+  { ladders: { 3: 43, 4: 44, 10: 30, 16: 36, 21: 81, 22: 59 }, snakes: { 26: 6, 75: 35, 87: 29, 91: 31, 97: 65, 99: 63 } },
 ];
 
 export type Pt = { x: number; y: number };
@@ -97,8 +97,8 @@ export function snlCentre(square: number, size: number): Pt {
 }
 
 /**
- * A snake's body curve (head → tail): a gentle S. The art and the "slide down the snake"
- * animation both use this, so a bitten token follows the body exactly.
+ * A snake's body (head → tail): a natural wave that fades in from the neck. The art and the
+ * "slide down the snake" animation both use this, so a bitten pawn follows the body exactly.
  */
 export function snakeCurve(head: Pt, tail: Pt, cell: number) {
   const dx = tail.x - head.x;
@@ -106,17 +106,14 @@ export function snakeCurve(head: Pt, tail: Pt, cell: number) {
   const len = Math.hypot(dx, dy) || 1;
   const nx = -dy / len;
   const ny = dx / len;
-  const amp = Math.min(cell * 0.9, len * 0.22);
-  const c1 = { x: head.x + dx * 0.33 + nx * amp, y: head.y + dy * 0.33 + ny * amp };
-  const c2 = { x: head.x + dx * 0.67 - nx * amp, y: head.y + dy * 0.67 - ny * amp };
+  const waves = Math.max(1, Math.min(2.2, len / (cell * 2.6)));
+  const amp = Math.min(cell * 0.75, len * 0.16);
   const at = (t: number): Pt => {
-    const u = 1 - t;
-    return {
-      x: u * u * u * head.x + 3 * u * u * t * c1.x + 3 * u * t * t * c2.x + t * t * t * tail.x,
-      y: u * u * u * head.y + 3 * u * u * t * c1.y + 3 * u * t * t * c2.y + t * t * t * tail.y,
-    };
+    const env = Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.85 + 0.15;
+    const off = amp * env * Math.sin(2 * Math.PI * waves * t);
+    return { x: head.x + dx * t + nx * off, y: head.y + dy * t + ny * off };
   };
-  return { c1, c2, at };
+  return { at };
 }
 
 /** Tokens sharing a square: offsets (in cells) and the size factor, for up to 10 of them. */

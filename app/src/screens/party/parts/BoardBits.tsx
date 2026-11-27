@@ -49,10 +49,14 @@ export function Pawn({ color, dark, size, glow }: { color: string; dark: string;
             <Stop offset="1" stopColor={dark} />
           </SvgGradient>
         </Defs>
+        {/* Coloured glow ring on the board under the pawn, then its shadow */}
+        <Ellipse cx={20} cy={42.5} rx={18.5} ry={5.2} fill={color} opacity={0.35} />
+        <Ellipse cx={20} cy={42.5} rx={18.5} ry={5.2} fill="none" stroke="#fff" strokeOpacity={0.7} strokeWidth={0.9} />
         <Ellipse cx={21} cy={44} rx={15} ry={3.6} fill="#000" opacity={0.3} />
         <Ellipse cx={20} cy={41} rx={14} ry={4.6} fill={dark} />
         <Path d="M8 41 Q11 27 16 22 L24 22 Q29 27 32 41 Z" fill={`url(#${id}b)`} stroke={dark} strokeWidth={0.8} />
         <Ellipse cx={20} cy={22.5} rx={7.5} ry={2.6} fill={dark} />
+        <Circle cx={20} cy={14} r={10.3} fill="#fff" opacity={0.9} />
         <Circle cx={20} cy={14} r={9.5} fill={`url(#${id}h)`} stroke={dark} strokeWidth={0.8} />
         <Ellipse cx={16.5} cy={10} rx={3.4} ry={2.2} fill="#fff" opacity={0.75} />
         <Path d="M14 30 Q15 26 17 24" stroke="#fff" strokeOpacity={0.45} strokeWidth={1.4} fill="none" strokeLinecap="round" />

@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, Easing, FlatList, KeyboardAvoidingView, Modal, Pressable, StyleSheet, TextInput, View } from 'react-native';
+import { Animated, Easing, FlatList, KeyboardAvoidingView, Modal, PanResponder, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -30,6 +30,42 @@ export function PartyChat({ partyId, meId }: { partyId: string; meId: string }) 
   const [sending, setSending] = useState(false);
   const [seenId, setSeenId] = useState(0);
   const slide = useRef(new Animated.Value(0)).current;
+  // Drag the header like the Housie chat: up = full screen, down = half, further down = close.
+  const { height: screenH } = useWindowDimensions();
+  const HALF = Math.round(screenH * 0.62);
+  const FULL = Math.round(screenH * 0.92);
+  const sheetH = useRef(new Animated.Value(HALF)).current;
+  const current = useRef(HALF);
+  const startH = useRef(HALF);
+  const snapTo = (h: number) => {
+    current.current = h;
+    Animated.spring(sheetH, { toValue: h, friction: 9, tension: 70, useNativeDriver: false }).start();
+  };
+  const pan = useRef(
+    PanResponder.create({
+      onMoveShouldSetPanResponder: (_e, g) => Math.abs(g.dy) > 4,
+      onPanResponderGrant: () => {
+        startH.current = current.current;
+      },
+      onPanResponderMove: (_e, g) => {
+        sheetH.setValue(Math.max(screenH * 0.3, Math.min(FULL, startH.current - g.dy)));
+      },
+      onPanResponderRelease: (_e, g) => {
+        const h = startH.current - g.dy;
+        if (startH.current <= HALF + 4 && (g.dy > 120 || g.vy > 1.2)) {
+          setOpen(false);
+          return;
+        }
+        snapTo(g.vy < -0.6 || h > (HALF + FULL) / 2 ? FULL : HALF);
+      },
+    }),
+  ).current;
+  useEffect(() => {
+    if (open) {
+      current.current = HALF;
+      sheetH.setValue(HALF);
+    }
+  }, [open, HALF, sheetH]);
 
   const messages = chat.data ?? [];
   const newest = messages.length ? messages[messages.length - 1].id : 0;
@@ -81,12 +117,15 @@ export function PartyChat({ partyId, meId }: { partyId: string; meId: string }) 
             style={[
               styles.sheet,
               {
+                height: sheetH,
                 backgroundColor: colors.surface,
                 paddingBottom: insets.bottom + spacing.sm,
                 transform: [{ translateY: slide.interpolate({ inputRange: [0, 1], outputRange: [400, 0] }) }],
               },
             ]}
           >
+            <View {...pan.panHandlers}>
+              <View style={[styles.handle, { backgroundColor: colors.border }]} />
             <Row style={styles.head}>
               <Ionicons name="chatbubbles" size={18} color={colors.primary} />
               <T variant="h3" style={{ flex: 1 }}>
@@ -96,6 +135,7 @@ export function PartyChat({ partyId, meId }: { partyId: string; meId: string }) 
                 <Ionicons name="close" size={18} color={colors.text} />
               </Pressable>
             </Row>
+            </View>
             <FlatList
               data={reversed}
               inverted
@@ -103,7 +143,7 @@ export function PartyChat({ partyId, meId }: { partyId: string; meId: string }) 
               style={{ flex: 1 }}
               contentContainerStyle={{ padding: spacing.md, gap: 8 }}
               ListEmptyComponent={
-                <T muted center style={{ transform: [{ scaleY: -1 }] }}>
+                <T muted center>
                   {t('chat.empty')}
                 </T>
               }
@@ -158,7 +198,8 @@ const styles = StyleSheet.create({
   badge: { position: 'absolute', right: -2, top: -2, minWidth: 20, height: 20, borderRadius: 10, paddingHorizontal: 4, backgroundColor: '#EF4444', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#fff' },
   badgeText: { color: '#fff', fontSize: 10, lineHeight: 13, fontWeight: '700' },
   backdrop: { flex: 1, justifyContent: 'flex-end' },
-  sheet: { height: '62%', borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl },
+  sheet: { borderTopLeftRadius: radius.xl, borderTopRightRadius: radius.xl, overflow: 'hidden' },
+  handle: { alignSelf: 'center', width: 44, height: 5, borderRadius: 3, marginTop: 8 },
   head: { gap: 8, padding: spacing.md, paddingBottom: spacing.sm },
   close: { width: 32, height: 32, borderRadius: 16, alignItems: 'center', justifyContent: 'center' },
   bubble: { maxWidth: '78%', borderRadius: 16, paddingHorizontal: 12, paddingVertical: 7, gap: 1 },

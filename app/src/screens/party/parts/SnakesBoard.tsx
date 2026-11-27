@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Svg, { Circle, Defs, Ellipse, G, LinearGradient as SvgGradient, Line, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, G, Line, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { Row, T } from '@/components/ui';
 import { LADDERS, type Pt, shareLayout, SNAKES, snakeCurve, snlCell, snlCentre, snlSteps, type SnlBoard } from '@/game/engine/board';
@@ -11,103 +11,129 @@ import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 import { Chances, Dice, DiceDrop, Pawn, PlayerPill, TOKEN_COLORS, TurnBar } from './BoardBits';
 import { GoldFrame } from './Premium';
 
-/** Snake skins: light → mid → dark, and the colour of the markings along the back. */
+/** Snake skins: light (lit back) → mid (body) → dark (outline), the blotch colour, and the belly. */
 const SKINS = [
-  { a: '#86EFAC', b: '#15803D', d: '#14532D', spot: '#FDE047' },
-  { a: '#FDBA74', b: '#EA580C', d: '#7C2D12', spot: '#1F2937' },
-  { a: '#D8B4FE', b: '#9333EA', d: '#581C87', spot: '#FDE68A' },
-  { a: '#FCA5A5', b: '#DC2626', d: '#7F1D1D', spot: '#FEF3C7' },
-  { a: '#7DD3FC', b: '#0284C7', d: '#0C4A6E', spot: '#FDE047' },
+  { a: '#BEF264', b: '#4D7C0F', d: '#1A2E05', spot: '#365314', belly: '#ECFCCB' },
+  { a: '#FCD34D', b: '#B45309', d: '#451A03', spot: '#78350F', belly: '#FEF3C7' },
+  { a: '#C4B5FD', b: '#6D28D9', d: '#2E1065', spot: '#4C1D95', belly: '#EDE9FE' },
+  { a: '#FDA4AF', b: '#BE123C', d: '#4C0519', spot: '#881337', belly: '#FFE4E6' },
+  { a: '#67E8F9', b: '#0E7490', d: '#083344', spot: '#164E63', belly: '#CFFAFE' },
 ];
+/** Soft pastel tint per board row, top (row 0) to bottom (row 9). */
+const ROW_TINTS = ['#F2F3C9', '#DDF5CF', '#CFF3E4', '#CDEDF6', '#D2E3FB', '#DAD9FB', '#E9D5F7', '#F9D2E4', '#FBD9D3', '#FDE7C3'];
 const CLASSIC: SnlBoard = { ladders: LADDERS, snakes: SNAKES };
 const f1 = (v: number) => v.toFixed(1);
 
 /**
- * A snake that reads as 3D: a dark outline body, a lighter tube inside it (light at the back,
- * dark at the belly), a shine running along the side facing the light, alternating markings,
- * and a shaded head with glossy eyes, nostrils and a flicking tongue — on a soft shadow.
+ * A realistic snake: a natural wavy body that tapers to a pointed tail, lit from the top-left
+ * (dark outline, body colour, a light band along the back, a white shine), python-style
+ * blotches down the spine, pale belly scales on the shaded side, and a viper head with
+ * slit-pupil eyes, brow ridges, nostrils and a forked tongue — on a soft shadow.
  */
 function SnakeArt({ head, tail, cell, skin, id }: { head: Pt; tail: Pt; cell: number; skin: (typeof SKINS)[number]; id: string }) {
-  const curve = snakeCurve(head, tail, cell);
-  const W = cell * 0.42;
-  const width = (t: number) => W * (t < 0.1 ? 0.78 + 2.2 * t : 1 - 0.92 * Math.pow((t - 0.1) / 0.9, 1.3));
-  const N = 36;
-  const frame = (t: number) => {
-    const p = curve.at(t);
-    const q = curve.at(Math.min(1, t + 0.01));
+  const { at } = snakeCurve(head, tail, cell);
+  const W = cell * 0.46;
+  const width = (t: number) => W * (t < 0.07 ? 0.7 + 4.3 * t : Math.max(0.02, 1 - Math.pow((t - 0.07) / 0.93, 1.6)));
+  const fr = (t: number) => {
+    const p = at(t);
+    const q = at(Math.min(1, t + 0.005));
     const l = Math.hypot(q.x - p.x, q.y - p.y) || 1;
     return { p, ux: -(q.y - p.y) / l, uy: (q.x - p.x) / l, ang: (Math.atan2(q.y - p.y, q.x - p.x) * 180) / Math.PI };
   };
+  const N = 60;
   const outline = (k: number) => {
     const L: string[] = [];
     const R: string[] = [];
     for (let i = 0; i <= N; i++) {
-      const t = 0.05 + (i / N) * 0.95;
-      const { p, ux, uy } = frame(t);
+      const t = (i / N) * 0.999;
+      const { p, ux, uy } = fr(t);
       const w = (width(t) / 2) * k;
       L.push(`${f1(p.x + ux * w)} ${f1(p.y + uy * w)}`);
       R.push(`${f1(p.x - ux * w)} ${f1(p.y - uy * w)}`);
     }
     return `M${L.join(' L')} L${R.reverse().join(' L')} Z`;
   };
-  const shine: string[] = [];
-  for (let i = 0; i <= N; i++) {
-    const t = 0.08 + (i / N) * 0.8;
-    const { p, ux, uy } = frame(t);
-    const side = -ux - uy > 0 ? 1 : -1;
-    const w = width(t) * 0.22 * side;
-    shine.push(`${f1(p.x + ux * w)} ${f1(p.y + uy * w)}`);
-  }
-  const h0 = curve.at(0.08);
+  // A line along the body, k × width towards the light (k < 0 = the shaded side).
+  const band = (k: number, t0: number, t1: number) => {
+    const P: string[] = [];
+    for (let i = 0; i <= N; i++) {
+      const t = t0 + (i / N) * (t1 - t0);
+      const { p, ux, uy } = fr(t);
+      const side = -ux - uy > 0 ? 1 : -1;
+      const w = width(t) * k * side;
+      P.push(`${f1(p.x + ux * w)} ${f1(p.y + uy * w)}`);
+    }
+    return `M${P.join(' L')}`;
+  };
+  const h0 = at(0.06);
   const headAng = (Math.atan2(head.y - h0.y, head.x - h0.x) * 180) / Math.PI;
-  const hs = cell * 0.3;
-  const headPath = `M${-hs * 0.7} ${-hs * 0.62} Q${hs * 0.5} ${-hs * 0.95} ${hs * 1.2} 0 Q${hs * 0.5} ${hs * 0.95} ${-hs * 0.7} ${hs * 0.62} Q${-hs * 0.95} 0 ${-hs * 0.7} ${-hs * 0.62} Z`;
+  const hs = cell * 0.34;
+  const headPath = `M${-0.55 * hs} ${-0.5 * hs} Q${0.25 * hs} ${-0.9 * hs} ${1.05 * hs} ${-0.38 * hs} Q${1.38 * hs} 0 ${1.05 * hs} ${0.38 * hs} Q${0.25 * hs} ${0.9 * hs} ${-0.55 * hs} ${0.5 * hs} Q${-0.8 * hs} 0 ${-0.55 * hs} ${-0.5 * hs} Z`;
+  const blotches: React.ReactNode[] = [];
+  for (let i = 0; i < 18; i++) {
+    const t = 0.1 + i * 0.047;
+    if (t > 0.9) break;
+    const { p, ang } = fr(t);
+    const w = width(t);
+    const L = w * 0.42;
+    const H = w * 0.32;
+    blotches.push(
+      <Path
+        key={i}
+        d={`M${-L} 0 Q0 ${-H * 1.4} ${L} 0 Q0 ${H * 1.4} ${-L} 0 Z`}
+        fill={skin.spot}
+        stroke={skin.a}
+        strokeWidth={w * 0.06}
+        strokeOpacity={0.8}
+        opacity={0.9}
+        transform={`translate(${f1(p.x)} ${f1(p.y)}) rotate(${ang.toFixed(0)})`}
+      />,
+    );
+  }
   return (
     <G>
       <Defs>
-        <SvgGradient id={id} x1="0" y1="0" x2="1" y2="1">
+        <RadialGradient id={`${id}h`} cx="40%" cy="35%" r="75%">
           <Stop offset="0" stopColor={skin.a} />
           <Stop offset="0.55" stopColor={skin.b} />
           <Stop offset="1" stopColor={skin.d} />
-        </SvgGradient>
-        <RadialGradient id={`${id}h`} cx="35%" cy="30%" r="80%">
-          <Stop offset="0" stopColor={skin.a} />
-          <Stop offset="0.6" stopColor={skin.b} />
-          <Stop offset="1" stopColor={skin.d} />
         </RadialGradient>
       </Defs>
-      <Path d={outline(1)} fill="rgba(0,0,0,0.28)" transform="translate(2.5 3.5)" />
+      <Path d={outline(1.05)} fill="rgba(0,0,0,0.28)" transform="translate(3 4)" />
       <Path d={outline(1)} fill={skin.d} />
-      <Path d={outline(0.78)} fill={`url(#${id})`} />
-      {Array.from({ length: 13 }, (_, i) => {
-        const t = 0.12 + (i + 1) * 0.062;
-        const { p, ang } = frame(t);
-        const w = width(t);
-        return (
-          <Ellipse
-            key={i}
-            cx={p.x}
-            cy={p.y}
-            rx={w * 0.16}
-            ry={w * 0.3}
-            fill={i % 2 ? skin.d : skin.spot}
-            opacity={i % 2 ? 0.35 : 0.8}
-            transform={`rotate(${ang.toFixed(0)} ${f1(p.x)} ${f1(p.y)})`}
-          />
-        );
-      })}
-      <Path d={`M${shine.join(' L')}`} stroke="#fff" strokeOpacity={0.45} strokeWidth={W * 0.12} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path d={outline(0.86)} fill={skin.b} />
+      <Path d={band(0.2, 0.04, 0.92)} stroke={skin.a} strokeOpacity={0.85} strokeWidth={W * 0.34} fill="none" strokeLinecap="round" strokeLinejoin="round" />
+      <Path
+        d={band(-0.3, 0.07, 0.9)}
+        stroke={skin.belly}
+        strokeOpacity={0.55}
+        strokeWidth={W * 0.12}
+        fill="none"
+        strokeLinecap="round"
+        strokeDasharray={`${f1(W * 0.12)} ${f1(W * 0.1)}`}
+      />
+      {blotches}
+      <Path d={band(0.27, 0.08, 0.85)} stroke="#fff" strokeOpacity={0.5} strokeWidth={W * 0.07} fill="none" strokeLinecap="round" strokeLinejoin="round" />
       <G transform={`translate(${f1(head.x)} ${f1(head.y)}) rotate(${headAng.toFixed(0)})`}>
-        <Path d={`M${hs * 1.15} 0 l${hs * 0.45} ${-hs * 0.14} M${hs * 1.15} 0 l${hs * 0.45} ${hs * 0.14}`} stroke="#E11D48" strokeWidth={1.6} strokeLinecap="round" />
-        <Path d={headPath} fill="rgba(0,0,0,0.25)" transform="translate(2 3)" />
-        <Path d={headPath} fill={`url(#${id}h)`} stroke={skin.d} strokeWidth={1.2} />
-        <Ellipse cx={hs * 0.15} cy={-hs * 0.32} rx={hs * 0.42} ry={hs * 0.16} fill="#fff" opacity={0.35} />
+        <Path
+          d={`M${1.25 * hs} 0 L${1.75 * hs} 0 l${0.22 * hs} ${-0.14 * hs} M${1.75 * hs} 0 l${0.22 * hs} ${0.14 * hs}`}
+          stroke="#DC2626"
+          strokeWidth={1.7}
+          fill="none"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+        <Path d={headPath} fill="rgba(0,0,0,0.3)" transform="translate(2.5 3.5)" />
+        <Path d={headPath} fill={`url(#${id}h)`} stroke={skin.d} strokeWidth={1.3} />
+        <Path d={`M${-0.2 * hs} 0 Q${0.35 * hs} ${-0.2 * hs} ${0.75 * hs} 0 Q${0.35 * hs} ${0.2 * hs} ${-0.2 * hs} 0 Z`} fill={skin.spot} opacity={0.8} />
+        <Ellipse cx={0.2 * hs} cy={-0.35 * hs} rx={0.5 * hs} ry={0.13 * hs} fill="#fff" opacity={0.35} />
         {[-1, 1].map((k) => (
           <G key={k}>
-            <Circle cx={hs * 0.35} cy={k * hs * 0.38} r={hs * 0.22} fill="#FEF9C3" stroke={skin.d} strokeWidth={0.8} />
-            <Ellipse cx={hs * 0.42} cy={k * hs * 0.38} rx={hs * 0.07} ry={hs * 0.16} fill="#111" />
-            <Circle cx={hs * 0.3} cy={k * hs * 0.38 - hs * 0.07} r={hs * 0.05} fill="#fff" />
-            <Circle cx={hs} cy={k * hs * 0.12} r={hs * 0.04} fill={skin.d} />
+            <Path d={`M${0.1 * hs} ${k * 0.55 * hs} Q${0.5 * hs} ${k * 0.72 * hs} ${0.85 * hs} ${k * 0.42 * hs}`} stroke={skin.d} strokeWidth={1.4} fill="none" />
+            <Ellipse cx={0.48 * hs} cy={k * 0.42 * hs} rx={0.2 * hs} ry={0.17 * hs} fill="#FDE047" stroke={skin.d} strokeWidth={0.9} />
+            <Ellipse cx={0.5 * hs} cy={k * 0.42 * hs} rx={0.045 * hs} ry={0.15 * hs} fill="#111" />
+            <Circle cx={0.42 * hs} cy={k * 0.42 * hs - 0.07 * hs} r={0.045 * hs} fill="#fff" />
+            <Circle cx={1.12 * hs} cy={k * 0.13 * hs} r={0.04 * hs} fill={skin.d} />
           </G>
         ))}
       </G>
@@ -122,16 +148,16 @@ function LadderArt({ from, to, cell }: { from: Pt; to: Pt; cell: number }) {
   const len = Math.hypot(dx, dy) || 1;
   const ux = dx / len;
   const uy = dy / len;
-  const A = { x: from.x + ux * cell * 0.15, y: from.y + uy * cell * 0.15 };
-  const B = { x: to.x - ux * cell * 0.15, y: to.y - uy * cell * 0.15 };
-  const px = -uy * cell * 0.2;
-  const py = ux * cell * 0.2;
-  const rungs = Math.max(2, Math.round((len - cell * 0.3) / (cell * 0.3)));
+  const A = { x: from.x + ux * cell * 0.12, y: from.y + uy * cell * 0.12 };
+  const B = { x: to.x - ux * cell * 0.12, y: to.y - uy * cell * 0.12 };
+  const px = -uy * cell * 0.22;
+  const py = ux * cell * 0.22;
+  const rungs = Math.max(2, Math.round((len - cell * 0.24) / (cell * 0.28)));
   const rail = (k: number) => ({ x1: A.x + k * px, y1: A.y + k * py, x2: B.x + k * px, y2: B.y + k * py });
   return (
     <G>
       {[1, -1].map((k) => (
-        <Line key={`s${k}`} {...rail(k)} stroke="rgba(0,0,0,0.22)" strokeWidth={5} strokeLinecap="round" transform="translate(2 3)" />
+        <Line key={`s${k}`} {...rail(k)} stroke="rgba(0,0,0,0.22)" strokeWidth={6} strokeLinecap="round" transform="translate(2.5 3.5)" />
       ))}
       {Array.from({ length: rungs }, (_, i) => {
         const t = (i + 0.5) / rungs;
@@ -139,38 +165,40 @@ function LadderArt({ from, to, cell }: { from: Pt; to: Pt; cell: number }) {
         const y = A.y + (B.y - A.y) * t;
         return (
           <G key={i}>
-            <Line x1={x + px} y1={y + py} x2={x - px} y2={y - py} stroke="#7C4A1E" strokeWidth={3.4} strokeLinecap="round" />
-            <Line x1={x + px * 0.85} y1={y + py * 0.85 - 0.8} x2={x - px * 0.85} y2={y - py * 0.85 - 0.8} stroke="#F3D3A1" strokeWidth={0.9} />
+            <Line x1={x + px} y1={y + py} x2={x - px} y2={y - py} stroke="#6B3E17" strokeWidth={4} strokeLinecap="round" />
+            <Line x1={x + px * 0.85} y1={y + py * 0.85 - 1} x2={x - px * 0.85} y2={y - py * 0.85 - 1} stroke="#E8B77A" strokeWidth={1.3} strokeLinecap="round" />
           </G>
         );
       })}
       {[1, -1].map((k) => (
         <G key={`r${k}`}>
-          <Line {...rail(k)} stroke="#5C3310" strokeWidth={5.2} strokeLinecap="round" />
-          <Line {...rail(k)} stroke="#B9783C" strokeWidth={3} strokeLinecap="round" />
-          <Line {...rail(k)} stroke="#F3D3A1" strokeWidth={1} strokeLinecap="round" />
+          <Line {...rail(k)} stroke="#4A2A0D" strokeWidth={6} strokeLinecap="round" />
+          <Line {...rail(k)} stroke="#A9692F" strokeWidth={3.8} strokeLinecap="round" />
+          <Line {...rail(k)} stroke="#F3D3A1" strokeWidth={1.2} strokeLinecap="round" strokeOpacity={0.9} />
         </G>
       ))}
     </G>
   );
 }
 
-/** The board: ivory checks, square numbers, the crown at 100, upright ladders, 3D snakes. */
+/** The board: soft pastel rows (a lighter check on every other square), bold numbers, the crown
+ * at 100, upright ladders, realistic snakes. */
 export const BoardArt = React.memo(
   function BoardArt({ size, board, numbers = true, idPrefix = 'b' }: { size: number; board: SnlBoard; numbers?: boolean; idPrefix?: string }) {
     const cell = size / 10;
     const c = (sq: number) => snlCentre(sq, size);
     return (
       <Svg width={size} height={size}>
-        <Rect x={0} y={0} width={size} height={size} fill="#FFF8EC" />
         {Array.from({ length: 100 }, (_, i) => {
           const sq = i + 1;
           const { row, col } = snlCell(sq);
           return (
             <G key={sq}>
-              <Rect x={col * cell} y={row * cell} width={cell} height={cell} fill={(row + col) % 2 === 0 ? '#F6E3C6' : '#FFF8EC'} />
+              <Rect x={col * cell} y={row * cell} width={cell} height={cell} fill={ROW_TINTS[row]} />
+              {(row + col) % 2 === 0 ? <Rect x={col * cell} y={row * cell} width={cell} height={cell} fill="#fff" opacity={0.45} /> : null}
+              <Rect x={col * cell + 1} y={row * cell + 1} width={cell - 2} height={cell * 0.4} rx={3} fill="#fff" opacity={0.18} />
               {numbers ? (
-                <SvgText x={col * cell + cell * 0.08} y={row * cell + cell * 0.28} fontSize={cell * 0.22} fontWeight="600" fill="#A47B52">
+                <SvgText x={col * cell + cell * 0.1} y={row * cell + cell * 0.3} fontSize={cell * 0.24} fontWeight="700" fill="#3B2A4A" fillOpacity={0.55}>
                   {sq}
                 </SvgText>
               ) : null}

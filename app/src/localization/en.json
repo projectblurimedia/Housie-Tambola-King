@@ -1014,6 +1014,7 @@
     "wonCoins": "+{{count}} coins",
     "wonEach": "+{{count}} coins each",
     "rules": "Rules",
-    "congrats": "CONGRATULATIONS!"
+    "congrats": "CONGRATULATIONS!",
+    "joinHint": "Enter the 6-letter code your friend shared"
   }
 }

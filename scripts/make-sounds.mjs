@@ -119,10 +119,10 @@ write('dice', 0.75, (b) => {
   noise(b, t + 0.03, 0.08, { vol: 0.6, decay: 45, smooth: 0.3 });
 });
 
-// Step: a soft wooden "tok" for each square a token hops.
-write('step', 0.12, (b) => {
-  tone(b, 0, 0.12, 79, { vol: 0.5, decay: 45, harmonics: [1, 0.2], attack: 0.002 });
-  noise(b, 0, 0.03, { vol: 0.15, decay: 120, smooth: 0.2 });
+// Step: a gentle marimba "plink" for each square a pawn hops — soft and musical, not a click.
+write('step', 0.22, (b) => {
+  tone(b, 0, 0.22, 84, { vol: 0.45, decay: 22, harmonics: [1, 0, 0.28, 0, 0.08], attack: 0.004 });
+  tone(b, 0, 0.12, 96, { vol: 0.08, decay: 40, harmonics: [1], attack: 0.004 });
 });
 
 // Ladder: bright rising climb (quick notes up the scale) with a sparkle at the top.

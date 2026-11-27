@@ -67,6 +67,9 @@ describe('snakes & ladders boards', () => {
         expect(Math.abs(snlCell(Number(f)).col - snlCell(t).col)).toBeLessThanOrEqual(1);
       }
       expect(Object.entries(b.snakes).filter(([h, t]) => snlCell(t).row - snlCell(Number(h)).row >= 5).length).toBeGreaterThanOrEqual(2);
+      // One long snake (6+ rows) and one long ladder (5+ rows) on every board.
+      expect(Object.entries(b.snakes).some(([h, t]) => snlCell(t).row - snlCell(Number(h)).row >= 6)).toBe(true);
+      expect(Object.entries(b.ladders).some(([f, t]) => snlCell(Number(f)).row - snlCell(t).row >= 5)).toBe(true);
     }
   });
   it('spreads up to 10 tokens on one square, smaller as more share it', async () => {
