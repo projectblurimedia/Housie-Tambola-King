@@ -81,58 +81,92 @@ write('strike', 0.18, (b) => {
   tone(b, 0.01, 0.15, 91, { vol: 0.2, decay: 35, harmonics: [1], attack: 0.002 });
 });
 
-// ─── Snakes & Ladders ─────────────────────────────────────────────────────────────
-/** Filtered noise burst (a "click" / rattle / hiss). */
-function noise(buf, startSec, durSec, { vol = 0.4, decay = 30, smooth = 0.6 } = {}) {
+// ─── Board games (Snakes & Ladders, Ashta Chamma) ─────────────────────────────────────
+/** White noise through a band-pass filter (biquad), with an exponential decay. */
+function band(buf, startSec, durSec, centerHz, { vol = 0.5, decay = 40, q = 4 } = {}) {
   const s0 = Math.floor(startSec * RATE);
   const n = Math.floor(durSec * RATE);
-  let last = 0;
+  const w0 = (2 * Math.PI * centerHz) / RATE;
+  const alpha = Math.sin(w0) / (2 * q);
+  const b0 = alpha, b2 = -alpha, a0 = 1 + alpha, a1 = -2 * Math.cos(w0), a2 = 1 - alpha;
+  let x1 = 0, x2 = 0, y1 = 0, y2 = 0;
   for (let i = 0; i < n && s0 + i < buf.length; i++) {
-    const t = i / RATE;
-    last = smooth * last + (1 - smooth) * (Math.random() * 2 - 1);
-    buf[s0 + i] += vol * Math.exp(-decay * t) * last;
+    const x = Math.random() * 2 - 1;
+    const y = (b0 * x + b2 * x2 - a1 * y1 - a2 * y2) / a0;
+    x2 = x1; x1 = x; y2 = y1; y1 = y;
+    buf[s0 + i] += vol * Math.exp((-decay * i) / RATE) * y;
   }
 }
-/** A tone whose pitch glides from one note to another. */
-function glide(buf, startSec, durSec, fromMidi, toMidi, { vol = 0.4, decay = 2, harmonics = [1, 0.3] } = {}) {
+/** A sine whose frequency glides (Hz), with optional vibrato. */
+function sweep(buf, startSec, durSec, fromHz, toHz, { vol = 0.4, decay = 2, vibrato = 0, attack = 0.01 } = {}) {
   const s0 = Math.floor(startSec * RATE);
   const n = Math.floor(durSec * RATE);
-  let phase = 0;
+  let ph = 0;
   for (let i = 0; i < n && s0 + i < buf.length; i++) {
     const t = i / RATE;
-    const m = fromMidi + (toMidi - fromMidi) * (i / n);
-    phase += (2 * Math.PI * freq(m)) / RATE;
-    let v = 0;
-    harmonics.forEach((h, k) => (v += h * Math.sin(phase * (k + 1))));
-    buf[s0 + i] += vol * Math.min(1, t / 0.01) * Math.exp(-decay * t) * v;
+    const f = fromHz * Math.pow(toHz / fromHz, i / n) * (1 + vibrato * Math.sin(2 * Math.PI * 6 * t));
+    ph += (2 * Math.PI * f) / RATE;
+    buf[s0 + i] += vol * Math.min(1, t / attack) * Math.exp(-decay * t) * (Math.sin(ph) + 0.25 * Math.sin(2 * ph));
   }
 }
+/** A plucked-string note (harp-like): bright attack, warm fast decay. */
+const pluck = (b, at, midi, vol = 0.4) => tone(b, at, 0.9, midi, { vol, decay: 5, harmonics: [1, 0.5, 0.3, 0.15, 0.08], attack: 0.003 });
 
-// Dice: a quick wooden rattle — irregular clicks getting closer, then the settle.
-write('dice', 0.75, (b) => {
-  let t = 0;
-  for (let i = 0; i < 9; i++) {
-    noise(b, t, 0.05, { vol: 0.5 - i * 0.03, decay: 70, smooth: 0.35 });
-    tone(b, t, 0.04, 70 + (i % 3) * 3, { vol: 0.12, decay: 90, harmonics: [1] });
-    t += 0.09 - i * 0.006;
-  }
-  noise(b, t + 0.03, 0.08, { vol: 0.6, decay: 45, smooth: 0.3 });
+// Dice: a real die rolling on a wooden board — clacks getting closer, a body thud, the settle.
+write('dice', 0.9, (b) => {
+  const hits = [0, 0.11, 0.2, 0.27, 0.33, 0.38, 0.42, 0.45];
+  hits.forEach((t, i) => {
+    const v = 0.9 - i * 0.08;
+    band(b, t, 0.05, 2800 + Math.random() * 1200, { vol: v, decay: 90, q: 3 });
+    band(b, t, 0.08, 180 + Math.random() * 60, { vol: v * 0.9, decay: 45, q: 2 });
+  });
+  band(b, 0.52, 0.12, 2200, { vol: 0.5, decay: 60, q: 3 });
+  band(b, 0.52, 0.18, 150, { vol: 0.7, decay: 30, q: 2 });
 });
 
-// Step: a gentle marimba "plink" for each square a pawn hops — soft and musical, not a click.
-write('step', 0.22, (b) => {
-  tone(b, 0, 0.22, 84, { vol: 0.45, decay: 22, harmonics: [1, 0, 0.28, 0, 0.08], attack: 0.004 });
-  tone(b, 0, 0.12, 96, { vol: 0.08, decay: 40, harmonics: [1], attack: 0.004 });
+// Step: a soft bubble pop for each square (pitch rises a little — friendly, not a click).
+write('step', 0.16, (b) => {
+  sweep(b, 0, 0.12, 520, 900, { vol: 0.55, decay: 26, attack: 0.004 });
+  band(b, 0, 0.02, 3000, { vol: 0.08, decay: 200, q: 2 });
 });
 
-// Ladder: bright rising climb (quick notes up the scale) with a sparkle at the top.
-write('ladder', 1.1, (b) => {
-  [67, 69, 71, 72, 74, 76, 77, 79].forEach((m, i) => tone(b, i * 0.075, 0.25, m, { vol: 0.42, decay: 10, harmonics: [1, 0.35] }));
-  [88, 91, 96].forEach((m, i) => tone(b, 0.62 + i * 0.05, 0.45, m, { vol: 0.15, decay: 6, harmonics: [1] }));
+// Ladder: a harp run up the scale, then a bright chime.
+write('ladder', 1.4, (b) => {
+  [60, 62, 64, 67, 69, 72, 74, 76, 79].forEach((m, i) => pluck(b, i * 0.065, m + 7, 0.38));
+  [91, 96].forEach((m, i) => tone(b, 0.62 + i * 0.08, 0.7, m, { vol: 0.12, decay: 4, harmonics: [1] }));
 });
 
-// Snake: a hiss, then a sliding "wooo" down.
+// Snake: a quick hiss, then a cartoon slide-whistle down.
 write('snake', 1.3, (b) => {
-  noise(b, 0, 0.45, { vol: 0.35, decay: 3, smooth: 0.05 });
-  glide(b, 0.3, 0.95, 76, 52, { vol: 0.45, decay: 1.6, harmonics: [1, 0.5, 0.2] });
+  band(b, 0, 0.35, 6000, { vol: 0.25, decay: 6, q: 1.2 });
+  sweep(b, 0.22, 1.0, 1100, 220, { vol: 0.42, decay: 1.4, vibrato: 0.03, attack: 0.02 });
+});
+
+// Seeds: four tamarind seeds tossed onto the floor — tiny clicks scattering, then landing taps.
+write('seeds', 0.8, (b) => {
+  for (let i = 0; i < 16; i++) band(b, Math.random() * 0.35, 0.03, 4500 + Math.random() * 2500, { vol: 0.35, decay: 140, q: 4 });
+  [0.42, 0.5, 0.55, 0.61].forEach((t) => {
+    band(b, t, 0.05, 3200, { vol: 0.6, decay: 80, q: 3 });
+    band(b, t, 0.06, 400, { vol: 0.35, decay: 60, q: 2 });
+  });
+});
+
+// Move (Ashta Chamma step): a soft wooden tap.
+write('move', 0.14, (b) => {
+  band(b, 0, 0.08, 900, { vol: 0.6, decay: 70, q: 5 });
+  tone(b, 0, 0.12, 67, { vol: 0.25, decay: 40, harmonics: [1, 0.3], attack: 0.003 });
+});
+
+// Cut: a pawn knocked home — a thump, a whoosh, a falling tone.
+write('cut', 0.9, (b) => {
+  band(b, 0, 0.15, 120, { vol: 0.9, decay: 25, q: 1.5 });
+  band(b, 0.02, 0.3, 2500, { vol: 0.35, decay: 12, q: 0.8 });
+  sweep(b, 0.08, 0.7, 700, 180, { vol: 0.35, decay: 3 });
+});
+
+// Home: a pawn reaches the centre — two bright rising chimes.
+write('home', 0.9, (b) => {
+  pluck(b, 0, 84, 0.45);
+  pluck(b, 0.12, 91, 0.45);
+  tone(b, 0.24, 0.6, 96, { vol: 0.15, decay: 4, harmonics: [1] });
 });

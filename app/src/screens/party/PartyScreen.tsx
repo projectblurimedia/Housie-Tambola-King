@@ -272,7 +272,7 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
         onCancel={() => setConfirm(null)}
       />
     </Screen>
-      <PartyChat partyId={partyId} meId={state.me.userId} />
+      <PartyChat partyId={partyId} meId={state.me.userId} colors={PARTY_LOOK[g.kind].colors} players={state.players.filter((p) => p.active).length} />
     </View>
   );
 }

@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { Animated, Easing, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import Svg, { Circle, Defs, G, Line, Path, RadialGradient, Rect, Stop } from 'react-native-svg';
@@ -6,26 +6,49 @@ import { useTranslation } from 'react-i18next';
 import { Avatar } from '@/components/Avatar';
 import { Row, T } from '@/components/ui';
 import { CHAMMA_COLORS, CHAMMA_HOME, chammaCell, chammaSteps, chammaTarget } from '@/game/engine/board';
+import { playGameSound } from '@/services/sounds';
 import type { PartyState } from '@/services/partyService';
 import { fonts, spacing } from '@/theme';
 import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 import { Chances, Token, TurnBar } from './BoardBits';
-import { LastThrow, SeedsArt, ThrowOverlay } from './ChammaSeeds';
-import { GOLD_EDGE, GoldFrame } from './Premium';
+import { SeedsArt, SeedTray } from './ChammaSeeds';
+import { GOLD_EDGE } from './Premium';
 
 /** Spots inside a square when pawns share it (a lone pawn sits in the middle). */
 const SPOTS: [number, number][] = [[-0.2, -0.2], [0.2, 0.2], [0.2, -0.2], [-0.2, 0.2], [0, 0], [0, -0.26], [0, 0.26], [-0.26, 0]];
 const INNER = new Set([6, 7, 8, 11, 13, 16, 17, 18]);
 const EXTRA_SAFE = { corners: [6, 8, 16, 18], straight: [7, 11, 13, 17] } as const;
+/** Name tag gutter around the board (names sit outside each side's start square). */
+const GUTTER = 22;
+
+/** Turn the board a quarter `turns` times: (r, c) → (4 − c, r). */
+function rotateCell(cell: number, turns: number) {
+  let c = cell;
+  for (let i = 0; i < ((turns % 4) + 4) % 4; i++) c = (4 - (c % 5)) * 5 + Math.floor(c / 5);
+  return c;
+}
 
 /**
- * The board: a dark walnut floor; the outer ring and the inner ring in two tones so the path
- * reads at a glance; chalk crosses on every safe square (start squares in their side's colour,
- * the inner safe squares of the chosen layout in gold); a glowing flower in the centre.
+ * The board, drawn so MY side is at the bottom: a dark walnut floor, the outer and inner rings
+ * in two tones, chalk crosses on the safe squares (start squares in their side's colour, inner
+ * safe squares in gold — no coloured squares), each colour's arrow into the inner ring, and a
+ * glowing flower in the centre.
  */
-const BoardArt = React.memo(function BoardArt({ size, sidesInUse, safe }: { size: number; sidesInUse: number[]; safe: 'corners' | 'straight' }) {
+const BoardArt = React.memo(function BoardArt({
+  size,
+  sidesInUse,
+  safe,
+  view,
+}: {
+  size: number;
+  sidesInUse: number[];
+  safe: 'corners' | 'straight';
+  /** Quarter turns that bring my side to the bottom. */
+  view: number;
+}) {
   const cell = size / 5;
   const chalk = 'rgba(255,248,230,0.92)';
+  const at = (cellNo: number) => rotateCell(cellNo, view);
   const cross = (cellNo: number, color: string, width = 2.6) => {
     const x = (cellNo % 5) * cell;
     const y = Math.floor(cellNo / 5) * cell;
@@ -42,7 +65,7 @@ const BoardArt = React.memo(function BoardArt({ size, sidesInUse, safe }: { size
     <Svg width={size} height={size}>
       <Defs>
         <RadialGradient id="home" cx="50%" cy="50%" r="50%">
-          <Stop offset="0" stopColor="#FDE68A" stopOpacity="0.55" />
+          <Stop offset="0" stopColor="#FDE68A" stopOpacity="0.45" />
           <Stop offset="1" stopColor="#FDE68A" stopOpacity="0.05" />
         </RadialGradient>
       </Defs>
@@ -57,28 +80,8 @@ const BoardArt = React.memo(function BoardArt({ size, sidesInUse, safe }: { size
           fill={i === 12 ? 'url(#home)' : INNER.has(i) ? '#4A3426' : '#33241B'}
         />
       ))}
-      {/* Start squares, tinted with their side's colour */}
-      {[0, 1, 2, 3].map((side) => {
-        const cellNo = chammaCell(side, 0);
-        const used = sidesInUse.includes(side);
-        return (
-          <G key={`s${side}`}>
-            {used ? (
-              <Rect x={(cellNo % 5) * cell + 1.5} y={Math.floor(cellNo / 5) * cell + 1.5} width={cell - 3} height={cell - 3} rx={6} fill={CHAMMA_COLORS[side].hex} opacity={0.32} />
-            ) : null}
-            {cross(cellNo, used ? CHAMMA_COLORS[side].hex : chalk, 3)}
-          </G>
-        );
-      })}
-      {/* Inner safe squares (the chosen layout) */}
-      {EXTRA_SAFE[safe].map((c) => (
-        <G key={`is${c}`}>
-          <Rect x={(c % 5) * cell + 1.5} y={Math.floor(c / 5) * cell + 1.5} width={cell - 3} height={cell - 3} rx={6} fill="#8A6A1C" />
-          <Rect x={(c % 5) * cell + 4} y={Math.floor(c / 5) * cell + 4} width={cell - 8} height={cell - 8} rx={4} fill="none" stroke="#FDE68A" strokeOpacity={0.5} strokeWidth={1} />
-          {cross(c, '#FDE68A', 2.4)}
-        </G>
-      ))}
-      {/* Centre: home */}
+      {[0, 1, 2, 3].map((side) => cross(at(chammaCell(side, 0)), sidesInUse.includes(side) ? CHAMMA_COLORS[side].hex : chalk, 3))}
+      {EXTRA_SAFE[safe].map((c) => cross(at(c), '#FDE68A', 2.4))}
       {Array.from({ length: 8 }, (_, i) => {
         const a = (i * Math.PI) / 4;
         const r = cell * 0.38;
@@ -93,10 +96,9 @@ const BoardArt = React.memo(function BoardArt({ size, sidesInUse, safe }: { size
         );
       })}
       <Circle cx={mid} cy={mid} r={cell * 0.07} fill="#FDE68A" />
-      {/* How each colour goes inside: an arrow from its last outer square into the inner ring */}
       {sidesInUse.map((side) => {
-        const from = chammaCell(side, 15);
-        const to = chammaCell(side, 16);
+        const from = at(chammaCell(side, 15));
+        const to = at(chammaCell(side, 16));
         const ax = (from % 5) * cell + cell / 2;
         const ay = Math.floor(from / 5) * cell + cell / 2;
         const bx = (to % 5) * cell + cell / 2;
@@ -116,8 +118,10 @@ const BoardArt = React.memo(function BoardArt({ size, sidesInUse, safe }: { size
 });
 
 /**
- * Ashta Chamma: the board, everyone's pawns (walking square by square), the seeds (thrown onto the board for everyone to see), and on
- * my turn Throw, then tap a glowing pawn. Waiting pawns sit in each player's tray.
+ * Ashta Chamma: a big board turned so my side is always at the bottom, each player's name just
+ * outside their start square, pawns walking square by square (a tap sound each, a knock on a
+ * cut, a chime at home), the seed tray underneath (the only place throws show), and a turn bar
+ * that never changes height. On my turn: Throw, then tap a glowing pawn.
  */
 export function ChammaBoard({
   state,
@@ -136,15 +140,17 @@ export function ChammaBoard({
   const { width } = useWindowDimensions();
   const g = state.game;
   const s = g.state;
-  const size = Math.min(width - spacing.lg * 2 - 18, 360);
+  const size = Math.min(width - 16 - GUTTER * 2, 480);
   const cell = size / 5;
-  const pawnSize = cell * 0.38;
+  const pawnSize = cell * 0.4;
   const order = s.order ?? [];
   const sides = s.sides ?? {};
   const pawns = s.pawns ?? {};
   const cut = s.cut ?? {};
   const teams = !!s.teams;
   const me = state.me.userId;
+  const mySide = sides[me] ?? 0;
+  const view = (4 - mySide) % 4;
   const isMyTurn = s.turn === me;
   const turnPlayer = state.players.find((p) => p.userId === s.turn);
   const colorOf = (uid?: string) => CHAMMA_COLORS[(sides[uid ?? ''] ?? 0) % 4];
@@ -154,9 +160,10 @@ export function ChammaBoard({
   const myCut = !!cut[me] || s.needCut === false;
   const legal = canMove ? myPawns.map((p) => chammaTarget(p, throwValue!, myCut) !== null) : [false, false, false, false];
   const outOf = (uid: string) => !state.players.find((p) => p.userId === uid)?.active;
+  const nameOf = (uid: string) => (uid === me ? t('party.you') : state.players.find((p) => p.userId === uid)?.name ?? '');
 
-  // Pawn positions: centred when alone, spread when several share a square.
-  const cellOf = (uid: string, idx: number) => chammaCell(sides[uid] ?? 0, idx);
+  // Screen cell of a pawn (board turned so my side is at the bottom).
+  const cellOf = (uid: string, idx: number) => rotateCell(chammaCell(sides[uid] ?? 0, idx), view);
   const occupancy: Record<number, string[]> = {};
   for (const uid of order) {
     if (outOf(uid)) continue;
@@ -186,6 +193,13 @@ export function ChammaBoard({
     if (!hops.current[key]) hops.current[key] = new Animated.Value(0);
   }
 
+  // Seeds sound for every throw (anyone's).
+  const thrownSeen = useRef(s.thrownAt);
+  useEffect(() => {
+    if (s.thrownAt && s.thrownAt !== thrownSeen.current) playGameSound('seeds');
+    thrownSeen.current = s.thrownAt;
+  }, [s.thrownAt]);
+
   const last = s.last;
   useEffect(() => {
     const isNew = last && last.at !== seenAt.current && last.pawn !== undefined;
@@ -202,20 +216,28 @@ export function ChammaBoard({
     const wrapped = last.from >= 0 && last.to < last.from;
     const steps = chammaSteps(last.from, last.to, !wrapped);
     if (last.from < 0) a.setValue(cellXY(last.userId, 0));
+    const timers: ReturnType<typeof setTimeout>[] = [];
+    const STEP = 220;
+    steps.forEach((_, i) => timers.push(setTimeout(() => playGameSound('move'), 650 + i * STEP + STEP - 40)));
+    const endAt = 650 + steps.length * STEP;
+    if (last.captured?.length) timers.push(setTimeout(() => playGameSound('cut'), endAt));
+    else if (last.to === CHAMMA_HOME) timers.push(setTimeout(() => playGameSound('home'), endAt));
     Animated.sequence([
+      Animated.delay(650),
       ...steps.slice(0, -1).map((idx) =>
         Animated.parallel([
-          Animated.timing(a, { toValue: cellXY(last.userId, idx), duration: 220, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
+          Animated.timing(a, { toValue: cellXY(last.userId, idx), duration: STEP, easing: Easing.inOut(Easing.quad), useNativeDriver: false }),
           Animated.sequence([
-            Animated.timing(hop, { toValue: 1, duration: 110, useNativeDriver: false }),
-            Animated.timing(hop, { toValue: 0, duration: 110, useNativeDriver: false }),
+            Animated.timing(hop, { toValue: 1, duration: STEP / 2, useNativeDriver: false }),
+            Animated.timing(hop, { toValue: 0, duration: STEP / 2, useNativeDriver: false }),
           ]),
         ]),
       ),
       Animated.timing(a, { toValue: targets[movingKey] ?? cellXY(last.userId, last.to), duration: 260, easing: Easing.out(Easing.back(1.6)), useNativeDriver: false }),
     ]).start();
+    return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [last?.at, JSON.stringify(pawns)]);
+  }, [last?.at, JSON.stringify(pawns), size, view]);
 
   const glow = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -232,68 +254,99 @@ export function ChammaBoard({
 
   const sidesInUse = order.map((u) => sides[u] ?? 0);
   const firstWaiting = myPawns.findIndex((p) => p === -1);
-  const captured = last?.captured?.length ? last : null;
-  const nameOf = (uid: string) => (uid === me ? t('party.you') : state.players.find((p) => p.userId === uid)?.name ?? '');
+  const thrower = s.thrownBy ? state.players.find((p) => p.userId === s.thrownBy) : undefined;
+  const lastValue = s.thrownAt ? (s.seeds ?? []).filter(Boolean).length || 8 : null;
+
+  // Name tags outside each player's start square (bottom / right / top / left on screen).
+  const tagFor = (uid: string) => {
+    const startCell = rotateCell(chammaCell(sides[uid] ?? 0, 0), view);
+    const r = Math.floor(startCell / 5);
+    return r === 4 ? 'bottom' : r === 0 ? 'top' : startCell % 5 === 0 ? 'left' : 'right';
+  };
 
   return (
     <View>
-      <GoldFrame radius={20} width={2} colors={['#2A1B12', '#1C120C', '#2A1B12']} innerStyle={{ padding: 8, alignItems: 'center' }}>
-        <View style={{ width: size, height: size }}>
-          <BoardArt size={size} sidesInUse={sidesInUse} safe={s.safe ?? 'corners'} />
-          {Object.keys(targets).map((key) => {
-            const [uid, k] = key.split(':');
-            const c = colorOf(uid);
-            const idx = (pawns[uid] ?? [])[Number(k)];
-            const movable = uid === me && legal[Number(k)] && idx >= 0;
-            return (
-              <Animated.View
-                key={key}
-                style={[
-                  styles.pawn,
-                  {
-                    transform: [
-                      ...(anims.current[key]?.getTranslateTransform() ?? []),
-                      { translateY: hops.current[key]?.interpolate({ inputRange: [0, 1], outputRange: [0, -cell * 0.25] }) ?? 0 },
-                    ],
-                  },
-                ]}
-              >
-                <Pressable onPress={() => movable && onMove(Number(k))} disabled={!movable || busy} hitSlop={8}>
-                  {movable ? (
-                    <Animated.View
-                      style={[
-                        styles.halo,
-                        {
-                          width: pawnSize + 14,
-                          height: pawnSize + 14,
-                          borderRadius: pawnSize,
-                          left: -7,
-                          top: -7,
-                          opacity: glow,
-                          transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.18] }) }],
-                        },
-                      ]}
-                    />
-                  ) : null}
-                  <Token color={c.hex} dark={c.dark} size={pawnSize} glow={idx === CHAMMA_HOME} />
-                </Pressable>
-              </Animated.View>
-            );
-          })}
-          <ThrowOverlay
-            seeds={s.seeds ?? [true, false, true, false]}
-            throwKey={s.thrownAt}
-            name={s.thrownBy ? nameOf(s.thrownBy) : ''}
-            color={colorOf(s.thrownBy).hex}
-          />
+      <View style={[styles.boardWrap, { width: size + GUTTER * 2 + 8, height: size + GUTTER * 2 + 8, marginHorizontal: -(spacing.lg - 8) }]}>
+        {order.map((uid) => {
+          const where = tagFor(uid);
+          const c = colorOf(uid);
+          const label = (
+            <View style={[styles.tag, { backgroundColor: c.dark, borderColor: c.hex }, uid === s.turn && styles.tagTurn]}>
+              <T style={styles.tagText} numberOfLines={1} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
+                {nameOf(uid)}
+              </T>
+            </View>
+          );
+          const common = { position: 'absolute' as const, alignItems: 'center' as const, justifyContent: 'center' as const };
+          return where === 'bottom' ? (
+            <View key={uid} style={[common, { left: 0, right: 0, bottom: 0, height: GUTTER }]}>
+              {label}
+            </View>
+          ) : where === 'top' ? (
+            <View key={uid} style={[common, { left: 0, right: 0, top: 0, height: GUTTER }]}>
+              {label}
+            </View>
+          ) : (
+            <View key={uid} style={[common, { top: 0, bottom: 0, width: GUTTER, [where]: 0 }]}>
+              <View style={{ width: size, alignItems: 'center', transform: [{ rotate: where === 'left' ? '-90deg' : '90deg' }] }}>{label}</View>
+            </View>
+          );
+        })}
+        <View style={[styles.board, { width: size + 8, height: size + 8 }]}>
+          <View style={{ width: size, height: size }}>
+            <BoardArt size={size} sidesInUse={sidesInUse} safe={s.safe ?? 'corners'} view={view} />
+            {Object.keys(targets).map((key) => {
+              const [uid, k] = key.split(':');
+              const c = colorOf(uid);
+              const idx = (pawns[uid] ?? [])[Number(k)];
+              const movable = uid === me && legal[Number(k)] && idx >= 0;
+              return (
+                <Animated.View
+                  key={key}
+                  style={[
+                    styles.pawn,
+                    {
+                      transform: [
+                        ...(anims.current[key]?.getTranslateTransform() ?? []),
+                        { translateY: hops.current[key]?.interpolate({ inputRange: [0, 1], outputRange: [0, -cell * 0.25] }) ?? 0 },
+                      ],
+                    },
+                  ]}
+                >
+                  <Pressable onPress={() => movable && onMove(Number(k))} disabled={!movable || busy} hitSlop={8}>
+                    {movable ? (
+                      <Animated.View
+                        style={[
+                          styles.halo,
+                          {
+                            width: pawnSize + 14,
+                            height: pawnSize + 14,
+                            borderRadius: pawnSize,
+                            left: -7,
+                            top: -7,
+                            opacity: glow,
+                            transform: [{ scale: glow.interpolate({ inputRange: [0, 1], outputRange: [0.9, 1.18] }) }],
+                          },
+                        ]}
+                      />
+                    ) : null}
+                    <Token color={c.hex} dark={c.dark} size={pawnSize} glow={idx === CHAMMA_HOME} />
+                  </Pressable>
+                </Animated.View>
+              );
+            })}
+          </View>
         </View>
-      </GoldFrame>
+      </View>
 
-      {captured ? (
-        <T variant="smallBold" center color="#DC2626" style={{ marginTop: 6 }}>
-          {t('party.chamma.cutMsg', { name: nameOf(captured.userId) })}
-        </T>
-      ) : null}
+      {/* The throw — only here, under the board (fixed height). */}
+      <SeedTray
+        seeds={s.seeds ?? [true, false, true, false]}
+        throwKey={s.thrownAt}
+        value={lastValue}
+        name={thrower ? nameOf(thrower.userId) : t('party.chamma.noThrowYet')}
+        avatar={<Avatar avatarKey={thrower?.avatarKey ?? turnPlayer?.avatarKey ?? 'a1'} size={24} />}
+      />
 
       <TurnBar
         player={turnPlayer}
@@ -307,9 +360,7 @@ export function ChammaBoard({
         onAct={onThrow}
         actionArt={<SeedsArt />}
         waitingLabel={canMove ? t('party.chamma.tapPawn', { count: seconds }) : isMyTurn ? t('party.board.moving') : t('party.board.waitTurn')}
-      >
-        <LastThrow seeds={s.seeds ?? [true, false, true, false]} value={s.thrownAt ? (s.seeds ?? []).filter(Boolean).length || 8 : null} />
-      </TurnBar>
+      />
 
       {/* Players: colour, team, waiting pawns (tap one to bring it in on 4 / 8), pawns home, cut, chances */}
       <View style={styles.panels}>
@@ -383,16 +434,13 @@ export function ChammaBoard({
 }
 
 const styles = StyleSheet.create({
+  boardWrap: { alignSelf: 'center', alignItems: 'center', justifyContent: 'center' },
+  board: { padding: 4, borderRadius: 14, backgroundColor: '#1C120C', borderWidth: 2, borderColor: '#F5D06F', alignItems: 'center', justifyContent: 'center' },
+  tag: { paddingHorizontal: 10, height: 18, borderRadius: 9, borderWidth: 1.2, alignItems: 'center', justifyContent: 'center', maxWidth: 160 },
+  tagTurn: { borderColor: '#FDE68A', borderWidth: 2 },
+  tagText: { color: '#fff', fontFamily: fonts.semibold, fontSize: 11, lineHeight: 14 },
   pawn: { position: 'absolute', left: 0, top: 0 },
   halo: { position: 'absolute', backgroundColor: 'rgba(253,230,138,0.6)' },
-  seed: { alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(0,0,0,0.35)' },
-  seedUp: { shadowColor: '#FDE68A', shadowOpacity: 0.9, shadowRadius: 6, shadowOffset: { width: 0, height: 0 }, elevation: 4 },
-  seedDot: { backgroundColor: 'rgba(146,64,14,0.55)' },
-  seedShine: { position: 'absolute', left: 3, top: 3, backgroundColor: 'rgba(255,255,255,0.35)' },
-  bowl: { width: 74, height: 74, borderRadius: 37, padding: 4 },
-  bowlInner: { flex: 1, borderRadius: 33, backgroundColor: '#2A1406', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
-  valuePill: { marginTop: 4, backgroundColor: '#FDE68A', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 999 },
-  valueText: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 15, color: '#3B1D00' },
   panels: { flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'space-between', rowGap: 8, marginTop: spacing.md },
   panelEdge: { width: '48.5%', borderRadius: 14, padding: 1.2 },
   panel: { borderRadius: 13, padding: 8, backgroundColor: '#1A1030', borderLeftWidth: 4 },

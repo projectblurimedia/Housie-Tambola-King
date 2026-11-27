@@ -466,6 +466,8 @@ try {
     check(movesOk, 'every roll is 1–6, a 1 brings a token onto the board, and moves follow the ladders and snakes');
     await friend.rpc('send_party_chat', { p_game: snl.id, p_body: 'Good luck!' });
     check((await host.rpc('get_party_chat', { p_game: snl.id })).some((m) => m.body === 'Good luck!'), 'party games have chat');
+    await friend.rpc('party_chat_typing', { p_game: snl.id });
+    check(true, 'party chat typing signal accepted');
     const winner = snlState.players.find((p) => p.userId === snlState.game.state.winnerId);
     check(snlState.game.status === 'finished' && winner?.score === 100, 'first to 100 wins');
     const hostWon = snlState.game.state.winnerId === snlState.me.userId;

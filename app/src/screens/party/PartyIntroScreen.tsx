@@ -360,15 +360,15 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
               </View>
               <Toggle value={opts.teams} onValueChange={(teams) => setOpts({ ...opts, teams })} />
             </Row>
-            <Row gap={spacing.md}>
-              <View style={{ flex: 1 }}>
-                <T variant="bodyMedium">{t('party.chamma.optCut')}</T>
-                <T variant="tiny" muted>
-                  {t('party.chamma.optCutDesc')}
-                </T>
-              </View>
-              <Toggle value={opts.needCut} onValueChange={(needCut) => setOpts({ ...opts, needCut })} />
-            </Row>
+            <View>
+              <T variant="bodyMedium" style={{ marginBottom: 6 }}>
+                {t('party.chamma.optInside')}
+              </T>
+              <Row gap={spacing.sm}>
+                <Choice active={opts.needCut} colors={look.colors} title={t('party.chamma.cutNeeded')} desc={t('party.chamma.cutNeededDesc')} onPress={() => setOpts({ ...opts, needCut: true })} />
+                <Choice active={!opts.needCut} colors={look.colors} title={t('party.chamma.cutNotNeeded')} desc={t('party.chamma.cutNotNeededDesc')} onPress={() => setOpts({ ...opts, needCut: false })} />
+              </Row>
+            </View>
           </>
         ) : null}
 
@@ -389,13 +389,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
         <T variant="tiny" muted style={{ marginBottom: spacing.sm }}>
           {t('party.joinHint')}
         </T>
-        <CodeInput value={code} onChange={setCode} accent={look.accent === '#FDE68A' ? '#F59E0B' : look.colors[1]} />
-        <Pressable onPress={join} disabled={code.length !== 6 || busy !== null} style={({ pressed }) => [{ marginTop: spacing.md, opacity: code.length === 6 ? 1 : 0.5 }, pressed && { transform: [{ scale: 0.98 }] }]}>
-          <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }} style={styles.joinBtn}>
-            <Ionicons name="enter" size={18} color="#fff" />
-            <T style={styles.joinText}>{busy === 'join' ? t('common.loading') : t('join.join')}</T>
-          </LinearGradient>
-        </Pressable>
+        <CodeInput value={code} onChange={setCode} onSubmit={join} busy={busy === 'join'} accent={look.colors[1]} />
       </View>
       <View style={{ height: spacing.xl }} />
     </Screen>

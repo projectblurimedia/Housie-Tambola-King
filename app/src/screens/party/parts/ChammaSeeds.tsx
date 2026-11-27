@@ -176,3 +176,86 @@ const styles = StyleSheet.create({
   resultLabel: { fontFamily: fonts.display, fontSize: 18, lineHeight: 24, color: '#FDE68A', marginTop: 4, textShadowColor: 'rgba(0,0,0,0.6)', textShadowRadius: 4 },
   lastValue: { fontFamily: fonts.display, fontSize: 14, lineHeight: 18, color: '#FCD34D' },
 });
+
+/**
+ * The seed tray under the board (fixed height): who threw, the four seeds tumbling down and
+ * flipping as they land (pale-side-up ones glow), and the number in a gold badge — "4 Chamma!",
+ * "8 Ashta!". Shown in this one place only (never on the board).
+ */
+export function SeedTray({ seeds, throwKey, name, value, avatar }: { seeds: boolean[]; throwKey?: number; name: string; value: number | null; avatar?: React.ReactNode }) {
+  const { t } = useTranslation();
+  const p = useRef(new Animated.Value(1)).current;
+  const pop = useRef(new Animated.Value(1)).current;
+  const [landed, setLanded] = useState(true);
+  const first = useRef(true);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (!throwKey) return;
+    p.setValue(0);
+    pop.setValue(0);
+    setLanded(false);
+    const land = setTimeout(() => setLanded(true), 650);
+    Animated.sequence([
+      Animated.timing(p, { toValue: 1, duration: 750, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.spring(pop, { toValue: 1, friction: 4, tension: 140, useNativeDriver: true }),
+    ]).start();
+    return () => clearTimeout(land);
+  }, [throwKey, p, pop]);
+  const label = value === 8 ? t('party.chamma.ashta') : value === 4 ? t('party.chamma.chamma') : null;
+  const spots: [number, number, number][] = [
+    [-36, 2, -25],
+    [-12, -6, 18],
+    [12, 4, -8],
+    [36, -4, 30],
+  ];
+  return (
+    <View style={trayStyles.tray}>
+      <View style={{ flex: 1, gap: 4 }}>
+        <Row gap={6}>
+          {avatar}
+          <T variant="smallBold" color="#fff" numberOfLines={1} style={{ flex: 1 }}>
+            {name}
+          </T>
+        </Row>
+        <T variant="tiny" color="rgba(255,255,255,0.85)" numberOfLines={1}>
+          {value ? (label ? `${t('party.chamma.threwN', { count: value })} · ${label}` : t('party.chamma.threwN', { count: value })) : t('party.chamma.firstThrow')}
+        </T>
+      </View>
+      <View style={trayStyles.field}>
+        {seeds.map((sd, i) => (
+          <Animated.View
+            key={i}
+            style={{
+              position: 'absolute',
+              transform: [
+                { translateX: p.interpolate({ inputRange: [0, 1], outputRange: [0, spots[i][0]] }) },
+                { translateY: p.interpolate({ inputRange: [0, 0.55, 0.8, 1], outputRange: [-50, spots[i][1] - 8, spots[i][1] + 3, spots[i][1]] }) },
+                { rotate: p.interpolate({ inputRange: [0, 1], outputRange: [`${(i % 2 ? 1 : -1) * 540}deg`, `${spots[i][2]}deg`] }) },
+                { scaleY: p.interpolate({ inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1], outputRange: [1, 0.15, 1, 0.15, 1, 1] }) },
+              ],
+            }}
+          >
+            <TamarindSeed up={landed ? sd : i % 2 === 0} size={26} glow={landed} />
+          </Animated.View>
+        ))}
+      </View>
+      <Animated.View style={{ transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) }] }}>
+        <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} style={trayStyles.badge}>
+          <T style={trayStyles.badgeText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
+            {value ?? '–'}
+          </T>
+        </LinearGradient>
+      </Animated.View>
+    </View>
+  );
+}
+
+const trayStyles = StyleSheet.create({
+  tray: { height: 92, flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 8, paddingLeft: 14, paddingRight: 10, borderRadius: 18, backgroundColor: '#2A1B12', borderWidth: 2, borderColor: 'rgba(245,208,111,0.5)' },
+  field: { width: 104, height: 60, alignItems: 'center', justifyContent: 'center' },
+  badge: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFF7D6' },
+  badgeText: { fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: '#3B1D00' },
+});

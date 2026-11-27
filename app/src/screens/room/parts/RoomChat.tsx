@@ -51,7 +51,7 @@ export function useChatUnread(roomId: string, meId: string): number {
 }
 
 /** Three dots bouncing one after another ("typing…"). */
-function TypingDots({ color }: { color: string }) {
+export function TypingDots({ color }: { color: string }) {
   const dots = useRef([0, 1, 2].map(() => new Animated.Value(0))).current;
   useEffect(() => {
     const loops = dots.map((d, i) =>

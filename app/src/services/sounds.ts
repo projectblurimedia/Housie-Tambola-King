@@ -102,18 +102,23 @@ export function playStrikeSound() {
   }
 }
 
-export type GameSound = 'dice' | 'step' | 'ladder' | 'snake';
+export type GameSound = 'dice' | 'step' | 'ladder' | 'snake' | 'seeds' | 'move' | 'cut' | 'home';
 const GAME_SOURCES: Record<GameSound, number> = {
   dice: require('../../assets/sounds/dice.wav'),
   step: require('../../assets/sounds/step.wav'),
   ladder: require('../../assets/sounds/ladder.wav'),
   snake: require('../../assets/sounds/snake.wav'),
+  seeds: require('../../assets/sounds/seeds.wav'),
+  move: require('../../assets/sounds/move.wav'),
+  cut: require('../../assets/sounds/cut.wav'),
+  home: require('../../assets/sounds/home.wav'),
 };
 const gamePlayers: Partial<Record<GameSound, Player>> = {};
-const GAME_VOLUME: Record<GameSound, number> = { dice: 0.9, step: 0.55, ladder: 0.85, snake: 0.85 };
+const GAME_VOLUME: Record<GameSound, number> = { dice: 0.95, step: 0.5, ladder: 0.85, snake: 0.85, seeds: 0.9, move: 0.55, cut: 0.9, home: 0.85 };
 
 /**
- * Board-game effects (Snakes & Ladders): dice rattle, a hop per square, ladder climb, snake bite.
+ * Board-game effects: dice, a pop per square, ladder harp, snake slide (Snakes & Ladders);
+ * seeds, step, cut and home (Ashta Chamma).
  * Only when the player has Sounds on (Profile); silent on builds without the audio module.
  */
 export function playGameSound(kind: GameSound) {

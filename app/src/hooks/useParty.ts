@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { AppState } from 'react-native';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
+import { usePartyTyping } from '@/state/partyTypingStore';
 import { partyService, type PartyChatMessage, type PartyState } from '@/services/partyService';
 
 export const partyKey = (id: string) => ['party', id] as const;
@@ -71,9 +72,14 @@ export function useParty(id: string, onEvent?: (e: PartyEvent) => void) {
     on('finished', () => ({ type: 'finished' }));
     on('closed', () => ({ type: 'closed' }));
     on('show', (p) => ({ type: 'show', userId: String(p.userId), first: Boolean(p.first) }));
-    // Chat goes straight into the chat list (no reload of the game).
+    // Chat goes straight into the chat list (no reload of the game); a message ends their "typing".
+    channel.on('broadcast', { event: 'typing' }, ({ payload }) => {
+      const p = payload as { userId: string; name: string; avatarKey: string };
+      usePartyTyping.getState().set(id, p);
+    });
     channel.on('broadcast', { event: 'chat' }, ({ payload }) => {
       const msg = payload as PartyChatMessage;
+      usePartyTyping.getState().clear(id, msg.userId);
       qc.setQueryData<PartyChatMessage[]>(partyChatKey(id), (old) => (old?.some((m) => m.id === msg.id) ? old : [...(old ?? []), msg]));
     });
 

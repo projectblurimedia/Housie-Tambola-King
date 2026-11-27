@@ -571,7 +571,8 @@ function LobbyPanel({
               ) : null}
             </>
           ) : allReady ? (
-            <PulseButton title={t('lobby.startNow')} icon="play" onPress={() => start.mutate()} loading={start.isPending} />
+            // Same simple gold button as Set prizes (owner, 2026-11-27).
+            <Button title={t('lobby.startNow')} variant="gold" icon="play" loading={start.isPending} onPress={() => start.mutate()} />
           ) : (
             <>
               <Button title={t('lobby.startNow')} variant="gold" icon="play" disabled onPress={() => undefined} />

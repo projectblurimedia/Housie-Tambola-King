@@ -962,7 +962,9 @@
       "startArea": "Roll a 1 to start:",
       "needOne": "{{name}} rolled {{roll}} — need a 1 to start",
       "entered": "{{name}} rolled a 1 and is on the board!",
-      "notIn": "Start"
+      "notIn": "Start",
+      "allIn": "Everyone is on the board",
+      "firstRoll": "First roll"
     },
     "chamma": {
       "title": "Ashta Chamma",
@@ -997,7 +999,16 @@
       "noCutNeeded": "No cut needed — pawns go straight to the centre.",
       "teamA": "Team A",
       "teamB": "Team B",
-      "threw": "{{name}} threw"
+      "threw": "{{name}} threw",
+      "threwN_one": "threw {{count}}",
+      "threwN_other": "threw {{count}}",
+      "firstThrow": "Waiting for the first throw",
+      "noThrowYet": "No throw yet",
+      "optInside": "Going into the inner ring",
+      "cutNeeded": "Cut needed",
+      "cutNeededDesc": "Cut a pawn first, then go inside",
+      "cutNotNeeded": "No cut needed",
+      "cutNotNeededDesc": "Go inside any time"
     },
     "coinsOrFree": "Free or play coins",
     "entry": "Entry (coins)",

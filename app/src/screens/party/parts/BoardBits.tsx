@@ -326,12 +326,15 @@ export function TurnBar({
               <T variant="bodyMedium" numberOfLines={1}>
                 {isMe ? t('party.board.yourTurn') : t('party.board.theirTurn', { name: player?.name ?? '' })}
               </T>
-              <T variant="tiny" muted>
+              <T variant="tiny" muted numberOfLines={1}>
                 {isMe ? (canAct ? t('party.board.autoIn', { count: seconds }) : waitingLabel) : waitingLabel}
               </T>
             </View>
           </Row>
         </View>
+        {/* A fixed slot: the Roll / Throw button on my turn, otherwise a countdown — same size, so
+            nothing above or below moves when the turn changes. */}
+        <View style={styles.slot}>
         {isMe && canAct ? (
           /* My turn: a round gold button with a pulsing ring, the art inside, the label under it. */
           <Pressable onPress={onAct} disabled={busy} style={{ alignItems: 'center' }} accessibilityLabel={actionLabel}>
@@ -352,8 +355,18 @@ export function TurnBar({
             <T style={styles.roundLabel}>{actionLabel}</T>
           </Pressable>
         ) : (
-          children
+          children ?? (
+            <View style={[styles.timer, { borderColor: color.hex }]}>
+              <T style={styles.timerText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
+                {seconds}
+              </T>
+              <T variant="tiny" color="rgba(255,255,255,0.7)" maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
+                s
+              </T>
+            </View>
+          )
         )}
+        </View>
       </Row>
     </View>
   );
@@ -393,6 +406,9 @@ export function PlayerPill({
 }
 
 const styles = StyleSheet.create({
+  slot: { width: 92, height: 104, alignItems: 'center', justifyContent: 'center' },
+  timer: { width: 64, height: 64, borderRadius: 32, borderWidth: 3, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.25)' },
+  timerText: { fontFamily: fonts.display, fontSize: 22, lineHeight: 26, color: '#fff' },
   roundWrap: { width: 78, height: 78, alignItems: 'center', justifyContent: 'center' },
   ring: { position: 'absolute', width: 78, height: 78, borderRadius: 39, borderWidth: 3, borderColor: '#F5B700' },
   round: { width: 72, height: 72, borderRadius: 36, padding: 4, overflow: 'hidden', borderWidth: 2, borderColor: '#92400E' },

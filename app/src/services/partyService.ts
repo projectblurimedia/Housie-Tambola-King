@@ -201,6 +201,9 @@ export const partyService = {
   async sendChat(id: string, body: string): Promise<PartyChatMessage> {
     return unwrap(await supabase.rpc('send_party_chat', { p_game: id, p_body: body })) as PartyChatMessage;
   },
+  async chatTyping(id: string): Promise<void> {
+    unwrap(await supabase.rpc('party_chat_typing', { p_game: id }));
+  },
   async nudge(id: string): Promise<void> {
     unwrap(await supabase.rpc('party_nudge', { p_game: id }));
   },
