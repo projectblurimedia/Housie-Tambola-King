@@ -334,7 +334,10 @@
     "notEnoughCoins": "Not enough coins — you have {{have}}.",
     "yourCoins": "You have {{have}}",
     "confirmTicketsFree_one": "You get {{count}} ticket for this game. You can’t change it later.",
-    "confirmTicketsFree_other": "You get {{count}} tickets for this game. You can’t change it later."
+    "confirmTicketsFree_other": "You get {{count}} tickets for this game. You can’t change it later.",
+    "ticketsTaken": "Tickets taken",
+    "chooseTicketsSub": "Pick 1 to {{count}} tickets for this game",
+    "readySub": "See the prizes and get ready"
   },
   "game": {
     "getReady": "Get ready…",
@@ -443,7 +446,7 @@
     "won": "Won",
     "spent": "Tickets",
     "net": "Net",
-    "wins": "{{count}} wins",
+    "wins": "🏆 {{count}} Full Housie",
     "gameShort": "Game {{n}}",
     "spentTickets": "Tickets ({{count}})",
     "left": "left the room",

@@ -6,7 +6,8 @@ const ReactNative = require('react-native');
 /**
  * Phones set to a large font size scale every text up (Android goes to about 2×), which broke
  * layouts made for normal size: numbers wrapping in inputs, the 2×2 Home tiles falling into one
- * column. Text here may grow at most 15 % — normal and smaller font sizes are untouched.
+ * column. Owner (2026-11-27): text stays at normal size on every phone — it never grows with the
+ * phone setting (smaller settings still shrink it).
  *
  * React 19 ignores `defaultProps` on function components, so `Text` and `TextInput` are swapped
  * for wrappers that pass a default `maxFontSizeMultiplier` (a screen can still set its own).
@@ -14,11 +15,13 @@ const ReactNative = require('react-native');
  * Numbers inside fixed-size shapes (ticket cells, number balls, the 1–90 board, PIN boxes) use
  * FIXED_SHAPE_SCALE = 1: the shape cannot grow, so their text must not either.
  */
-export const MAX_FONT_SCALE = 1.15;
+export const MAX_FONT_SCALE = 1;
 
 function capped<T extends React.ComponentType<any>>(Original: T): T {
   const Wrapped = React.forwardRef((props: any, ref) =>
-    React.createElement(Original, { maxFontSizeMultiplier: MAX_FONT_SCALE, ...props, ref }),
+    // A screen passing maxFontSizeMultiplier={undefined} (our T always passes the prop) must still
+    // get the cap — spreading props after the default let undefined switch it off.
+    React.createElement(Original, { ...props, maxFontSizeMultiplier: props.maxFontSizeMultiplier ?? MAX_FONT_SCALE, ref }),
   );
   // Keep statics such as TextInput.State.
   for (const key of Object.keys(Original)) {
@@ -39,6 +42,15 @@ function swap(name: 'Text' | 'TextInput') {
 
 swap('Text');
 swap('TextInput');
+
+// Animated.Text was built from the original Text when React Native loaded: rebuild it on the capped one.
+try {
+  const Animated = ReactNative.Animated;
+  const animatedText = Animated.createAnimatedComponent(ReactNative.Text);
+  Object.defineProperty(Animated, 'Text', { configurable: true, enumerable: true, get: () => animatedText });
+} catch {
+  // Keep the original Animated.Text.
+}
 
 /** For text inside a fixed-size shape (ticket cell, ball, board cell, PIN box): never scaled up. */
 export const FIXED_SHAPE_SCALE = 1;

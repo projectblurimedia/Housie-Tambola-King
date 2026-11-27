@@ -91,6 +91,21 @@ export function useRoom(roomId: string, onEvent?: (event: RoomEvent) => void) {
       !connectedRef.current ? 5000 : q.state.data?.game?.status === 'running' ? 20000 : 15000,
   });
 
+  // Let in by the host (the room loads after NOT_IN_ROOM): the live channel was refused while we
+  // weren't a member, so open it again now, and load the chat — so chat and calls work at once.
+  const wasLockedOut = useRef(false);
+  useEffect(() => {
+    if (query.error) {
+      wasLockedOut.current = true;
+      return;
+    }
+    if (query.data && wasLockedOut.current) {
+      wasLockedOut.current = false;
+      setChannelTry((n) => n + 1);
+      qc.invalidateQueries({ queryKey: chatKey(roomId) });
+    }
+  }, [query.error, query.data, qc, roomId]);
+
   useEffect(() => {
     let cancelled = false;
     let refetchTimer: ReturnType<typeof setTimeout> | null = null;

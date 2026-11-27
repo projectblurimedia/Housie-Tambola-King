@@ -199,6 +199,8 @@ try {
     const lateChat = await late.rpc('get_chat', { p_room: room.roomId });
     check(!lateChat.some((m) => m.body === 'All the best!'), 'late joiner does not see the older chat');
     check(lateChat.some((m) => m.kind === 'join'), 'late joiner sees their own "joined" line');
+    await late.rpc('send_chat', { p_room: room.roomId, p_body: 'Hi all, joined mid-game' });
+    check((await host.rpc('get_chat', { p_room: room.roomId })).some((m) => m.body === 'Hi all, joined mid-game'), 'a player let in mid-game can chat');
     await late.rpc('leave_room', { p_room: room.roomId });
     check((await host.rpc('get_chat', { p_room: room.roomId })).some((m) => m.kind === 'leave'), 'chat shows "left" line');
   } finally {

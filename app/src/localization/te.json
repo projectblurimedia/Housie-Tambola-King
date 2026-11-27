@@ -334,7 +334,10 @@
     "notEnoughCoins": "కాయిన్స్ సరిపోవు — మీ దగ్గర {{have}} ఉన్నాయి.",
     "yourCoins": "మీ దగ్గర {{have}}",
     "confirmTicketsFree_one": "ఈ ఆటకు మీకు {{count}} టికెట్. తర్వాత మార్చలేరు.",
-    "confirmTicketsFree_other": "ఈ ఆటకు మీకు {{count}} టికెట్లు. తర్వాత మార్చలేరు."
+    "confirmTicketsFree_other": "ఈ ఆటకు మీకు {{count}} టికెట్లు. తర్వాత మార్చలేరు.",
+    "ticketsTaken": "టికెట్లు తీసుకున్నారు",
+    "chooseTicketsSub": "ఈ ఆటకు 1 నుండి {{count}} టికెట్లు ఎంచుకోండి",
+    "readySub": "బహుమతులు చూసి సిద్ధం అవ్వండి"
   },
   "game": {
     "getReady": "సిద్ధంగా ఉండండి…",
@@ -443,7 +446,7 @@
     "won": "గెలుపు",
     "spent": "టికెట్లు",
     "net": "నికర",
-    "wins": "{{count}} విజయాలు",
+    "wins": "🏆 {{count}} ఫుల్ హౌసీ",
     "gameShort": "ఆట {{n}}",
     "spentTickets": "టికెట్లు ({{count}})",
     "left": "రూమ్ నుండి వెళ్లారు",

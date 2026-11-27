@@ -62,7 +62,8 @@ export function TicketPicker({
   return (
     <>
       <Modal transparent visible={visible && !confirming} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
-        <Pressable style={[styles.backdrop, { backgroundColor: colors.overlay, paddingBottom: spacing.xl + insets.bottom }]} onPress={onClose}>
+        {/* Only the ✕ (or Later / back) closes it — a tap outside does nothing. */}
+        <View style={[styles.backdrop, { backgroundColor: colors.overlay, paddingBottom: spacing.xl + insets.bottom }]}>
           <Animated.View
             style={[
               styles.card,
@@ -82,6 +83,9 @@ export function TicketPicker({
                 <T variant="tiny" color="rgba(255,255,255,0.8)">
                   {t('lobby.upTo', { count: max })}
                 </T>
+                <Pressable onPress={onClose} hitSlop={10} style={styles.closeBtn} accessibilityLabel={t('common.close')}>
+                  <Ionicons name="close" size={18} color="#fff" />
+                </Pressable>
               </LinearGradient>
 
               <View style={{ padding: spacing.md, gap: spacing.md }}>
@@ -136,7 +140,7 @@ export function TicketPicker({
               </View>
             </Pressable>
           </Animated.View>
-        </Pressable>
+        </View>
       </Modal>
       <ConfirmModal
         visible={visible && confirming}
@@ -158,6 +162,7 @@ export function TicketPicker({
 }
 
 const styles = StyleSheet.create({
+  closeBtn: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.2)', alignItems: 'center', justifyContent: 'center', marginLeft: 6 },
   backdrop: { flex: 1, justifyContent: 'flex-end', paddingHorizontal: spacing.lg },
   card: { borderRadius: radius.xl, overflow: 'hidden', alignSelf: 'center', width: '100%', maxWidth: 380 },
   head: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, paddingVertical: spacing.sm },

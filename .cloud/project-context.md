@@ -54,6 +54,7 @@ _Last updated: 2026-11-19_
 - **Party round 4** (2026-11-25, migration 20261208000001_snakes_random_board, applied): Snakes & Ladders gets a random board per game (no ladder to 100, two big snakes), dice thrown onto the board centre; party cards and details hero use drawn SVG art (`screens/party/parts/gameArt.ts`) on jewel-tone gradients; party headers in the game's colours with an ⓘ rules modal (`RulesModal`); round gold Roll / Throw buttons; Ashta Chamma tamarind seeds drawn in SVG, throws shown on the board with the thrower's name and a big result, colour entry arrows into the inner ring, gold inner safe squares; Housie-style winner celebration (`PartyWinner`: rays, confetti, gold card).
 - Party screens (details + game) are fully themed in the game's colours: `ThemeOverride` (theme/useThemeColors) with `PARTY_THEME` palettes; Screen `backgroundColors` draws the page gradient.
 - ₹ Amount rooms open to everyone again (2026-11-26, migration 20261210000001_amount_for_all removes the short-lived approved-numbers feature 20261209000001); amounts are for scoring only and players settle cash among themselves outside the app. A real-money wallet (admin collecting and paying out) was declined — operating a money game under the 2025 Act. New rooms start Free. Create Room rule settings: compact rows (icon, name + live meaning, small − value + / toggle) and a two-way hint switch.
+- 2026-11-27 round (migration 20261211000001_standings_full_house_wins, applied): standings "wins" = Full Housie wins only (all prizes still listed). **Text never grows with the phone font size** (fontScaleCap MAX_FONT_SCALE = 1; bug fixed: T passed maxFontSizeMultiplier={undefined} which switched the cap off; Animated.Text rebuilt on the capped Text). Lobby: ticket counts private while tickets are taken (others see "Tickets taken"; pot shows from the Ready step); premium Choose tickets / I'm ready buttons; ticket picker and ready card close only with ✕. A player let in mid-game: live channel + chat reload when the room first loads after NOT_IN_ROOM.
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
@@ -63,7 +64,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (31 migrations, latest 20261210000001_amount_for_all) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (32 migrations, latest 20261211000001_standings_full_house_wins) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 24 unit tests; EAS project @projectblurimedia/housie-tambola-king; latest preview APK versionCode 5 (2026-11-19: PIN login, expo-audio, screen-orientation, blank native splash, new icon) via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |

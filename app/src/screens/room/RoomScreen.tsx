@@ -34,7 +34,8 @@ import { RoomSettingsCard } from './parts/RoomSettingsModal';
 import { APP_NAME, JOIN_LINK_BASE } from '@/constants/config';
 import type { PrizeType } from '@/game/engine/ticket';
 import { gameLabel } from '@/utils/gameLabel';
-import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
+import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
+import { ShineSweep } from '@/screens/party/parts/Premium';
 import type { Me, RoomState } from '@/types/api';
 import type { ScreenProps } from '@/navigation/types';
 import { LiveView } from './parts/LiveView';
@@ -198,14 +199,20 @@ function StepBar({ step }: { step: 1 | 2 | 3 }) {
   );
 }
 
-/** A big gold button that gently pulses, for the one thing a player should do next. */
+/**
+ * The one thing a player should do next (Choose tickets, I'm ready): a big glossy gold button
+ * with the icon on a dark badge, a bold title and a short line under it, a light sweeping
+ * across it, and a soft glow that breathes behind it.
+ */
 function PulseButton({
   title,
+  sub,
   icon,
   onPress,
   loading,
 }: {
   title: string;
+  sub?: string;
   icon: keyof typeof Ionicons.glyphMap;
   onPress: () => void;
   loading?: boolean;
@@ -214,17 +221,37 @@ function PulseButton({
   useEffect(() => {
     const loop = Animated.loop(
       Animated.sequence([
-        Animated.timing(pulse, { toValue: 1, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
-        Animated.timing(pulse, { toValue: 0, duration: 800, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 1, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
+        Animated.timing(pulse, { toValue: 0, duration: 900, easing: Easing.inOut(Easing.sin), useNativeDriver: true }),
       ]),
     );
     loop.start();
     return () => loop.stop();
   }, [pulse]);
   return (
-    <Animated.View style={{ transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.03] }) }] }}>
-      <Animated.View style={[styles.pulseGlow, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.25, 0.6] }) }]} />
-      <Button title={title} variant="gold" icon={icon} onPress={onPress} loading={loading} />
+    <Animated.View style={{ transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.02] }) }] }}>
+      <Animated.View style={[styles.pulseGlow, { opacity: pulse.interpolate({ inputRange: [0, 1], outputRange: [0.2, 0.55] }) }]} />
+      <Pressable onPress={onPress} disabled={loading} style={({ pressed }) => pressed && { transform: [{ scale: 0.98 }] }} accessibilityRole="button" accessibilityLabel={title}>
+        <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.bigAction}>
+          <ShineSweep every={1800} />
+          <View style={styles.bigActionIcon}>
+            <Ionicons name={icon} size={22} color="#FDE68A" />
+          </View>
+          <View style={{ flex: 1 }}>
+            <T style={styles.bigActionTitle} numberOfLines={1}>
+              {loading ? '…' : title}
+            </T>
+            {sub ? (
+              <T variant="tiny" color="#5B3A00" numberOfLines={1}>
+                {sub}
+              </T>
+            ) : null}
+          </View>
+          <View style={styles.bigActionArrow}>
+            <Ionicons name="chevron-forward" size={18} color="#3B1D00" />
+          </View>
+        </LinearGradient>
+      </Pressable>
     </Animated.View>
   );
 }
@@ -355,9 +382,10 @@ function LobbyPanel({
 
   const statusOf = (m: RoomState['members'][number]) => {
     if (phase === 'joining') return m.userId === room.hostId ? { label: `👑 ${t('room.host')}`, color: colors.goldDark } : null;
+    // While tickets are being taken, how many each player took stays private (until the host's Next).
     if (phase === 'tickets')
       return m.tickets > 0
-        ? { label: `✓ ${t('lobby.readyWithTickets', { count: m.tickets })}`, color: colors.success }
+        ? { label: m.userId === me.id ? `✓ ${t('lobby.readyWithTickets', { count: m.tickets })}` : `✓ ${t('lobby.ticketsTaken')}`, color: colors.success }
         : { label: t('lobby.notReady'), color: colors.warning };
     if (m.tickets === 0) return { label: t('lobby.watching'), color: colors.textMuted };
     return readySet.has(m.userId)
@@ -392,7 +420,7 @@ function LobbyPanel({
         </Card>
       ) : null}
 
-      {phase !== 'joining' ? (
+      {phase === 'ready' ? (
         <Card>
           <PotBadge pot={Number(game.pot)} tickets={game.ticketCount} price={Number(game.ticketPrice)} />
         </Card>
@@ -479,7 +507,7 @@ function LobbyPanel({
           {myTickets === 0 ? (
             <>
               <T muted>{t('lobby.noTickets')}</T>
-              <PulseButton title={t('lobby.chooseTickets')} icon="ticket" onPress={onOpenPicker} />
+              <PulseButton title={t('lobby.chooseTickets')} sub={t('lobby.chooseTicketsSub', { count: room.maxTickets ?? 3 })} icon="ticket" onPress={onOpenPicker} />
             </>
           ) : (
             // The tickets themselves appear once the game starts.
@@ -502,7 +530,7 @@ function LobbyPanel({
               </T>
             </Card>
           ) : (
-            <PulseButton title={t('lobby.readyButton')} icon="checkmark-done" onPress={() => setReadyOpen(true)} loading={ready.isPending} />
+            <PulseButton title={t('lobby.readyButton')} sub={t('lobby.readySub')} icon="checkmark-done" onPress={() => setReadyOpen(true)} loading={ready.isPending} />
           )
         ) : (
           <T muted center>
@@ -668,7 +696,7 @@ function PlayersPanel({ state, me, onLeave, onEnd }: { state: RoomState; me: Me;
             </View>
             {state.game?.status === 'lobby' ? (
               <T variant="smallBold" color={m.tickets ? colors.success : colors.textMuted}>
-                {m.tickets ? `🎫 ${m.tickets}` : t('lobby.noTicketsYet')}
+                {m.tickets ? (state.game.phase === 'tickets' && m.userId !== me.id ? `✓ ${t('lobby.ticketsTaken')}` : `🎫 ${m.tickets}`) : t('lobby.noTicketsYet')}
               </T>
             ) : running && m.tickets === 0 ? (
               <T variant="tiny" muted>
@@ -1169,7 +1197,11 @@ const styles = StyleSheet.create({
   },
   doneIcon: { width: 52, height: 52, borderRadius: 26, alignItems: 'center', justifyContent: 'center' },
   waitWrap: { flex: 1, alignItems: 'center', justifyContent: 'center', gap: spacing.sm, paddingHorizontal: spacing.lg },
-  pulseGlow: { position: 'absolute', top: -4, left: -4, right: -4, bottom: -4, borderRadius: 20, backgroundColor: '#F5B700' },
+  pulseGlow: { position: 'absolute', top: -5, left: -5, right: -5, bottom: -5, borderRadius: 26, backgroundColor: '#F5B700' },
+  bigAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, height: 68, borderRadius: 22, paddingHorizontal: 12, overflow: 'hidden', borderWidth: 1.5, borderColor: '#B45309' },
+  bigActionIcon: { width: 44, height: 44, borderRadius: 14, backgroundColor: '#3B1D00', alignItems: 'center', justifyContent: 'center' },
+  bigActionTitle: { fontFamily: fonts.display, fontSize: 18, lineHeight: 24, color: '#3B1D00' },
+  bigActionArrow: { width: 30, height: 30, borderRadius: 15, backgroundColor: 'rgba(255,255,255,0.45)', alignItems: 'center', justifyContent: 'center' },
   readyCard: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, borderWidth: 2 },
   waitingBox: { borderRadius: radius.md, padding: spacing.sm, marginTop: 4 },
   potCoin: {

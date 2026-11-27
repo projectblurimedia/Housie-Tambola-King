@@ -74,7 +74,7 @@ export function ReadySheet({
   return (
     <Modal transparent visible={visible} animationType="fade" onRequestClose={onClose} statusBarTranslucent>
       <KeyboardAvoidingView behavior="padding" style={[styles.backdrop, { backgroundColor: colors.overlay, paddingBottom: spacing.lg + insets.bottom }]}>
-        <Pressable style={StyleSheet.absoluteFill} onPress={onClose} />
+        {/* Only the ✕ closes it — a tap outside does nothing. */}
         <Animated.View
           style={[
             styles.card,
