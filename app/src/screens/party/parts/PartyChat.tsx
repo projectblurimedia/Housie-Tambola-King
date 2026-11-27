@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Animated, BackHandler, Easing, FlatList, KeyboardAvoidingView, PanResponder, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
+import { Animated, BackHandler, Easing, FlatList, Keyboard, PanResponder, Platform, Pressable, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -41,6 +41,27 @@ export function PartyChat({ partyId, meId, colors: gradient, players }: { partyI
   const sheetH = useRef(new Animated.Value(HALF)).current;
   const startH = useRef(HALF);
   const lastTyping = useRef(0);
+  // Keyboard: lift the panel by exactly the part of the keyboard that covers it, and never let
+  // it grow past the space left above (so it can't run off the top whatever the phone does).
+  const wrapRef = useRef<React.ComponentRef<typeof View>>(null);
+  const [kb, setKb] = useState(0);
+  const [areaH, setAreaH] = useState(screenH);
+  useEffect(() => {
+    if (!mounted) return;
+    const showEvt = Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow';
+    const hideEvt = Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide';
+    const a = Keyboard.addListener(showEvt, (e) => {
+      const top = e.endCoordinates.screenY;
+      if (!wrapRef.current) return setKb(e.endCoordinates.height);
+      wrapRef.current.measureInWindow((_x: number, y: number, _w: number, h: number) => setKb(Math.max(0, Math.min(e.endCoordinates.height, y + h - top))));
+    });
+    const b = Keyboard.addListener(hideEvt, () => setKb(0));
+    return () => {
+      a.remove();
+      b.remove();
+    };
+  }, [mounted]);
+  const maxH = Math.max(200, areaH - kb - insets.top - 8);
 
   const messages = chat.data ?? [];
   const newest = messages.length ? messages[messages.length - 1].id : 0;
@@ -66,6 +87,7 @@ export function PartyChat({ partyId, meId, colors: gradient, players }: { partyI
     Animated.spring(sheetH, { toValue: toFull ? FULL : HALF, friction: 9, tension: 70, useNativeDriver: false }).start();
   };
   const show = () => {
+    chat.refetch();
     setMounted(true);
     setOpen(true);
     setFull(false);
@@ -146,9 +168,9 @@ export function PartyChat({ partyId, meId, colors: gradient, players }: { partyI
       )}
 
       {mounted ? (
-        <KeyboardAvoidingView behavior="padding" style={StyleSheet.absoluteFill} pointerEvents="box-none">
+        <View ref={wrapRef} style={[StyleSheet.absoluteFill, { paddingBottom: kb }]} pointerEvents="box-none" onLayout={(e) => setAreaH(e.nativeEvent.layout.height)}>
           <View style={{ flex: 1 }} pointerEvents="none" />
-          <Animated.View style={[styles.sheet, { height: sheetH, opacity: fade, backgroundColor: colors.surface }]}>
+          <Animated.View style={[styles.sheet, { height: sheetH, maxHeight: maxH, opacity: fade, backgroundColor: colors.surface }]}>
             <View {...drag.panHandlers}>
               <LinearGradient colors={gradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}>
                 <Pressable onPress={() => snap(!full)} style={styles.handleArea} accessibilityLabel={t('chat.expand')}>
@@ -218,7 +240,7 @@ export function PartyChat({ partyId, meId, colors: gradient, players }: { partyI
               </Row>
             ) : null}
 
-            <Row gap={8} style={[styles.inputRow, { borderTopColor: colors.border, paddingBottom: spacing.sm + insets.bottom }]}>
+            <Row gap={8} style={[styles.inputRow, { borderTopColor: colors.border, paddingBottom: spacing.sm + (kb ? 0 : insets.bottom) }]}>
               <TextInput
                 value={text}
                 onChangeText={onType}
@@ -235,7 +257,7 @@ export function PartyChat({ partyId, meId, colors: gradient, players }: { partyI
               </Pressable>
             </Row>
           </Animated.View>
-        </KeyboardAvoidingView>
+        </View>
       ) : null}
     </>
   );

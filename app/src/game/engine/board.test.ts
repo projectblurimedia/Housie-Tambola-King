@@ -56,9 +56,9 @@ describe('ashta chamma', () => {
 });
 
 describe('snakes & ladders boards', () => {
-  it('has 5 boards with upright ladders, no ladder to the top row, no shared ends', async () => {
+  it('has 15 boards (5 per level) with upright ladders, no ladder to the top row, no shared ends', async () => {
     const { SNL_BOARDS, snlCell } = await import('./board');
-    expect(SNL_BOARDS).toHaveLength(5);
+    expect(SNL_BOARDS).toHaveLength(15);
     for (const b of SNL_BOARDS) {
       const ends = [...Object.entries(b.ladders), ...Object.entries(b.snakes)].flat().map(Number);
       expect(new Set(ends).size).toBe(ends.length);
@@ -71,6 +71,16 @@ describe('snakes & ladders boards', () => {
       expect(Object.entries(b.snakes).some(([h, t]) => snlCell(t).row - snlCell(Number(h)).row >= 6)).toBe(true);
       expect(Object.entries(b.ladders).some(([f, t]) => snlCell(Number(f)).row - snlCell(t).row >= 5)).toBe(true);
     }
+  });
+  it('puts more snakes and fewer ladders on harder boards', async () => {
+    const { SNL_BOARDS, snlLevelOf } = await import('./board');
+    const count = (lvl: string, k: 'snakes' | 'ladders') => Math.max(...SNL_BOARDS.filter((_, i) => snlLevelOf(i) === lvl).map((b) => Object.keys(b[k]).length));
+    const least = (lvl: string, k: 'snakes' | 'ladders') => Math.min(...SNL_BOARDS.filter((_, i) => snlLevelOf(i) === lvl).map((b) => Object.keys(b[k]).length));
+    expect(count('easy', 'snakes')).toBeLessThan(least('medium', 'snakes'));
+    expect(count('medium', 'snakes')).toBeLessThan(least('hard', 'snakes'));
+    expect(least('easy', 'ladders')).toBeGreaterThan(count('hard', 'ladders'));
+    expect(snlLevelOf(0)).toBe('easy');
+    expect(snlLevelOf(14)).toBe('hard');
   });
   it('spreads up to 10 tokens on one square, smaller as more share it', async () => {
     const { shareLayout } = await import('./board');

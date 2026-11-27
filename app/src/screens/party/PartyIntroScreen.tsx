@@ -19,7 +19,7 @@ import { GAME_ART } from './parts/gameArt';
 import { RulesModal } from './parts/RulesModal';
 import { BoardThumb } from './parts/SnakesBoard';
 import { CodeInput } from './parts/CodeInput';
-import { SNL_BOARDS } from '@/game/engine/board';
+import { SNL_BOARDS, SNL_LEVELS, SNL_PER_LEVEL, snlLevelOf } from '@/game/engine/board';
 
 const ENTRY_PRESETS = [0, 10, 25, 50, 100];
 const SAFE_CELLS = {
@@ -105,7 +105,8 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const board = isBoardGame(kind);
   const [rounds, setRounds] = useState(5);
   const [entry, setEntry] = useState(0);
-  const [boardNo, setBoardNo] = useState(0);
+  const [boardNo, setBoardNo] = useState(SNL_PER_LEVEL); // medium, board 1
+  const level = snlLevelOf(boardNo);
   const [opts, setOpts] = useState<Required<Pick<PartyOptions, 'start' | 'safe' | 'teams' | 'needCut'>>>({
     start: 'enter',
     safe: 'corners',
@@ -293,15 +294,35 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
           </Row>
         </View>
 
-        {/* Snakes & Ladders: pick one of the 5 boards */}
+        {/* Snakes & Ladders: pick a level (more snakes = harder), then one of its 5 boards */}
         {kind === 'snakes' ? (
           <View>
+            <T variant="bodyMedium" style={{ marginBottom: 6 }}>
+              {t('party.snakes.level')}
+            </T>
+            <Row gap={spacing.sm} style={{ marginBottom: spacing.md }}>
+              {SNL_LEVELS.map((lv, li) => (
+                <Choice
+                  key={lv}
+                  active={level === lv}
+                  colors={look.colors}
+                  title={t('party.snakes.' + lv)}
+                  desc={t('party.snakes.' + lv + 'Desc')}
+                  onPress={() => setBoardNo(li * SNL_PER_LEVEL)}
+                >
+                  <T style={{ fontSize: 22, lineHeight: 28 }} maxFontSizeMultiplier={1}>
+                    {lv === 'easy' ? '🌱' : lv === 'medium' ? '⚡' : '🔥'}
+                  </T>
+                </Choice>
+              ))}
+            </Row>
             <T variant="bodyMedium">{t('party.snakes.chooseBoard')}</T>
             <T variant="tiny" muted>
               {t('party.snakes.chooseBoardDesc')}
             </T>
             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
               {SNL_BOARDS.map((b, i) => {
+                if (snlLevelOf(i) !== level) return null;
                 const on = boardNo === i;
                 return (
                   <Pressable key={i} onPress={() => setBoardNo(i)} style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>

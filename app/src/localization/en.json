@@ -941,7 +941,11 @@
       "autoIn_other": "Plays for you in {{count}} s",
       "moving": "Moving…",
       "waitTurn": "Waiting for their move",
-      "out": "Out"
+      "out": "Out",
+      "tapRoll": "TAP TO ROLL",
+      "tapThrow": "TAP TO THROW",
+      "rolling": "Rolling…",
+      "yourTurnRoll": "Your turn — tap the die to roll"
     },
     "snakes": {
       "title": "Snakes & Ladders",
@@ -958,13 +962,20 @@
       "bitten": "{{name}} was bitten — down to {{to}} 🐍",
       "tooHigh": "{{name}} needs an exact roll to reach 100",
       "chooseBoard": "Choose a board",
-      "chooseBoardDesc": "5 boards — each with its own snakes and ladders",
+      "chooseBoardDesc": "5 boards for each level — each with its own snakes and ladders",
       "startArea": "Roll a 1 to start:",
       "needOne": "{{name}} rolled {{roll}} — need a 1 to start",
       "entered": "{{name}} rolled a 1 and is on the board!",
       "notIn": "Start",
       "allIn": "Everyone is on the board",
-      "firstRoll": "First roll"
+      "firstRoll": "First roll",
+      "level": "Difficulty",
+      "easy": "Easy",
+      "easyDesc": "4 snakes · 8 ladders",
+      "medium": "Medium",
+      "mediumDesc": "6–7 snakes · 6–7 ladders",
+      "hard": "Hard",
+      "hardDesc": "9 snakes · 4 ladders"
     },
     "chamma": {
       "title": "Ashta Chamma",
@@ -1008,7 +1019,9 @@
       "cutNeeded": "Cut needed",
       "cutNeededDesc": "Cut a pawn first, then go inside",
       "cutNotNeeded": "No cut needed",
-      "cutNotNeededDesc": "Go inside any time"
+      "cutNotNeededDesc": "Go inside any time",
+      "throwing": "Throwing…",
+      "yourThrow": "Your turn — tap the seeds to throw"
     },
     "coinsOrFree": "Free or play coins",
     "entry": "Entry (coins)",

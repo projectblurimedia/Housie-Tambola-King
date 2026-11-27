@@ -259,3 +259,89 @@ const trayStyles = StyleSheet.create({
   badge: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#FFF7D6' },
   badgeText: { fontFamily: fonts.display, fontSize: 22, lineHeight: 28, color: '#3B1D00' },
 });
+
+/**
+ * The seeds in the middle of the play area. Tapped Throw (`throwing`): they shake in the hand at
+ * once. A new throw (`throwKey`): they toss up, spin and flip, scatter onto the pad and land —
+ * pale-side-up ones glow — then the number pops in a gold badge.
+ */
+export function SeedPad({ seeds, throwKey, throwing, value }: { seeds: boolean[]; throwKey?: number; throwing: boolean; value: number | null }) {
+  const p = useRef(new Animated.Value(1)).current;
+  const pop = useRef(new Animated.Value(value ? 1 : 0)).current;
+  const shake = useRef(new Animated.Value(0)).current;
+  const [landed, setLanded] = useState(true);
+  const first = useRef(true);
+  useEffect(() => {
+    if (!throwing) return;
+    pop.setValue(0);
+    const loop = Animated.loop(
+      Animated.sequence([
+        Animated.timing(shake, { toValue: 1, duration: 90, useNativeDriver: true }),
+        Animated.timing(shake, { toValue: -1, duration: 180, useNativeDriver: true }),
+        Animated.timing(shake, { toValue: 0, duration: 90, useNativeDriver: true }),
+      ]),
+    );
+    loop.start();
+    return () => {
+      loop.stop();
+      shake.setValue(0);
+    };
+  }, [throwing, shake, pop]);
+  useEffect(() => {
+    if (first.current) {
+      first.current = false;
+      return;
+    }
+    if (!throwKey) return;
+    p.setValue(0);
+    pop.setValue(0);
+    setLanded(false);
+    const land = setTimeout(() => setLanded(true), 560);
+    Animated.sequence([
+      Animated.timing(p, { toValue: 1, duration: 680, easing: Easing.out(Easing.quad), useNativeDriver: true }),
+      Animated.spring(pop, { toValue: 1, friction: 4, tension: 150, useNativeDriver: true }),
+    ]).start();
+    return () => clearTimeout(land);
+  }, [throwKey, p, pop]);
+  const spots: [number, number, number][] = [
+    [-24, -10, -25],
+    [8, -16, 18],
+    [-10, 12, -8],
+    [22, 8, 30],
+  ];
+  return (
+    <View style={{ width: 96, height: 76, alignItems: 'center', justifyContent: 'center' }}>
+      {seeds.map((sd, i) => (
+        <Animated.View
+          key={i}
+          style={{
+            position: 'absolute',
+            transform: [
+              { translateX: p.interpolate({ inputRange: [0, 1], outputRange: [0, spots[i][0]] }) },
+              { translateY: p.interpolate({ inputRange: [0, 0.5, 0.78, 1], outputRange: [0, -34, spots[i][1] + 3, spots[i][1]] }) },
+              { rotate: p.interpolate({ inputRange: [0, 1], outputRange: [`${(i % 2 ? 1 : -1) * 540}deg`, `${spots[i][2]}deg`] }) },
+              { scaleY: p.interpolate({ inputRange: [0, 0.2, 0.4, 0.6, 0.8, 1], outputRange: [1, 0.15, 1, 0.15, 1, 1] }) },
+              { translateX: shake.interpolate({ inputRange: [-1, 1], outputRange: [-3 - i, 3 + i] }) },
+              { rotate: shake.interpolate({ inputRange: [-1, 1], outputRange: ['-12deg', '12deg'] }) },
+            ],
+          }}
+        >
+          <TamarindSeed up={landed ? sd : i % 2 === 0} size={24} glow={landed && !throwing} />
+        </Animated.View>
+      ))}
+      <Animated.View style={[padStyles.badgeWrap, { opacity: pop, transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.3, 1] }) }] }]}>
+        <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} style={padStyles.badge}>
+          <T style={padStyles.badgeText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
+            {value ?? '–'}
+          </T>
+        </LinearGradient>
+      </Animated.View>
+    </View>
+  );
+}
+
+const padStyles = StyleSheet.create({
+  badgeWrap: { position: 'absolute', right: -6, top: -8 },
+  badge: { width: 30, height: 30, borderRadius: 15, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFF7D6' },
+  badgeText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 21, color: '#3B1D00' },
+});

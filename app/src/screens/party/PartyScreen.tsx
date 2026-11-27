@@ -70,13 +70,15 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
   const seconds = party.secondsLeft(now);
 
   /** Run an action; refresh the state after it (broadcasts also do). */
-  const act = async (fn: () => Promise<void>, opts?: { optimistic?: (s: PartyState) => PartyState }) => {
+  const act = async (fn: () => Promise<void>, opts?: { optimistic?: (s: PartyState) => PartyState }): Promise<boolean> => {
     if (opts?.optimistic) qc.setQueryData<PartyState>(partyKey(partyId), (old) => (old ? opts.optimistic!(old) : old));
     setBusy(true);
     try {
       await fn();
+      return true;
     } catch (err) {
       showToast({ variant: 'error', title: errorMessage(err) });
+      return false;
     } finally {
       setBusy(false);
       qc.invalidateQueries({ queryKey: partyKey(partyId) });
@@ -228,7 +230,7 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
               }}
               onMove={(pawn) => {
                 buzz('light');
-                act(() => partyService.movePawn(partyId, pawn));
+                return act(() => partyService.movePawn(partyId, pawn));
               }}
             />
           ) : (

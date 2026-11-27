@@ -67,7 +67,7 @@ Find Seeta (3–15 players), Show (3–10), Snakes & Ladders (2–6) and Ashta C
 
 | RPC | Args | Returns | Errors |
 |---|---|---|---|
-| `create_party` | `p_kind, p_rounds (3–20; board games 1), p_entry (0–10,000 coins), p_options (Ashta Chamma: {start enter·board, safe corners·straight, teams, needCut})` | `{id, code}` | `INVALID_PARTY_KIND`, `INVALID_ROUNDS`, `INVALID_ENTRY`, `NOT_ENOUGH_COINS`, `TOO_MANY_OPEN_PARTIES` (3) |
+| `create_party` | `p_kind, p_rounds (3–20; board games 1), p_entry (0–10,000 coins), p_options (Snakes & Ladders: {board 0–14: easy 0–4, medium 5–9, hard 10–14}; Ashta Chamma: {start enter·board, safe corners·straight, teams, needCut})` | `{id, code}` | `INVALID_PARTY_KIND`, `INVALID_ROUNDS`, `INVALID_ENTRY`, `NOT_ENOUGH_COINS`, `TOO_MANY_OPEN_PARTIES` (3) |
 | `join_party_by_code` | `p_code` | party id (no approval; lobby only) | `PARTY_NOT_FOUND`, `PARTY_STARTED`, `PARTY_FULL` |
 | `get_party_state` | `p_game` | `{game{…, phase, turnNo, state, deadline}, players[{…, score, active, picked}], me{role, hand, pick}, serverNow}` | `NOT_A_MEMBER` |
 | `get_my_parties` | – | my open / finished party games | – |
