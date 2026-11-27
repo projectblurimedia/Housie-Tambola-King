@@ -2,7 +2,17 @@ import { useEffect, useState } from 'react';
 import { NavLink, Outlet, useLocation } from 'react-router-dom';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import type { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { faBars, faBug, faChartPie, faClockRotateLeft, faDice, faRightFromBracket, faSliders, faUsers } from '@fortawesome/free-solid-svg-icons';
+import {
+  faBars,
+  faBug,
+  faChartPie,
+  faClockRotateLeft,
+  faDice,
+  faRightFromBracket,
+  faSliders,
+  faUsers,
+  faXmark,
+} from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './Auth';
 
@@ -14,7 +24,6 @@ interface NavItem {
   gradient: string;
 }
 
-// Same colourful gradient squares as the NearbyU admin menu.
 const SECTIONS: { title: string; items: NavItem[] }[] = [
   {
     title: 'Overview',
@@ -38,37 +47,87 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
 ];
 
 const ALL = SECTIONS.flatMap((s) => s.items);
+const MOBILE = '(max-width: 900px)';
+const COLLAPSE_KEY = 'admin.navCollapsed';
 
 function itemFor(pathname: string): NavItem {
   return ALL.filter((i) => i.to !== '/' && pathname.startsWith(i.to)).sort((a, b) => b.to.length - a.to.length)[0] ?? ALL[0];
 }
 
+/** The app's icon: purple tile, gold edge, shiny crown and the 7 · 31 · 65 balls. */
 export function BrandMark({ size = 30 }: { size?: number }) {
-  return <img src="/favicon.svg" width={size} height={size} alt="" />;
+  return <img src="/brand.svg" width={size} height={size} alt="" style={{ display: 'block' }} />;
 }
 
-/** Every admin page: the glass sidebar (a drawer on small screens) and the page beside it. */
+function readCollapsed(): boolean {
+  try {
+    return localStorage.getItem(COLLAPSE_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Every admin page: a frosted-glass sidebar beside the page. The ☰ button always works:
+ * on a wide screen it folds the sidebar away (remembered), on a phone it opens a drawer that
+ * closes with ✕, the dimmed backdrop, Esc, or choosing a page.
+ */
 export function Layout() {
   const { me } = useAuth();
   const location = useLocation();
-  const [navOpen, setNavOpen] = useState(false);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(readCollapsed);
   const current = itemFor(location.pathname);
 
-  useEffect(() => setNavOpen(false), [location.pathname]);
+  useEffect(() => setDrawerOpen(false), [location.pathname]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && setDrawerOpen(false);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, []);
+
+  // The page behind an open drawer doesn't scroll.
+  useEffect(() => {
+    document.body.style.overflow = drawerOpen ? 'hidden' : '';
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [drawerOpen]);
+
+  const toggle = () => {
+    if (window.matchMedia(MOBILE).matches) {
+      setDrawerOpen((o) => !o);
+      return;
+    }
+    setCollapsed((c) => {
+      try {
+        localStorage.setItem(COLLAPSE_KEY, c ? '0' : '1');
+      } catch {
+        // Private mode: just don't remember it.
+      }
+      return !c;
+    });
+  };
 
   return (
-    <div className={`shell${navOpen ? ' nav-open' : ''}`}>
-      <div className="scrim" onClick={() => setNavOpen(false)} />
-      <aside className="sidebar">
+    <div className={`shell${drawerOpen ? ' nav-open' : ''}${collapsed ? ' nav-collapsed' : ''}`}>
+      <div className="scrim" onClick={() => setDrawerOpen(false)} aria-hidden />
+      <aside className="sidebar" aria-label="Menu">
         <div className="sidebar-panel glass">
           <div className="sidebar-brand">
             <span className="brand-mark">
-              <BrandMark />
+              <BrandMark size={44} />
             </span>
-            <div>
-              <div className="brand-name">Housie Tambola King</div>
+            <div className="brand-text">
+              <div className="brand-name">
+                Housie Tambola <span className="gold-text">King</span>
+              </div>
               <div className="brand-sub">Admin control centre</div>
             </div>
+            <button className="icon-btn drawer-close" onClick={() => setDrawerOpen(false)} aria-label="Close menu">
+              <FontAwesomeIcon icon={faXmark} />
+            </button>
           </div>
           <nav className="nav">
             {SECTIONS.map((section) => (
@@ -99,9 +158,17 @@ export function Layout() {
       </aside>
       <main className="main">
         <header className="topbar glass">
-          <button className="icon-btn menu-btn" onClick={() => setNavOpen(true)} aria-label="Menu">
+          <button
+            className="icon-btn menu-btn"
+            onClick={toggle}
+            aria-label={drawerOpen || !collapsed ? 'Hide menu' : 'Show menu'}
+            aria-expanded={drawerOpen || !collapsed}
+          >
             <FontAwesomeIcon icon={faBars} />
           </button>
+          <span className="topbar-brand">
+            <BrandMark size={34} />
+          </span>
           <span className="nav-icon" style={{ background: current.gradient }}>
             <FontAwesomeIcon icon={current.icon} />
           </span>

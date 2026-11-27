@@ -1,1 +1,54 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A78BFA"/><stop offset="1" stop-color="#4C1D95"/></linearGradient></defs><circle cx="32" cy="32" r="30" fill="url(#g)"/><circle cx="32" cy="32" r="19" fill="#fff"/><text x="32" y="40" text-anchor="middle" font-family="Arial" font-weight="700" font-size="22" fill="#1B1030">90</text></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <defs>
+    <radialGradient id="tile" cx="50%" cy="40%" r="70%">
+      <stop offset="0" stop-color="#B83AF0"/>
+      <stop offset="0.6" stop-color="#6D28D9"/>
+      <stop offset="1" stop-color="#3B0A6B"/>
+    </radialGradient>
+    <linearGradient id="edge" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#FFF1B8"/>
+      <stop offset="0.5" stop-color="#F5B700"/>
+      <stop offset="1" stop-color="#B87400"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFF8D6"/>
+      <stop offset="0.25" stop-color="#FFD84D"/>
+      <stop offset="0.5" stop-color="#E9A400"/>
+      <stop offset="0.72" stop-color="#FFE27A"/>
+      <stop offset="1" stop-color="#B87400"/>
+    </linearGradient>
+    <linearGradient id="band" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFE992"/>
+      <stop offset="0.5" stop-color="#D99100"/>
+      <stop offset="1" stop-color="#FFD24A"/>
+    </linearGradient>
+    <radialGradient id="ruby" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#FFB3C1"/><stop offset="1" stop-color="#C1121F"/></radialGradient>
+    <radialGradient id="sapphire" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#B3D4FF"/><stop offset="1" stop-color="#1D4ED8"/></radialGradient>
+    <radialGradient id="emerald" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#B9F5D8"/><stop offset="1" stop-color="#0E9F6E"/></radialGradient>
+    <radialGradient id="br" cx="38%" cy="34%" r="72%"><stop offset="0" stop-color="#FF9A9A"/><stop offset="0.5" stop-color="#E11D2E"/><stop offset="1" stop-color="#7F0A14"/></radialGradient>
+    <radialGradient id="bb" cx="38%" cy="34%" r="72%"><stop offset="0" stop-color="#9CCBFF"/><stop offset="0.5" stop-color="#1D6BEB"/><stop offset="1" stop-color="#0B2C7A"/></radialGradient>
+    <radialGradient id="bg" cx="38%" cy="34%" r="72%"><stop offset="0" stop-color="#A8F5A8"/><stop offset="0.5" stop-color="#16A34A"/><stop offset="1" stop-color="#0B4D22"/></radialGradient>
+  </defs>
+  <rect x="3" y="3" width="94" height="94" rx="24" fill="url(#tile)" stroke="url(#edge)" stroke-width="4"/>
+  <g transform="translate(17 7) scale(0.55)">
+    <path d="M14 74 L8 26 L38 50 L60 12 L82 50 L112 26 L106 74 Z" fill="#3B0764" opacity="0.35" transform="translate(0 4)"/>
+    <path d="M14 74 L8 26 L38 50 L60 12 L82 50 L112 26 L106 74 Z" fill="url(#metal)" stroke="#8A5A00" stroke-width="2.2" stroke-linejoin="round"/>
+    <path d="M16 66 L12 34 L30 50" stroke="#FFFFFF" stroke-opacity="0.7" stroke-width="2.4" fill="none" stroke-linecap="round"/>
+    <path d="M52 44 L60 24" stroke="#FFFFFF" stroke-opacity="0.75" stroke-width="2.4" stroke-linecap="round"/>
+    <rect x="12" y="72" width="96" height="16" rx="5" fill="url(#band)" stroke="#8A5A00" stroke-width="2.2"/>
+    <rect x="18" y="75" width="84" height="3.5" rx="1.8" fill="#FFFFFF" opacity="0.55"/>
+    <circle cx="8" cy="24" r="6.5" fill="url(#metal)" stroke="#8A5A00" stroke-width="1.6"/>
+    <circle cx="60" cy="10" r="6.5" fill="url(#metal)" stroke="#8A5A00" stroke-width="1.6"/>
+    <circle cx="112" cy="24" r="6.5" fill="url(#metal)" stroke="#8A5A00" stroke-width="1.6"/>
+    <path d="M60 48 L67 58 L60 68 L53 58 Z" fill="url(#ruby)" stroke="#7A0010" stroke-width="1.2"/>
+    <circle cx="36" cy="80" r="4.4" fill="url(#sapphire)"/>
+    <circle cx="60" cy="80" r="4.8" fill="url(#ruby)"/>
+    <circle cx="84" cy="80" r="4.4" fill="url(#emerald)"/>
+    <path d="M92 36 l2 -6 l2 6 l6 2 l-6 2 l-2 6 l-2 -6 l-6 -2 Z" fill="#FFFFFF" opacity="0.9"/>
+  </g>
+  <g font-family="Arial, sans-serif" font-weight="700" text-anchor="middle" fill="#111827">
+    <circle cx="28" cy="74" r="11" fill="url(#br)"/><circle cx="28" cy="74" r="6.8" fill="#fff"/><text x="28" y="77.2" font-size="8.6">7</text>
+    <circle cx="50" cy="74" r="11" fill="url(#bb)"/><circle cx="50" cy="74" r="6.8" fill="#fff"/><text x="50" y="76.8" font-size="7.2">31</text>
+    <circle cx="72" cy="74" r="11" fill="url(#bg)"/><circle cx="72" cy="74" r="6.8" fill="#fff"/><text x="72" y="76.8" font-size="7.2">65</text>
+  </g>
+</svg>

@@ -19,7 +19,9 @@
   --text: #1b1030;
   --muted: #6b6380;
   --border: rgba(60, 20, 110, 0.1);
-  --glass: rgba(255, 255, 255, 0.62);
+  --glass: rgba(255, 255, 255, 0.55);
+  --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.55), rgba(255, 255, 255, 0) 40%);
+  --edge-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.95), rgba(253, 230, 138, 0.6) 40%, rgba(167, 139, 250, 0.5));
   --glass-strong: rgba(255, 255, 255, 0.85);
   --glass-border: rgba(255, 255, 255, 0.78);
   --glass-shadow: 0 18px 50px rgba(52, 17, 99, 0.13);
@@ -38,7 +40,9 @@
     --text: #f4eeff;
     --muted: #a99bc7;
     --border: rgba(255, 255, 255, 0.09);
-    --glass: rgba(30, 18, 54, 0.62);
+    --glass: rgba(30, 18, 54, 0.55);
+    --sheen: linear-gradient(180deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 40%);
+    --edge-gradient: linear-gradient(135deg, rgba(255, 255, 255, 0.22), rgba(253, 230, 138, 0.25) 40%, rgba(167, 139, 250, 0.2));
     --glass-strong: rgba(36, 22, 64, 0.9);
     --glass-border: rgba(255, 255, 255, 0.1);
     --glass-shadow: 0 18px 50px rgba(0, 0, 0, 0.45);
@@ -62,17 +66,27 @@ body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Soft colour behind every glass panel, fixed while the page scrolls. */
+/* Slowly drifting colour (aurora) behind the frosted glass, fixed while the page scrolls. */
 body::before {
   content: '';
   position: fixed;
-  inset: 0;
+  inset: -10%;
   z-index: -1;
   background:
     radial-gradient(40vmax 40vmax at 8% 4%, var(--blob-a), transparent 60%),
     radial-gradient(36vmax 36vmax at 96% 18%, var(--blob-b), transparent 62%),
     radial-gradient(42vmax 42vmax at 60% 108%, var(--blob-c), transparent 60%),
+    radial-gradient(30vmax 30vmax at 30% 70%, var(--blob-a), transparent 65%),
     var(--bg);
+  animation: aurora 28s ease-in-out infinite alternate;
+}
+@keyframes aurora {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  50% { transform: translate3d(-3%, 2%, 0) scale(1.05); }
+  100% { transform: translate3d(2%, -2%, 0) scale(1.02); }
+}
+@media (prefers-reduced-motion: reduce) {
+  body::before { animation: none; }
 }
 
 a { color: var(--primary); text-decoration: none; }
@@ -90,14 +104,30 @@ code { font-size: 12px; }
 
 /* ---------- Glass ---------- */
 .glass, .panel {
-  background: var(--glass);
-  backdrop-filter: blur(22px) saturate(160%);
-  -webkit-backdrop-filter: blur(22px) saturate(160%);
+  position: relative;
+  background: var(--sheen), var(--glass);
+  backdrop-filter: blur(26px) saturate(180%);
+  -webkit-backdrop-filter: blur(26px) saturate(180%);
   border: 1px solid var(--glass-border);
-  box-shadow: var(--glass-shadow);
+  box-shadow: var(--glass-shadow), inset 0 1px 0 rgba(255, 255, 255, 0.5);
   border-radius: var(--radius);
 }
+/* A fine light edge that catches the light, like real glass. */
+.glass::after, .panel::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--edge-gradient);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
 .panel { padding: 20px; }
+.panel.stat { transition: transform 0.18s ease, box-shadow 0.18s ease; }
+.panel.stat:hover { transform: translateY(-3px); box-shadow: 0 24px 60px rgba(52, 17, 99, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.5); }
 
 /* ---------- Layout ---------- */
 .shell { display: flex; min-height: 100vh; }
@@ -111,25 +141,45 @@ code { font-size: 12px; }
   padding: 16px;
   display: flex;
   flex-direction: column;
-  z-index: 20;
+  z-index: 40;
+  transition: margin-left 0.28s ease, opacity 0.2s ease;
 }
+/* Wide screens: the menu button folds the sidebar away (and back). */
+.shell.nav-collapsed .sidebar { margin-left: -272px; opacity: 0; pointer-events: none; }
+.topbar-brand { display: grid; filter: drop-shadow(0 4px 10px rgba(76, 29, 149, 0.35)); }
+.shell:not(.nav-collapsed) .topbar-brand { display: none; }
 .sidebar-panel { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
 .sidebar-brand {
-  background: var(--gradient);
+  position: relative;
+  background: radial-gradient(120% 140% at 0% 0%, #a855f7 0%, #6d28d9 45%, #2e1065 100%);
   color: #fff;
-  padding: 20px 18px;
+  padding: 18px 16px;
   display: flex;
   align-items: center;
   gap: 12px;
+  overflow: hidden;
 }
+/* A light glint sweeping across the brand bar now and then. */
+.sidebar-brand::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(115deg, transparent 30%, rgba(255, 255, 255, 0.22) 45%, transparent 60%);
+  transform: translateX(-100%);
+  animation: sheen 6s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes sheen {
+  0%, 70% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+.brand-text { flex: 1; min-width: 0; }
+.gold-text { background: var(--gold-gradient); -webkit-background-clip: text; background-clip: text; color: transparent; font-weight: 700; }
+.drawer-close { display: none; background: rgba(255, 255, 255, 0.18); border-color: rgba(255, 255, 255, 0.3); color: #fff; position: relative; z-index: 1; }
 .brand-mark {
-  width: 46px;
-  height: 46px;
-  border-radius: 14px;
-  background: rgba(255, 255, 255, 0.2);
-  border: 1px solid rgba(255, 255, 255, 0.35);
   display: grid;
   place-items: center;
+  filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.35));
 }
 .brand-name { font-size: 16px; font-weight: 600; line-height: 1.2; }
 .brand-sub { font-size: 12px; opacity: 0.85; }
@@ -157,11 +207,26 @@ code { font-size: 12px; }
   transition: background 0.15s;
 }
 .nav-item:hover { background: var(--row-hover); }
+.nav-item { position: relative; }
 .nav-item.active {
-  background: var(--glass-strong);
+  background: var(--sheen), var(--glass-strong);
   border-color: var(--glass-border);
-  box-shadow: 0 6px 20px rgba(52, 17, 99, 0.12);
+  box-shadow: 0 8px 24px rgba(52, 17, 99, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+  font-weight: 600;
 }
+/* Gold glow bar beside the page you're on. */
+.nav-item.active::before {
+  content: '';
+  position: absolute;
+  left: -12px;
+  top: 10px;
+  bottom: 10px;
+  width: 4px;
+  border-radius: 0 4px 4px 0;
+  background: var(--gold-gradient);
+  box-shadow: 0 0 12px rgba(245, 183, 0, 0.7);
+}
+.nav-icon { box-shadow: 0 6px 14px rgba(0, 0, 0, 0.18), inset 0 1px 0 rgba(255, 255, 255, 0.35); }
 .nav-icon, .stat-icon {
   width: 34px;
   height: 34px;
@@ -208,7 +273,7 @@ code { font-size: 12px; }
 }
 .topbar-title h1 { font-size: 19px; margin: 0; }
 .topbar-title p { font-size: 12px; color: var(--muted); margin: 0; }
-.menu-btn { display: none; }
+.menu-btn { display: grid; }
 .content { max-width: 1240px; }
 
 .scrim { display: none; }
@@ -226,7 +291,7 @@ code { font-size: 12px; }
   padding: 9px 16px;
   font-weight: 600;
   cursor: pointer;
-  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.25);
+  box-shadow: 0 8px 20px rgba(124, 58, 237, 0.25), inset 0 1px 0 rgba(255, 255, 255, 0.35);
   transition: transform 0.12s, filter 0.15s;
 }
 .btn:hover:not(:disabled) { filter: brightness(1.06); }
@@ -325,18 +390,29 @@ pre { white-space: pre-wrap; word-break: break-word; font-size: 11px; margin: 0;
 @media (max-width: 900px) {
   .sidebar {
     position: fixed;
+    top: 0;
     left: 0;
+    margin-left: 0 !important;
+    opacity: 1 !important;
+    pointer-events: auto !important;
     transform: translateX(-105%);
-    transition: transform 0.22s ease;
+    transition: transform 0.26s ease;
   }
   .shell.nav-open .sidebar { transform: none; }
-  .shell.nav-open .scrim {
+  .scrim {
     display: block;
     position: fixed;
     inset: 0;
-    background: rgba(10, 4, 24, 0.45);
-    z-index: 18;
+    background: rgba(10, 4, 24, 0.5);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
+    z-index: 35;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
   }
+  .shell.nav-open .scrim { opacity: 1; pointer-events: auto; }
+  .drawer-close { display: grid; }
+  .shell:not(.nav-collapsed) .topbar-brand, .shell.nav-collapsed .topbar-brand { display: grid; }
   .main { padding: 12px 14px 40px; }
-  .menu-btn { display: grid; }
 }
