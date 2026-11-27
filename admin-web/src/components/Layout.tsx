@@ -11,7 +11,6 @@ import {
   faRightFromBracket,
   faSliders,
   faUsers,
-  faXmark,
 } from '@fortawesome/free-solid-svg-icons';
 import { supabase } from '@/lib/supabase';
 import { useAuth } from './Auth';
@@ -48,7 +47,7 @@ const SECTIONS: { title: string; items: NavItem[] }[] = [
 
 const ALL = SECTIONS.flatMap((s) => s.items);
 const MOBILE = '(max-width: 900px)';
-const COLLAPSE_KEY = 'admin.navCollapsed';
+const COLLAPSE_KEY = 'housie-admin-sidebar-collapsed';
 
 function itemFor(pathname: string): NavItem {
   return ALL.filter((i) => i.to !== '/' && pathname.startsWith(i.to)).sort((a, b) => b.to.length - a.to.length)[0] ?? ALL[0];
@@ -68,9 +67,9 @@ function readCollapsed(): boolean {
 }
 
 /**
- * Every admin page: a frosted-glass sidebar beside the page. The ☰ button always works:
- * on a wide screen it folds the sidebar away (remembered), on a phone it opens a drawer that
- * closes with ✕, the dimmed backdrop, Esc, or choosing a page.
+ * Every admin page, like the NearbyU admin: a frosted-glass sidebar beside the page. The ☰
+ * button folds it to icons only and back on a wide screen (remembered); on a phone it opens a
+ * drawer that closes on the dimmed backdrop, Esc, or choosing a page.
  */
 export function Layout() {
   const { me } = useAuth();
@@ -111,7 +110,7 @@ export function Layout() {
   };
 
   return (
-    <div className={`shell${drawerOpen ? ' nav-open' : ''}${collapsed ? ' nav-collapsed' : ''}`}>
+    <div className={`shell${drawerOpen ? ' nav-open' : ''}${collapsed ? ' collapsed' : ''}`}>
       <div className="scrim" onClick={() => setDrawerOpen(false)} aria-hidden />
       <aside className="sidebar" aria-label="Menu">
         <div className="sidebar-panel glass">
@@ -120,25 +119,20 @@ export function Layout() {
               <BrandMark size={44} />
             </span>
             <div className="brand-text">
-              <div className="brand-name">
-                Housie Tambola <span className="gold-text">King</span>
-              </div>
+              <div className="brand-name">Housie King</div>
               <div className="brand-sub">Admin control centre</div>
             </div>
-            <button className="icon-btn drawer-close" onClick={() => setDrawerOpen(false)} aria-label="Close menu">
-              <FontAwesomeIcon icon={faXmark} />
-            </button>
           </div>
           <nav className="nav">
             {SECTIONS.map((section) => (
               <div key={section.title}>
                 <div className="nav-section">{section.title}</div>
                 {section.items.map((item) => (
-                  <NavLink key={item.to} to={item.to} end={item.to === '/'} className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
+                  <NavLink key={item.to} to={item.to} end={item.to === '/'} title={item.label} className={({ isActive }) => `nav-item${isActive ? ' active' : ''}`}>
                     <span className="nav-icon" style={{ background: item.gradient }}>
                       <FontAwesomeIcon icon={item.icon} />
                     </span>
-                    {item.label}
+                    <span className="nav-label">{item.label}</span>
                   </NavLink>
                 ))}
               </div>
@@ -158,18 +152,10 @@ export function Layout() {
       </aside>
       <main className="main">
         <header className="topbar glass">
-          <button
-            className="icon-btn menu-btn"
-            onClick={toggle}
-            aria-label={drawerOpen || !collapsed ? 'Hide menu' : 'Show menu'}
-            aria-expanded={drawerOpen || !collapsed}
-          >
+          <button className="icon-btn" onClick={toggle} aria-label="Show or hide the menu" title="Show or hide the menu">
             <FontAwesomeIcon icon={faBars} />
           </button>
-          <span className="topbar-brand">
-            <BrandMark size={34} />
-          </span>
-          <span className="nav-icon" style={{ background: current.gradient }}>
+          <span className="nav-icon topbar-icon" style={{ background: current.gradient }}>
             <FontAwesomeIcon icon={current.icon} />
           </span>
           <div className="topbar-title">

@@ -37,11 +37,11 @@ export function LoginPage() {
       <div className="glass login-card">
         <div className="sidebar-brand">
           <span className="brand-mark">
-            <BrandMark size={52} />
+            <BrandMark size={44} />
           </span>
           <div>
             <div className="brand-name">
-              Housie Tambola <span className="gold-text">King</span>
+              Housie Tambola King
             </div>
             <div className="brand-sub">Admin control centre</div>
           </div>
