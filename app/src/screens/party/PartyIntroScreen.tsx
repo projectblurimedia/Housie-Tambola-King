@@ -94,54 +94,49 @@ function Choice({
 /** Easy / Medium / Hard: each in its own colours (green, amber, red) with its badge; the chosen one
  * lifts a little with a gold rim and a tick, the others dim. */
 const LEVEL_LOOK = {
-  easy: { colors: ['#4ADE80', '#16A34A', '#166534'], icon: '🌱' },
-  medium: { colors: ['#FCD34D', '#F59E0B', '#B45309'], icon: '⚡' },
-  hard: { colors: ['#FB7185', '#E11D48', '#881337'], icon: '🔥' },
+  easy: { bars: 1, color: '#4ADE80' },
+  medium: { bars: 2, color: '#FBBF24' },
+  hard: { bars: 3, color: '#F87171' },
 } as const;
 
 /**
- * Easy / Medium / Hard: bold game cards in the level's colours — a glossy shine, the icon in a
- * white medal, the name, and how many snakes and ladders the board has. The chosen one has a
- * white ring, lifts a little and gets a gold tick.
+ * Easy / Medium / Hard as dark glass cards with a signal-style difficulty meter (1, 2 or 3 bars
+ * lit in the level's colour), the name, and the board's snakes and ladders. The chosen one gets a
+ * gold edge, a soft gold glow and a tick; the others stay fully readable.
  */
 function LevelCard({ level, active, title, snakes, ladders, onPress }: { level: keyof typeof LEVEL_LOOK; active: boolean; title: string; snakes: number; ladders: number; onPress: () => void }) {
   const lk = LEVEL_LOOK[level];
-  const pop = useRef(new Animated.Value(active ? 1 : 0)).current;
+  const glow = useRef(new Animated.Value(active ? 1 : 0)).current;
   useEffect(() => {
-    Animated.spring(pop, { toValue: active ? 1 : 0, friction: 6, tension: 160, useNativeDriver: true }).start();
-  }, [active, pop]);
+    Animated.timing(glow, { toValue: active ? 1 : 0, duration: 220, useNativeDriver: true }).start();
+  }, [active, glow]);
   return (
-    <Pressable onPress={onPress} style={{ flex: 1 }} accessibilityRole="radio" accessibilityState={{ selected: active }}>
-      <Animated.View style={[styles.levelOuter, active && styles.levelOuterOn, { transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.03] }) }] }]}>
-        <LinearGradient colors={[...lk.colors]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={styles.levelCard}>
-          <LinearGradient colors={['rgba(255,255,255,0.45)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 0.55 }} style={styles.levelShine} />
-          <View style={styles.levelMedal}>
-            <T style={{ fontSize: 22, lineHeight: 28 }} maxFontSizeMultiplier={1}>
-              {lk.icon}
-            </T>
-          </View>
-          <T style={styles.levelName} numberOfLines={1} maxFontSizeMultiplier={1}>
-            {title}
+    <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
+      <View style={[styles.lvCard, active ? styles.lvCardOn : null]}>
+        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.lvGlow, { opacity: glow }]} />
+        <View style={styles.lvMeter}>
+          {[0, 1, 2].map((i) => (
+            <View key={i} style={[styles.lvBar, { height: 8 + i * 6, backgroundColor: i < lk.bars ? lk.color : 'rgba(255,255,255,0.22)' }]} />
+          ))}
+        </View>
+        <T style={[styles.lvName, { color: active ? '#FDE68A' : '#FFFFFF' }]} numberOfLines={1} maxFontSizeMultiplier={1}>
+          {title}
+        </T>
+        <View style={styles.lvRow}>
+          <T style={styles.lvStat} maxFontSizeMultiplier={1}>
+            🐍 {snakes}
           </T>
-          <View style={styles.levelChips}>
-            <View style={styles.levelChip}>
-              <T style={styles.levelChipText} maxFontSizeMultiplier={1}>
-                🐍 {snakes}
-              </T>
-            </View>
-            <View style={styles.levelChip}>
-              <T style={styles.levelChipText} maxFontSizeMultiplier={1}>
-                🪜 {ladders}
-              </T>
-            </View>
+          <View style={styles.lvDot} />
+          <T style={styles.lvStat} maxFontSizeMultiplier={1}>
+            🪜 {ladders}
+          </T>
+        </View>
+        {active ? (
+          <View style={styles.lvTick}>
+            <Ionicons name="checkmark" size={12} color="#3B1D00" />
           </View>
-          {active ? (
-            <View style={styles.levelTick}>
-              <Ionicons name="checkmark" size={13} color="#3B1D00" />
-            </View>
-          ) : null}
-        </LinearGradient>
-      </Animated.View>
+        ) : null}
+      </View>
     </Pressable>
   );
 }
@@ -450,19 +445,21 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
               {Array.from({ length: SNL_PER_LEVEL }, (_, k) => {
                 const idx = SNL_BOARDS.findIndex((_b, i) => snlLevelOf(i) === level) + k;
                 const on = boardNo === idx;
-                const giant = SNL_BOARDS[idx]?.snakes['99'] === 1;
                 return (
                   <Pressable key={k} onPress={() => setBoardNo(idx)} style={({ pressed }) => [{ flex: 1 }, pressed && { transform: [{ scale: 0.95 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
-                    <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#D97706'] : [colors.surfaceAlt, colors.surfaceAlt]} style={[styles.placeBtn, !on && { borderWidth: 1, borderColor: colors.border }]}>
-                      <T style={[styles.placeNum, { color: on ? '#3B1D00' : colors.text }]} maxFontSizeMultiplier={1}>
-                        {k + 1}
-                      </T>
-                      {giant ? (
-                        <T style={[styles.placeTag, { color: on ? '#7C2D12' : colors.textMuted }]} maxFontSizeMultiplier={1} numberOfLines={1}>
-                          🐍 99→1
+                    {on ? (
+                      <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} style={styles.placeBtn}>
+                        <T style={[styles.placeNum, { color: '#3B1D00' }]} maxFontSizeMultiplier={1}>
+                          {k + 1}
                         </T>
-                      ) : null}
-                    </LinearGradient>
+                      </LinearGradient>
+                    ) : (
+                      <View style={[styles.placeBtn, { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }]}>
+                        <T style={[styles.placeNum, { color: colors.text }]} maxFontSizeMultiplier={1}>
+                          {k + 1}
+                        </T>
+                      </View>
+                    )}
                   </Pressable>
                 );
               })}
@@ -553,16 +550,16 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
 }
 
 const styles = StyleSheet.create({
-  levelOuter: { borderRadius: 20, padding: 3, backgroundColor: 'transparent' },
-  levelOuterOn: { backgroundColor: '#FFFFFF', shadowColor: '#F5B700', shadowOpacity: 0.6, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
-  levelCard: { borderRadius: 17, paddingTop: 12, paddingBottom: 10, paddingHorizontal: 6, alignItems: 'center', overflow: 'hidden', minHeight: 128 },
-  levelShine: { position: 'absolute', left: 0, right: 0, top: 0, height: '60%' },
-  levelMedal: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)', elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
-  levelName: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22, color: '#FFFFFF', marginTop: 6, textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
-  levelChips: { flexDirection: 'row', gap: 4, marginTop: 6 },
-  levelChip: { paddingHorizontal: 6, height: 20, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.28)', justifyContent: 'center' },
-  levelChipText: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 14, color: '#FFFFFF' },
-  levelTick: { position: 'absolute', right: 6, top: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: '#FDE047', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' },
+  lvCard: { borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center', backgroundColor: 'rgba(15,23,42,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)', overflow: 'hidden', minHeight: 112, justifyContent: 'center' },
+  lvCardOn: { borderWidth: 2.5, borderColor: '#F5B700', backgroundColor: 'rgba(15,23,42,0.75)' },
+  lvGlow: { backgroundColor: 'rgba(245,183,0,0.16)' },
+  lvMeter: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 20, marginBottom: 6 },
+  lvBar: { width: 7, borderRadius: 2 },
+  lvName: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22 },
+  lvRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
+  lvStat: { fontFamily: fonts.semibold, fontSize: 11.5, lineHeight: 15, color: 'rgba(255,255,255,0.9)' },
+  lvDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.5)' },
+  lvTick: { position: 'absolute', right: 6, top: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: '#F5B700', alignItems: 'center', justifyContent: 'center' },
   designRing: { borderRadius: 14, padding: 3 },
   designFrame: { width: 94, height: 94, borderRadius: 11, borderWidth: 2, padding: 4, alignItems: 'center', justifyContent: 'center' },
   mosaic: { width: 80, height: 80, flexDirection: 'row', flexWrap: 'wrap', borderRadius: 4, overflow: 'hidden' },
@@ -571,7 +568,6 @@ const styles = StyleSheet.create({
   designTick: { position: 'absolute', right: 2, top: 2, width: 20, height: 20, borderRadius: 10, backgroundColor: '#16A34A', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' },
   placeBtn: { height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
   placeNum: { fontFamily: fonts.display, fontSize: 20, lineHeight: 25 },
-  placeTag: { fontFamily: fonts.bold, fontSize: 9, lineHeight: 12 },
   hero: { borderRadius: 26, padding: spacing.lg, paddingTop: spacing.sm, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   heroWatermark: { position: 'absolute', right: -14, bottom: -24, fontSize: 130, lineHeight: 150, opacity: 0.2 },
   heroBadge: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },

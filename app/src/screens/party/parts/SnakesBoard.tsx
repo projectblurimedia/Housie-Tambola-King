@@ -184,6 +184,16 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id, part }: { head: Pt
     );
   }
   if (part === 'body') return <G>{body}</G>;
+  const neck =
+    style === 'neon' ? (
+      <Path d={band(1, 0, 0.1)} fill="#0B0F1E" stroke={p.body} strokeWidth={2 * k} />
+    ) : (
+      <>
+        <Path d={band(1.05, 0, 0.11)} fill="rgba(0,0,0,0.28)" transform={`translate(${f1(2 * k)} ${f1(2.5 * k)})`} />
+        <Path d={band(1, 0, 0.11)} fill={p.body} stroke={p.line} strokeWidth={(style === 'cute' ? 1.8 : 1.2) * k} strokeLinejoin="round" />
+        {style === 'cute' || lite ? null : <Path d={band(0.16, 0.02, 0.11, 0.6)} fill="#fff" opacity={0.55} />}
+      </>
+    );
   return (
     <G>
       {lite || style === 'neon' || style === 'cute' ? null : (
@@ -195,6 +205,7 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id, part }: { head: Pt
           </RadialGradient>
         </Defs>
       )}
+      {neck}
       <G transform={`translate(${f1(h0.x)} ${f1(h0.y)}) rotate(${f1(ang)})`}>{headArt}</G>
     </G>
   );
@@ -208,20 +219,25 @@ function LadderArt({ from, to, cell, look, lite, foot }: { from: Pt; to: Pt; cel
   const ux = dx / len;
   const uy = dy / len;
   const A = { x: from.x - ux * cell * 0.2, y: from.y - uy * cell * 0.2 };
-  // Foot only: the ladder's first square (its entry point), drawn again over any snake passing it.
-  const B = foot ? { x: from.x + ux * cell * 0.55, y: from.y + uy * cell * 0.55 } : { x: to.x + ux * cell * 0.15, y: to.y + uy * cell * 0.15 };
+  const B = { x: to.x + ux * cell * 0.15, y: to.y + uy * cell * 0.15 };
+  const full = Math.hypot(B.x - A.x, B.y - A.y);
+  // Foot only: the ladder's first square (its entry point), drawn again over any snake passing it —
+  // the very same rails and rungs (same spacing), just cut short, so it reads as one ladder.
+  const reach = foot ? Math.min(full, cell * 0.85) : full;
+  const E = { x: A.x + ux * reach, y: A.y + uy * reach };
   const half = cell * (look.half ?? 0.19);
   const px = -uy * half;
   const py = ux * half;
-  const n = Math.max(4, Math.round(Math.hypot(B.x - A.x, B.y - A.y) / (cell * (look.gap ?? 0.3))));
+  const n = Math.max(4, Math.round(full / (cell * (look.gap ?? 0.3))));
   const sw = Math.max(0.5, cell / 36);
   const railD = (sx = 0, sy = 0) =>
-    [1, -1].map((k) => `M${f1(A.x + k * px + sx)} ${f1(A.y + k * py + sy)}L${f1(B.x + k * px + sx)} ${f1(B.y + k * py + sy)}`).join('');
+    [1, -1].map((k) => `M${f1(A.x + k * px + sx)} ${f1(A.y + k * py + sy)}L${f1(E.x + k * px + sx)} ${f1(E.y + k * py + sy)}`).join('');
   const colours = Array.isArray(look.rung) ? look.rung : [look.rung];
   const rungs = colours.map(() => '');
   let all = '';
   for (let i = 0; i < n; i++) {
     const t = (i + 0.5) / n;
+    if (t * full > reach) break;
     const x = A.x + (B.x - A.x) * t;
     const y = A.y + (B.y - A.y) * t;
     const seg = `M${f1(x + px)} ${f1(y + py)}L${f1(x - px)} ${f1(y - py)}`;
@@ -230,16 +246,14 @@ function LadderArt({ from, to, cell, look, lite, foot }: { from: Pt; to: Pt; cel
   }
   return (
     <G>
-      {lite ? null : <Path d={railD(2, 3)} stroke="rgba(0,0,0,0.22)" strokeWidth={(look.rail + 1) * sw} strokeLinecap="round" />}
-      {look.edge ? <Path d={all} stroke={look.edge} strokeWidth={(look.rungW + 1.4) * sw} strokeLinecap="round" /> : null}
-      {rungs.map((d, i) => (
-        <Path key={i} d={d} stroke={colours[i]} strokeWidth={look.rungW * sw} strokeLinecap="round" />
-      ))}
-      {look.edge ? <Path d={railD()} stroke={look.edge} strokeWidth={(look.rail + 1.6) * sw} strokeLinecap="round" /> : null}
-      <Path d={railD()} stroke={look.railC} strokeWidth={look.rail * sw} strokeLinecap="round" />
+      {lite || foot ? null : <Path d={railD(2, 3)} stroke="rgba(0,0,0,0.22)" strokeWidth={(look.rail + 1) * sw} strokeLinecap="round" />}
+      {look.edge && all ? <Path d={all} stroke={look.edge} strokeWidth={(look.rungW + 1.4) * sw} strokeLinecap="round" /> : null}
+      {rungs.map((d, i) => (d ? <Path key={i} d={d} stroke={colours[i]} strokeWidth={look.rungW * sw} strokeLinecap="round" /> : null))}
+      {look.edge ? <Path d={railD()} stroke={look.edge} strokeWidth={(look.rail + 1.6) * sw} strokeLinecap={foot ? 'butt' : 'round'} /> : null}
+      <Path d={railD()} stroke={look.railC} strokeWidth={look.rail * sw} strokeLinecap={foot ? 'butt' : 'round'} />
       {look.kind === 'candy' ? <Path d={railD()} stroke="#fff" strokeWidth={look.rail * sw} strokeDasharray="4 4" /> : null}
-      {look.kind === 'rope' && !lite ? <Path d={railD()} stroke="#8D6E63" strokeWidth={look.rail * 0.6 * sw} strokeDasharray="1.5 2.5" /> : null}
-      {look.shine && !lite ? <Path d={railD(-0.8)} stroke="#fff" strokeOpacity={0.7} strokeWidth={1} /> : null}
+      {look.kind === 'rope' ? <Path d={railD()} stroke="#8D6E63" strokeWidth={look.rail * 0.6 * sw} strokeDasharray="1.5 2.5" /> : null}
+      {look.shine && !foot ? <Path d={railD(-0.8)} stroke="#fff" strokeOpacity={0.7} strokeWidth={1} /> : null}
     </G>
   );
 }
@@ -360,7 +374,8 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
   const { width } = useWindowDimensions();
   const g = state.game;
   const s = g.state;
-  const size = Math.min(width - 26, 560);
+  // As big as the screen allows: the frame is thin so the squares get the room (board + 12 px of frame).
+  const size = Math.min(width - 14, 560);
   const cell = size / 10;
   const pawnSize = cell * 0.62;
   const order = s.order ?? state.players.map((p) => p.userId);
@@ -533,14 +548,14 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
 
   return (
     <View>
-      <View style={[styles.boardWrap, { width: size + 19, marginHorizontal: -(spacing.lg - 1), backgroundColor: theme.frame, borderColor: theme.edge }]}>
+      <View style={[styles.boardWrap, { width: size + 12, marginHorizontal: -(spacing.lg - 1), backgroundColor: theme.frame, borderColor: theme.edge }]}>
         {/* Title banner, like the painted Paramapadam boards */}
         <View style={styles.banner}>
           <T style={styles.bannerText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE} numberOfLines={1}>
             🪔  {t('party.snakes.title').toUpperCase()}  🪔
           </T>
         </View>
-        <View style={{ width: size + 4, padding: 2, borderRadius: 7, backgroundColor: '#1E1006' }}>
+        <View style={{ width: size + 2, padding: 1, borderRadius: 6, backgroundColor: '#1E1006' }}>
         <View style={{ width: size, height: size, borderRadius: 5, overflow: 'hidden' }}>
           {opened ? (
             <BoardArt size={size} board={board} design={design} icons={showIcons} />
@@ -606,7 +621,7 @@ export function BoardThumb({ index, board, size, design = 0, label }: { index: n
 }
 
 const styles = StyleSheet.create({
-  boardWrap: { alignSelf: 'center', padding: 5, borderRadius: 14, borderWidth: 2.5 },
+  boardWrap: { alignSelf: 'center', padding: 3, borderRadius: 12, borderWidth: 2 },
   banner: { height: 28, marginBottom: 5, borderRadius: 7, backgroundColor: '#FFF176', borderWidth: 1, borderColor: '#5D4037', alignItems: 'center', justifyContent: 'center' },
   bannerText: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 18, color: '#B71C1C', letterSpacing: 1 },
   token: { position: 'absolute', left: 0, top: 0 },
@@ -706,13 +721,13 @@ export function DesignPreview({
                 <Ionicons name="close" size={24} color="#fff" />
               </Pressable>
             </View>
-            <View style={[styles.boardWrap, { width: size + 19, backgroundColor: d.frame, borderColor: d.edge }]}>
+            <View style={[styles.boardWrap, { width: size + 12, backgroundColor: d.frame, borderColor: d.edge }]}>
               <View style={styles.banner}>
                 <T style={styles.bannerText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE} numberOfLines={1}>
                   🪔  {t('party.snakes.title').toUpperCase()}  🪔
                 </T>
               </View>
-              <View style={{ width: size + 4, padding: 2, borderRadius: 7, backgroundColor: '#1E1006' }}>
+              <View style={{ width: size + 2, padding: 1, borderRadius: 6, backgroundColor: '#1E1006' }}>
                 <View style={{ width: size, height: size, borderRadius: 5, overflow: 'hidden' }}>
                   <BoardArt size={size} board={board} design={design!} icons={icons} idPrefix={`p${design}`} />
                 </View>
