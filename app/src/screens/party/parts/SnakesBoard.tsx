@@ -40,7 +40,7 @@ const ellipsePath = (cx: number, cy: number, rx: number, ry: number, deg: number
  * smile) or glowing neon — on one smooth body along a natural wave (slim for short snakes, thicker
  * for long ones, fine pointed tail), with its head pinned on the neck inside its own square.
  */
-function SnakeArt({ head, tail, cell, style, paint, lite, id, part }: { head: Pt; tail: Pt; cell: number; style: SnakeStyle; paint: SnakePaint; lite?: boolean; id: string; part: 'body' | 'head' }) {
+function SnakeArt({ head, tail, cell, style, paint, lite, id, part }: { head: Pt; tail: Pt; cell: number; style: SnakeStyle; paint: SnakePaint; lite?: boolean; id: string; part: 'all' | 'body' | 'head' }) {
   const p = paint;
   /** Line widths follow the board size, so a small preview looks just like the game board. */
   const k = Math.max(0.35, cell / 40);
@@ -184,18 +184,36 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id, part }: { head: Pt
     );
   }
   if (part === 'body') return <G>{body}</G>;
+  /** The two edges of the neck (from the head to t1), without a line across the end. */
+  function sides(t1: number) {
+    const Lp: string[] = [];
+    const Rp: string[] = [];
+    for (let i = 0; i <= 12; i++) {
+      const t = (i / 12) * t1;
+      const { p: q, ux, uy } = fr(t);
+      const w = width(t) / 2;
+      Lp.push(`${f1(q.x + ux * w)} ${f1(q.y + uy * w)}`);
+      Rp.push(`${f1(q.x - ux * w)} ${f1(q.y - uy * w)}`);
+    }
+    return `M${Lp.join(' L')} M${Rp.join(' L')}`;
+  }
   const neck =
     style === 'neon' ? (
-      <Path d={band(1, 0, 0.1)} fill="#0B0F1E" stroke={p.body} strokeWidth={2 * k} />
+      <>
+        <Path d={band(1, 0, 0.1)} fill="#0B0F1E" />
+        <Path d={sides(0.1)} stroke={p.body} strokeWidth={2 * k} fill="none" />
+      </>
     ) : (
       <>
         <Path d={band(1.05, 0, 0.11)} fill="rgba(0,0,0,0.28)" transform={`translate(${f1(2 * k)} ${f1(2.5 * k)})`} />
-        <Path d={band(1, 0, 0.11)} fill={p.body} stroke={p.line} strokeWidth={(style === 'cute' ? 1.8 : 1.2) * k} strokeLinejoin="round" />
+        <Path d={band(1, 0, 0.11)} fill={p.body} />
+        <Path d={sides(0.11)} stroke={p.line} strokeWidth={(style === 'cute' ? 1.8 : 1.2) * k} fill="none" />
         {style === 'cute' || lite ? null : <Path d={band(0.16, 0.02, 0.11, 0.6)} fill="#fff" opacity={0.55} />}
       </>
     );
   return (
     <G>
+      {part === 'all' ? body : null}
       {lite || style === 'neon' || style === 'cute' ? null : (
         <Defs>
           <RadialGradient id={id} cx="40%" cy="35%" r="75%">
@@ -205,7 +223,7 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id, part }: { head: Pt
           </RadialGradient>
         </Defs>
       )}
-      {neck}
+      {part === 'head' ? neck : null}
       <G transform={`translate(${f1(h0.x)} ${f1(h0.y)}) rotate(${f1(ang)})`}>{headArt}</G>
     </G>
   );
@@ -276,6 +294,20 @@ export const BoardArt = React.memo(
     const gap = d.gap ?? 0.6;
     const rx = d.rx ? Math.max(1, (d.rx * cell) / 36) : 0;
     const paints = SNAKE_PAINTS[d.snake];
+    // Snakes whose head a ladder passes over: their head (and neck) is drawn on top of the ladders.
+    const raised = new Set(
+      Object.keys(board.snakes).filter((h) => {
+        const hp = c(Number(h));
+        return Object.entries(board.ladders).some(([f, to]) => {
+          const a = c(Number(f));
+          const b = c(to);
+          const vx = b.x - a.x;
+          const vy = b.y - a.y;
+          const t = Math.max(0, Math.min(1, ((hp.x - a.x) * vx + (hp.y - a.y) * vy) / (vx * vx + vy * vy || 1)));
+          return Math.hypot(a.x + vx * t - hp.x, a.y + vy * t - hp.y) < cell * 0.6;
+        });
+      }),
+    );
     const fills = new Map<string, string>();
     let light = '';
     let dark = '';
@@ -345,12 +377,12 @@ export const BoardArt = React.memo(
         {/* Layers: ladders, snake bodies, then every ladder's foot (its entry square) over any snake
             passing it, then every snake's head over any ladder passing it. */}
         {Object.entries(board.snakes).map(([h, tl], i) => (
-          <SnakeArt key={`s${h}`} part="body" id={`${idPrefix}h${h}`} style={d.snake} paint={paints[i % paints.length]} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
+          <SnakeArt key={`s${h}`} part={raised.has(h) ? 'body' : 'all'} id={`${idPrefix}h${h}`} style={d.snake} paint={paints[i % paints.length]} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
         ))}
         {Object.entries(board.ladders).map(([f, to]) => (
           <LadderArt key={`lf${f}`} foot from={c(Number(f))} to={c(to)} cell={cell} look={LADDER_LOOKS[d.ladder]} lite />
         ))}
-        {Object.entries(board.snakes).map(([h, tl], i) => (
+        {Object.entries(board.snakes).map(([h, tl], i) => !raised.has(h) ? null : (
           <SnakeArt key={`sh${h}`} part="head" id={`${idPrefix}h${h}`} style={d.snake} paint={paints[i % paints.length]} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
         ))}
       </Svg>

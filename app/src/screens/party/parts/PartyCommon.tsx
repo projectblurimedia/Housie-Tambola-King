@@ -14,6 +14,7 @@ import { JOIN_LINK_BASE } from '@/constants/config';
 import { isBoardGame, PARTY_LIMITS, type PartyPlayer, type PartyState } from '@/services/partyService';
 import { fonts, radius, spacing, useThemeColors } from '@/theme';
 import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
+import { GameCodeCard } from '@/components/GameCodeCard';
 
 /** Re-renders every half second (countdowns). */
 export function useNow(active = true) {
@@ -138,49 +139,13 @@ export function PartyLobby({
 
   return (
     <View>
-      {/* Game code: a dark glass card with a gold edge (same look as the join-code box) — the code
-          big and spaced in a pill, copy right inside it, then Copy and Invite. */}
-      <LinearGradient colors={['#FFF1A8', '#D4A017', '#8A6100', '#F5D06F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.codeEdge}>
-        <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.codeCard}>
-          <Row gap={6} style={{ alignSelf: 'stretch' }}>
-            <LinearGradient colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)']} style={styles.codeBadge}>
-              <T style={{ fontSize: 14, lineHeight: 18 }} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
-                {look.emoji}
-              </T>
-            </LinearGradient>
-            <T variant="tiny" color="#FDE68A" style={{ letterSpacing: 2, flex: 1, fontFamily: fonts.semibold }}>
-              {t('party.gameCode').toUpperCase()}
-            </T>
-          </Row>
-          <Pressable onPress={copy} accessibilityLabel={t('party.copyCode')} style={({ pressed }) => [styles.codePill, pressed && { transform: [{ scale: 0.98 }] }]}>
-            <View style={[styles.codeKey, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
-              <Ionicons name="key" size={16} color="#fff" />
-            </View>
-            <T style={styles.codeBig} maxFontSizeMultiplier={FIXED_SHAPE_SCALE} numberOfLines={1} adjustsFontSizeToFit>
-              {state.game.code}
-            </T>
-            <Animated.View style={[styles.copyBtn, copied && styles.copyBtnDone, { transform: [{ scale: copyPop.interpolate({ inputRange: [0, 0.5, 1], outputRange: [1, 1.25, 1] }) }] }]}>
-              <Ionicons name={copied ? 'checkmark' : 'copy-outline'} size={18} color={copied ? '#065F46' : '#3B1D00'} />
-            </Animated.View>
-          </Pressable>
-          <Row gap={spacing.sm} style={{ marginTop: spacing.md, alignSelf: 'stretch' }}>
-            <Pressable onPress={copy} style={({ pressed }) => [styles.codeAction, copied && styles.codeActionDone, pressed && { opacity: 0.8 }]}>
-              <Ionicons name={copied ? 'checkmark-circle' : 'copy'} size={15} color={copied ? '#065F46' : '#fff'} />
-              <T variant="smallBold" color={copied ? '#065F46' : '#fff'}>
-                {copied ? t('common.copied') : t('party.copyCode')}
-              </T>
-            </Pressable>
-            <Pressable onPress={share} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.85 }]}>
-              <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.codeInvite}>
-                <Ionicons name="share-social" size={15} color="#3B1D00" />
-                <T variant="smallBold" color="#3B1D00">
-                  {t('party.invite')}
-                </T>
-              </LinearGradient>
-            </Pressable>
-          </Row>
-        </LinearGradient>
-      </LinearGradient>
+      <GameCodeCard
+        code={state.game.code}
+        colors={look.colors}
+        emoji={look.emoji}
+        label={t('party.gameCode')}
+        shareMessage={t('party.shareMessage', { game: title, code: state.game.code, link: JOIN_LINK_BASE + state.game.code })}
+      />
 
       {/* Entry + pot, and the game's rules (Ashta Chamma) */}
       <View style={[styles.infoCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>

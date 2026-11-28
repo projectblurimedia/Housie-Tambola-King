@@ -166,7 +166,7 @@
     "quickPick": "Quick pick",
     "speedDesc": "A new number every {{count}} seconds",
     "noLimit": "No limit",
-    "namePlaceholderList": "Family Housie|Friends Housie|Office Housie|Kitty Party Housie|Diwali Housie",
+    "namePlaceholderList": "Friends Housie|Party Housie|Office Housie|Family Housie",
     "stakeTitle": "Play for",
     "stakeHint": "No price, play coins, or ₹ amounts (score only)",
     "stake_free": "Free",
@@ -1061,6 +1061,7 @@
     "congrats": "CONGRATULATIONS!",
     "joinHint": "Enter the 6-letter code your friend shared",
     "autoLeave_one": "Leaving the game in {{count}} s",
-    "autoLeave_other": "Leaving the game in {{count}} s"
+    "autoLeave_other": "Leaving the game in {{count}} s",
+    "newGameSub": "Pick your options and invite your friends"
   }
 }

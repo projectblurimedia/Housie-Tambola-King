@@ -45,31 +45,36 @@ ${card(108, 66, 22, 'c3', '#4ADE80,#15803D', '<path d="M-7 8 C-9 -4 0 -10 8 -8 C
 <path d="M80 6 l2.4 -7 l2.4 7 l7 2.4 l-7 2.4 l-2.4 7 l-2.4 -7 l-7 -2.4 Z" fill="#FFF7D6" transform="translate(52 6)"/>
 </svg>`;
 
+// Snakes & Ladders (owner, 2026-11-28): a tilted folk-colour board, a wooden ladder, a friendly banded
+// snake curling over it and a die.
 const snakes = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 160 120">
-<defs>
-  <linearGradient id="sk" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#A3E635"/><stop offset="1" stop-color="#15803D"/></linearGradient>
-  <linearGradient id="wd" x1="0" y1="0" x2="1" y2="0"><stop offset="0" stop-color="#8B5A2B"/><stop offset="0.5" stop-color="#D9A066"/><stop offset="1" stop-color="#8B5A2B"/></linearGradient>
-  <radialGradient id="g3" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#BEF264" stop-opacity="0.4"/><stop offset="1" stop-color="#BEF264" stop-opacity="0"/></radialGradient>
-</defs>
-<circle cx="80" cy="60" r="56" fill="url(#g3)"/>
-<g transform="rotate(-8 80 60)">
-  <rect x="34" y="16" width="92" height="92" rx="10" fill="#FFF8EC" opacity="0.95"/>
-  <path d="M34 39 h92 M34 62 h92 M34 85 h92 M57 16 v92 M80 16 v92 M103 16 v92" stroke="#E2C9A6" stroke-width="1"/>
-  <rect x="34" y="16" width="23" height="23" fill="#F6E3C6"/><rect x="80" y="16" width="23" height="23" fill="#F6E3C6"/><rect x="57" y="39" width="23" height="23" fill="#F6E3C6"/><rect x="103" y="39" width="23" height="23" fill="#F6E3C6"/><rect x="34" y="62" width="23" height="23" fill="#F6E3C6"/><rect x="80" y="62" width="23" height="23" fill="#F6E3C6"/><rect x="57" y="85" width="23" height="23" fill="#F6E3C6"/><rect x="103" y="85" width="23" height="23" fill="#F6E3C6"/>
-  <g stroke-linecap="round"><path d="M50 98 L92 28 M62 104 L104 34" stroke="#6B3E17" stroke-width="5"/><path d="M50 98 L92 28 M62 104 L104 34" stroke="url(#wd)" stroke-width="3"/>
-  <path d="M55 89 l12 6 M61 79 l12 6 M67 69 l12 6 M73 59 l12 6 M79 49 l12 6 M85 39 l12 6" stroke="#7C4A1E" stroke-width="3"/></g>
-  <path d="M112 30 C88 40 120 58 96 70 C72 82 98 96 70 102" fill="none" stroke="#14532D" stroke-width="12" stroke-linecap="round"/>
-  <path d="M112 30 C88 40 120 58 96 70 C72 82 98 96 70 102" fill="none" stroke="url(#sk)" stroke-width="9" stroke-linecap="round"/>
-  <path d="M112 30 C88 40 120 58 96 70 C72 82 98 96 70 102" fill="none" stroke="#FDE047" stroke-width="3" stroke-dasharray="2 7" stroke-linecap="round"/>
-  <ellipse cx="114" cy="28" rx="9" ry="7" fill="#15803D"/><ellipse cx="114" cy="28" rx="7.5" ry="5.6" fill="#84CC16"/>
-  <circle cx="117" cy="25" r="2" fill="#fff"/><circle cx="117.5" cy="25" r="1" fill="#111"/><circle cx="117" cy="31" r="2" fill="#fff"/><circle cx="117.5" cy="31" r="1" fill="#111"/>
-  <path d="M122 28 l6 -2 M122 28 l6 2" stroke="#E11D48" stroke-width="1.6" stroke-linecap="round"/>
-</g>
-<g transform="translate(26 84) rotate(-14)">
-  <rect x="-13" y="-13" width="26" height="26" rx="6" fill="#000" opacity="0.25" transform="translate(2 3)"/>
-  <rect x="-13" y="-13" width="26" height="26" rx="6" fill="#FFFFFF"/><rect x="-13" y="-13" width="26" height="13" rx="6" fill="#F1F5F9"/>
-  <circle cx="-6" cy="-6" r="2.6" fill="#1F2937"/><circle cx="0" cy="0" r="2.6" fill="#DC2626"/><circle cx="6" cy="6" r="2.6" fill="#1F2937"/>
-</g>
+  <defs>
+    <linearGradient id="sb" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22C55E"/><stop offset="1" stop-color="#15803D"/></linearGradient>
+    <radialGradient id="sh" cx="40%" cy="35%" r="70%"><stop offset="0" stop-color="#86EFAC"/><stop offset="1" stop-color="#15803D"/></radialGradient>
+    <linearGradient id="dice" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FFFFFF"/><stop offset="1" stop-color="#E5DCCB"/></linearGradient>
+  </defs>
+  <ellipse cx="80" cy="112" rx="62" ry="7" fill="rgba(0,0,0,0.25)"/>
+  <g transform="translate(36 14) rotate(-8 44 44)">
+    <rect x="-4" y="-4" width="96" height="96" rx="8" fill="#5D2E0B" stroke="#FDE047" stroke-width="2"/>
+    <g><rect x="0" y="0" width="22" height="22" fill="#FFD54F"/><rect x="22" y="0" width="22" height="22" fill="#FFB74D"/><rect x="44" y="0" width="22" height="22" fill="#CE93D8"/><rect x="66" y="0" width="22" height="22" fill="#81D4FA"/><rect x="0" y="22" width="22" height="22" fill="#81D4FA"/><rect x="22" y="22" width="22" height="22" fill="#AED581"/><rect x="44" y="22" width="22" height="22" fill="#F48FB1"/><rect x="66" y="22" width="22" height="22" fill="#FFD54F"/><rect x="0" y="44" width="22" height="22" fill="#FFD54F"/><rect x="22" y="44" width="22" height="22" fill="#FFB74D"/><rect x="44" y="44" width="22" height="22" fill="#CE93D8"/><rect x="66" y="44" width="22" height="22" fill="#81D4FA"/><rect x="0" y="66" width="22" height="22" fill="#81D4FA"/><rect x="22" y="66" width="22" height="22" fill="#AED581"/><rect x="44" y="66" width="22" height="22" fill="#F48FB1"/><rect x="66" y="66" width="22" height="22" fill="#FFD54F"/></g>
+    <g stroke="#3E2723" stroke-width="4.5" stroke-linecap="round"><line x1="18" y1="84" x2="30" y2="10"/><line x1="34" y1="86" x2="46" y2="12"/></g>
+    <g stroke="#B9732F" stroke-width="2.6" stroke-linecap="round"><line x1="18" y1="84" x2="30" y2="10"/><line x1="34" y1="86" x2="46" y2="12"/></g>
+    <g stroke="#E0A060" stroke-width="2.4" stroke-linecap="round"><line x1="19.0" y1="77.8" x2="35.0" y2="79.8"/><line x1="21.0" y1="65.5" x2="37.0" y2="67.5"/><line x1="23.0" y1="53.2" x2="39.0" y2="55.2"/><line x1="25.0" y1="40.8" x2="41.0" y2="42.8"/><line x1="27.0" y1="28.5" x2="43.0" y2="30.5"/><line x1="29.0" y1="16.2" x2="45.0" y2="18.2"/></g>
+  </g>
+  <path d="M118 30 C 96 26, 84 44, 98 56 S 116 80, 92 92 S 52 96, 46 108" stroke="rgba(0,0,0,0.25)" stroke-width="13" fill="none" stroke-linecap="round" transform="translate(2 3)"/>
+  <path d="M118 30 C 96 26, 84 44, 98 56 S 116 80, 92 92 S 52 96, 46 108" stroke="#14532D" stroke-width="13" fill="none" stroke-linecap="round"/>
+  <path d="M118 30 C 96 26, 84 44, 98 56 S 116 80, 92 92 S 52 96, 46 108" stroke="url(#sb)" stroke-width="10.5" fill="none" stroke-linecap="round"/>
+  <path d="M118 30 C 96 26, 84 44, 98 56 S 116 80, 92 92 S 52 96, 46 108" stroke="#FDE047" stroke-width="10.5" fill="none" stroke-dasharray="4 7"/>
+  <path d="M118 30 C 96 26, 84 44, 98 56 S 116 80, 92 92 S 52 96, 46 108" stroke="#fff" stroke-opacity="0.45" stroke-width="2.5" fill="none" transform="translate(-2 -2)"/>
+  <ellipse cx="122" cy="28" rx="13" ry="11" fill="url(#sh)" stroke="#14532D" stroke-width="1.6"/>
+  <circle cx="118" cy="24" r="3.6" fill="#fff" stroke="#14532D" stroke-width="0.8"/><circle cx="119" cy="24" r="1.9" fill="#111"/>
+  <circle cx="127" cy="23" r="3.6" fill="#fff" stroke="#14532D" stroke-width="0.8"/><circle cx="128" cy="23" r="1.9" fill="#111"/>
+  <path d="M120 32 Q124 35 129 31" stroke="#14532D" stroke-width="1.3" fill="none" stroke-linecap="round"/>
+  <path d="M134 28 L142 27 l3 -3 M142 27 l3 3" stroke="#DC2626" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+  <g transform="translate(16 74) rotate(-14 13 13)">
+    <rect width="26" height="26" rx="6" fill="url(#dice)" stroke="#B9AB92" stroke-width="1.2"/>
+    <circle cx="7" cy="7" r="2.4" fill="#1F2937"/><circle cx="19" cy="7" r="2.4" fill="#1F2937"/><circle cx="13" cy="13" r="2.4" fill="#1F2937"/><circle cx="7" cy="19" r="2.4" fill="#1F2937"/><circle cx="19" cy="19" r="2.4" fill="#1F2937"/>
+  </g>
 </svg>`;
 
 const seed = (x: number, y: number, r: number, up: boolean) => `

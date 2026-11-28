@@ -17,11 +17,36 @@ const ReactNative = require('react-native');
  */
 export const MAX_FONT_SCALE = 1;
 
+/** Layouts are made for a phone about 392 dp wide. */
+const DESIGN_WIDTH = 392;
+/**
+ * "Display size" (screen zoom) makes the phone narrower in dp, so text made for normal phones
+ * wraps or gets cut ("Calle…"). Text shrinks with the width — never below 84 % — so it fits.
+ */
+export function fitScale(): number {
+  const w = ReactNative.Dimensions.get('window').width as number;
+  return Math.max(0.84, Math.min(1, w / DESIGN_WIDTH));
+}
+function fitStyle(style: unknown) {
+  const k = fitScale();
+  if (k >= 0.999 || !style) return style;
+  const flat = ReactNative.StyleSheet.flatten(style) as { fontSize?: number; lineHeight?: number } | undefined;
+  if (!flat || (flat.fontSize == null && flat.lineHeight == null)) return style;
+  return [style, { fontSize: flat.fontSize != null ? flat.fontSize * k : undefined, lineHeight: flat.lineHeight != null ? flat.lineHeight * k : undefined }];
+}
+
 function capped<T extends React.ComponentType<any>>(Original: T): T {
   const Wrapped = React.forwardRef((props: any, ref) =>
     // A screen passing maxFontSizeMultiplier={undefined} (our T always passes the prop) must still
     // get the cap — spreading props after the default let undefined switch it off.
-    React.createElement(Original, { ...props, maxFontSizeMultiplier: props.maxFontSizeMultiplier ?? MAX_FONT_SCALE, ref }),
+    React.createElement(Original, {
+      ...props,
+      // Never grows with the phone's font setting; shrinks a little on zoomed (narrow) screens.
+      allowFontScaling: props.allowFontScaling ?? false,
+      maxFontSizeMultiplier: props.maxFontSizeMultiplier ?? MAX_FONT_SCALE,
+      style: fitStyle(props.style),
+      ref,
+    }),
   );
   // Keep statics such as TextInput.State.
   for (const key of Object.keys(Original)) {

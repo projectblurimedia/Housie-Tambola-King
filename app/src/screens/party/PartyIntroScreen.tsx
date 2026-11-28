@@ -300,42 +300,24 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
       </LinearGradient>
       <RulesModal kind={kind} visible={rulesOpen} onClose={() => setRulesOpen(false)} />
 
-      {/* Your open games */}
-      {myGames.length ? (
-        <>
-          <T variant="smallBold" muted style={styles.label}>
-            {t('party.yourGames').toUpperCase()}
-          </T>
-          <View style={{ gap: spacing.sm }}>
-            {myGames.map((g) => (
-              <Pressable
-                key={g.id}
-                onPress={() => navigation.navigate('Party', { partyId: g.id })}
-                style={({ pressed }) => [styles.mine, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.8 }]}
-              >
-                <LinearGradient colors={look.colors} style={styles.mineBadge}>
-                  <T style={{ fontSize: 18, lineHeight: 24 }}>{look.emoji}</T>
-                </LinearGradient>
-                <View style={{ flex: 1 }}>
-                  <T variant="bodyMedium" style={{ letterSpacing: 2 }}>
-                    {g.code}
-                  </T>
-                  <T variant="tiny" muted>
-                    {t(`party.status_${g.status}`)} · {t('party.playersCount', { count: g.players })}
-                  </T>
-                </View>
-                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
-              </Pressable>
-            ))}
-          </View>
-        </>
-      ) : null}
-
-      {/* Create */}
-      <T variant="smallBold" muted style={styles.label}>
-        {t('party.newGame').toUpperCase()}
-      </T>
-      <View style={[styles.card, { backgroundColor: colors.surface, borderColor: colors.border, gap: spacing.md }]}>
+      {/* New game: a featured card — gold edge, a header strip in the game's colours, then the options. */}
+      <LinearGradient colors={['#FFF1A8', '#D4A017', '#8A6100', '#F5D06F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.newEdge}>
+        <View style={[styles.newCard, { backgroundColor: colors.surface }]}>
+          <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.newHead}>
+            <View style={styles.newHeadIcon}>
+              <Ionicons name="sparkles" size={18} color="#FDE68A" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <T style={styles.newTitle}>{t('party.newGame')}</T>
+              <T variant="tiny" color="rgba(255,255,255,0.88)">
+                {t('party.newGameSub')}
+              </T>
+            </View>
+            <T style={{ fontSize: 26, lineHeight: 32 }} maxFontSizeMultiplier={1}>
+              {look.emoji}
+            </T>
+          </LinearGradient>
+          <View style={{ padding: spacing.md, gap: spacing.md }}>
         {board ? null : (
           <Row gap={spacing.md}>
             <View style={{ flex: 1 }}>
@@ -532,7 +514,9 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
 
         {/* Same plain gold button as Housie's Start game. */}
         <Button title={t('party.create')} variant="gold" icon="add-circle" loading={busy === 'create'} disabled={busy !== null && busy !== 'create'} onPress={create} />
-      </View>
+          </View>
+        </View>
+      </LinearGradient>
 
       {/* Join */}
       <T variant="smallBold" muted style={styles.label}>
@@ -544,12 +528,48 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
         </T>
         <CodeInput value={code} onChange={setCode} onSubmit={join} busy={busy === 'join'} accent={look.colors[1]} />
       </View>
+      {/* Your open games */}
+      {myGames.length ? (
+        <>
+          <T variant="smallBold" muted style={styles.label}>
+            {t('party.yourGames').toUpperCase()}
+          </T>
+          <View style={{ gap: spacing.sm }}>
+            {myGames.map((g) => (
+              <Pressable
+                key={g.id}
+                onPress={() => navigation.navigate('Party', { partyId: g.id })}
+                style={({ pressed }) => [styles.mine, { backgroundColor: colors.surface, borderColor: colors.border }, pressed && { opacity: 0.8 }]}
+              >
+                <LinearGradient colors={look.colors} style={styles.mineBadge}>
+                  <T style={{ fontSize: 18, lineHeight: 24 }}>{look.emoji}</T>
+                </LinearGradient>
+                <View style={{ flex: 1 }}>
+                  <T variant="bodyMedium" style={{ letterSpacing: 2 }}>
+                    {g.code}
+                  </T>
+                  <T variant="tiny" muted>
+                    {t(`party.status_${g.status}`)} · {t('party.playersCount', { count: g.players })}
+                  </T>
+                </View>
+                <Ionicons name="chevron-forward" size={18} color={colors.textMuted} />
+              </Pressable>
+            ))}
+          </View>
+        </>
+      ) : null}
+
       <View style={{ height: spacing.xl }} />
     </Screen>
   );
 }
 
 const styles = StyleSheet.create({
+  newEdge: { marginTop: spacing.lg, borderRadius: 22, padding: 2 },
+  newCard: { borderRadius: 20, overflow: 'hidden' },
+  newHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: 12 },
+  newHeadIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(253,230,138,0.6)' },
+  newTitle: { fontFamily: fonts.display, fontSize: 18, lineHeight: 24, color: '#FFFFFF' },
   lvCard: { borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center', backgroundColor: 'rgba(15,23,42,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)', overflow: 'hidden', minHeight: 112, justifyContent: 'center' },
   lvCardOn: { borderWidth: 2.5, borderColor: '#F5B700', backgroundColor: 'rgba(15,23,42,0.75)' },
   lvGlow: { backgroundColor: 'rgba(245,183,0,0.16)' },

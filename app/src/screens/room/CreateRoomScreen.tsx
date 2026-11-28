@@ -11,10 +11,11 @@ import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import type { PrizeType } from '@/game/engine/ticket';
-import { fonts, goldGradient, heroGradient, radius, spacing, useThemeColors } from '@/theme';
+import { fonts, goldGradient, heroGradient, radius, spacing, useThemeColors, typography } from '@/theme';
 import type { ClaimRule, HintMode, RoomKind, RoomVisibility } from '@/types/api';
 import { RuleOptions, RulePicker } from './parts/RoomSettingsModal';
 import type { ScreenProps } from '@/navigation/types';
+import { RotatingPlaceholder } from '@/components/RotatingPlaceholder';
 
 /**
  * Prizes are NOT chosen here: the host switches each prize on/off and sets its amount in the
@@ -148,19 +149,19 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   const { colors } = useThemeColors();
   const qc = useQueryClient();
   const [title, setTitle] = useState('');
-  const [kind, setKind] = useState<RoomKind>('normal');
+  const [kind, setKind] = useState<RoomKind>('series');
   const [seriesLength, setSeriesLength] = useState(5);
   /** Off = no limit: the series runs until the host taps End series. */
   const [limitGames, setLimitGames] = useState(false);
-  const [visibility, setVisibility] = useState<RoomVisibility>('private');
+  const [visibility, setVisibility] = useState<RoomVisibility>('public');
   const [maxPlayers, setMaxPlayers] = useState(10);
   const [price, setPrice] = useState('10');
   /** Play for: free (no price), coins (play coins), or ₹ just for scoring. */
   const [stake, setStake] = useState<'free' | 'coins' | 'amount'>('free');
   /** Most tickets one player may take per game. */
-  const [maxTickets, setMaxTickets] = useState(3);
+  const [maxTickets, setMaxTickets] = useState(4);
   const [rule, setRule] = useState<ClaimRule>('normal');
-  const [autoHint, setAutoHint] = useState(false);
+  const [autoHint, setAutoHint] = useState(true);
   const [hintMode, setHintMode] = useState<HintMode>('next');
   // Owner's defaults: check until everyone is ready (0); late claim 2 numbers.
   const [checkSeconds, setCheckSeconds] = useState(0);
@@ -170,15 +171,8 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
   /** Seconds between called numbers (default 3; the host can change it any time). */
   const [speed, setSpeed] = useState(3);
   const [loading, setLoading] = useState(false);
-  // Example names take turns in the empty name box: Family Housie, Friends Housie, …
+  // Example names slide by in the empty name box (like NearbyU's search box): Friends Housie, …
   const nameIdeas = t('create.namePlaceholderList').split('|');
-  const [ideaIndex, setIdeaIndex] = useState(0);
-  useEffect(() => {
-    if (title) return;
-    const id = setInterval(() => setIdeaIndex((i) => i + 1), 2500);
-    return () => clearInterval(id);
-  }, [title]);
-  const namePlaceholder = nameIdeas[ideaIndex % nameIdeas.length];
 
   const priceNum = Number(price);
   const valid = title.trim().length > 0 && Number.isFinite(priceNum) && priceNum >= 0;
@@ -229,12 +223,19 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
       </LinearGradient>
 
       <Step n={1} title={t('create.roomName')} hint={t('create.nameHint')}>
-        <TextField value={title} onChangeText={setTitle} placeholder={namePlaceholder} maxLength={40} />
+        <View>
+          <TextField value={title} onChangeText={setTitle} maxLength={40} />
+          {title ? null : (
+            <View pointerEvents="none" style={styles.namePh}>
+              <RotatingPlaceholder lines={nameIdeas} style={[typography.bodyMedium, { color: colors.textMuted }]} />
+            </View>
+          )}
+        </View>
       </Step>
 
       <Step n={2} title={t('create.type')} hint={t('create.typeHint')}>
         <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
-          {(['normal', 'series'] as RoomKind[]).map((k) => (
+          {(['series', 'normal'] as RoomKind[]).map((k) => (
             <ChoiceTile
               key={k}
               active={kind === k}
@@ -266,7 +267,7 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
 
       <Step n={3} title={t('create.visibility')} hint={t('create.joinHint')}>
         <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
-          {(['private', 'public'] as RoomVisibility[]).map((v) => (
+          {(['public', 'private'] as RoomVisibility[]).map((v) => (
             <ChoiceTile
               key={v}
               active={visibility === v}
@@ -396,6 +397,8 @@ export function CreateRoomScreen({ navigation }: ScreenProps<'CreateRoom'>) {
 }
 
 const styles = StyleSheet.create({
+  // Over the name box (same left padding and height as the input).
+  namePh: { position: 'absolute', left: spacing.md + 1.5, right: spacing.md, top: 0, height: 52, justifyContent: 'center' },
   hero: {
     flexDirection: 'row',
     alignItems: 'center',

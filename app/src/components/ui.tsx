@@ -63,6 +63,8 @@ export function T({
     <Text
       numberOfLines={numberOfLines}
       onPress={onPress}
+      // Text never grows with the phone's font setting (even if the global swap could not run).
+      allowFontScaling={false}
       maxFontSizeMultiplier={maxFontSizeMultiplier}
       adjustsFontSizeToFit={adjustsFontSizeToFit}
       suppressHighlighting

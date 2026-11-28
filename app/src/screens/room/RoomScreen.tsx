@@ -43,6 +43,7 @@ import { PrizeSetupModal } from './parts/PrizeSetupModal';
 import { ResultsCard } from './parts/ResultsCard';
 import { StandingsList } from './parts/StandingsList';
 import { TicketPicker } from './parts/TicketPicker';
+import { GameCodeCard } from '@/components/GameCodeCard';
 
 const NO_STRIKES = new Set<number>();
 type Tab = 'game' | 'players' | 'standings';
@@ -52,23 +53,16 @@ function RoomHeader({ state, onBack }: { state: RoomState; onBack: () => void })
   const { room } = state;
   const share = () =>
     Share.share({ message: t('room.shareMessage', { title: room.title, app: APP_NAME, code: room.code, link: JOIN_LINK_BASE + room.code }) }).catch(() => undefined);
-  const copy = () => Clipboard.setStringAsync(room.code).then(() => showToast({ variant: 'success', title: t('common.copied') }));
 
-  // Just back · room code (tap to copy) · share. Everything else is in the card below.
+  // Just back · room name · share. The room code has its own card in the lobby.
   return (
     <LinearGradient colors={heroGradient} style={styles.header}>
       <SafeAreaView edges={['top']}>
         <Row style={{ paddingHorizontal: spacing.md, paddingTop: spacing.lg - 4, minHeight: 56, alignItems: 'center', justifyContent: 'space-between' }}>
           <IconButton icon="chevron-back" color="#fff" onPress={onBack} />
-          <Pressable onPress={copy} style={({ pressed }) => [styles.codePill, { opacity: pressed ? 0.8 : 1 }]}>
-            <T variant="tiny" color="rgba(255,255,255,0.8)" style={styles.codeText}>
-              {t('room.code')}
-            </T>
-            <T variant="h2" color="#FDE68A" style={[styles.codeText, { letterSpacing: 5 }]}>
-              {room.code}
-            </T>
-            <Ionicons name="copy-outline" size={15} color="#FDE68A" />
-          </Pressable>
+          <T variant="h3" color="#fff" numberOfLines={1} style={{ flex: 1, textAlign: 'center', marginHorizontal: spacing.sm }}>
+            {room.title}
+          </T>
           <IconButton icon="share-social" color="#fff" onPress={share} />
         </Row>
       </SafeAreaView>
@@ -1084,6 +1078,18 @@ function RoomScreenInner({ route, navigation }: ScreenProps<'Room'>) {
         <View style={{ marginBottom: spacing.md }}>
           <RoomInfoCard state={state} />
         </View>
+        {/* The room code card (copy / invite) while players are still joining — not in the header. */}
+        {!ended && (!state.game || state.game.status === 'lobby') ? (
+          <View style={{ marginBottom: spacing.md }}>
+            <GameCodeCard
+              code={state.room.code}
+              colors={heroGradient}
+              emoji="🎱"
+              label={t('room.code')}
+              shareMessage={t('room.shareMessage', { title: state.room.title, app: APP_NAME, code: state.room.code, link: JOIN_LINK_BASE + state.room.code })}
+            />
+          </View>
+        ) : null}
         {tab === 'game' ? (
           ended || !state.game ? (
             <EndedPanel
