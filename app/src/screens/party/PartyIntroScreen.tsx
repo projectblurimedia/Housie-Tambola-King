@@ -91,20 +91,64 @@ function Choice({
 }
 
 /** A party game's details: what it is, how it goes, then create (with its options) or join. */
+/** Easy / Medium / Hard: each in its own colours (green, amber, red) with its badge; the chosen one
+ * lifts a little with a gold rim and a tick, the others dim. */
+const LEVEL_LOOK = {
+  easy: { colors: ['#34D399', '#059669'], icon: '🌱' },
+  medium: { colors: ['#FBBF24', '#D97706'], icon: '⚡' },
+  hard: { colors: ['#F87171', '#B91C1C'], icon: '🔥' },
+} as const;
+function LevelTile({ level, active, title, desc, onPress }: { level: keyof typeof LEVEL_LOOK; active: boolean; title: string; desc: string; onPress: () => void }) {
+  const lk = LEVEL_LOOK[level];
+  const lift = useRef(new Animated.Value(active ? 1 : 0)).current;
+  useEffect(() => {
+    Animated.spring(lift, { toValue: active ? 1 : 0, friction: 6, tension: 140, useNativeDriver: true }).start();
+  }, [active, lift]);
+  return (
+    <Pressable onPress={onPress} style={{ flex: 1 }} accessibilityRole="radio" accessibilityState={{ selected: active }}>
+      <Animated.View style={{ opacity: lift.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }), transform: [{ scale: lift.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.03] }) }] }}>
+        <LinearGradient colors={active ? ['#FFF1A8', '#F5B700', '#B87400'] : ['rgba(255,255,255,0.25)', 'rgba(255,255,255,0.25)']} style={styles.levelRim}>
+          <LinearGradient colors={[...lk.colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.levelTile}>
+            <View style={styles.levelBadge}>
+              <T style={{ fontSize: 20, lineHeight: 26 }} maxFontSizeMultiplier={1}>
+                {lk.icon}
+              </T>
+            </View>
+            <T style={styles.levelTitle} numberOfLines={1}>
+              {title}
+            </T>
+            <T style={styles.levelDesc} numberOfLines={2}>
+              {desc}
+            </T>
+            {active ? (
+              <View style={styles.choiceTick}>
+                <Ionicons name="checkmark" size={12} color="#fff" />
+              </View>
+            ) : null}
+          </LinearGradient>
+        </LinearGradient>
+      </Animated.View>
+    </Pressable>
+  );
+}
+
 /** The design cards all show this one layout (medium, 1), so changing level or layout never redraws them. */
 const SAMPLE_BOARD = SNL_BOARDS[SNL_PER_LEVEL];
+/** Preview card size (width) and height (frame + strip + board). */
+const CARD = 150;
+const CARD_H = 160;
 
 /** Grey boxes with a spinner while the board pictures are being drawn. */
 function Placeholders({ size, count }: { size: number; count: number }) {
   const { colors } = useThemeColors();
   return (
-    <Row gap={spacing.sm} style={{ paddingVertical: spacing.sm }}>
+    <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
       {Array.from({ length: count }, (_, i) => (
-        <View key={i} style={[styles.placeholder, { width: size, height: size, backgroundColor: colors.surfaceAlt }]}>
+        <View key={i} style={[styles.placeholder, { width: size + 6, height: CARD_H + 6, backgroundColor: colors.surfaceAlt }]}>
           {i === 0 ? <ActivityIndicator color={colors.primary} /> : null}
         </View>
       ))}
-    </Row>
+    </ScrollView>
   );
 }
 
@@ -351,18 +395,14 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
             </T>
             <Row gap={spacing.sm} style={{ marginBottom: spacing.md }}>
               {SNL_LEVELS.map((lv, li) => (
-                <Choice
+                <LevelTile
                   key={lv}
+                  level={lv}
                   active={level === lv}
-                  colors={look.colors}
                   title={t('party.snakes.' + lv)}
                   desc={t('party.snakes.' + lv + 'Desc')}
                   onPress={() => setBoardNo(li * SNL_PER_LEVEL + (boardNo % SNL_PER_LEVEL))}
-                >
-                  <T style={{ fontSize: 22, lineHeight: 28 }} maxFontSizeMultiplier={1}>
-                    {lv === 'easy' ? '🌱' : lv === 'medium' ? '⚡' : '🔥'}
-                  </T>
-                </Choice>
+                />
               ))}
             </Row>
 
@@ -380,13 +420,13 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
               {t('party.snakes.designDesc')}
             </T>
             {opened ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
+              <ScrollView horizontal removeClippedSubviews showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
                 {BOARD_DESIGNS.map((d, i) => {
                   const on = design === i;
                   return (
                     <Pressable key={d.key} onPress={() => setDesign(i)} style={({ pressed }) => [{ alignItems: 'center', gap: 4 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
                       <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : ['transparent', 'transparent']} style={styles.boardEdge}>
-                        {i < shown ? <MiniBoard design={i} board={SAMPLE_BOARD} size={150} label={String(i + 1)} icons={pictures} /> : <View style={[styles.placeholder, { width: 150, height: 158, backgroundColor: d.frame }]} />}
+                        {i < shown ? <MiniBoard design={i} board={SAMPLE_BOARD} size={CARD} label={String(i + 1)} icons={pictures} /> : <View style={[styles.placeholder, { width: CARD, height: CARD_H, backgroundColor: d.frame }]} />}
                       </LinearGradient>
                       <T variant="tiny" style={{ fontFamily: on ? fonts.bold : fonts.medium }} numberOfLines={1}>
                         {t('party.snakes.designs.' + d.key)}
@@ -404,7 +444,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                 })}
               </ScrollView>
             ) : (
-              <Placeholders size={124} count={3} />
+              <Placeholders size={CARD} count={3} />
             )}
 
 
@@ -415,14 +455,14 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
               {t('party.snakes.chooseBoardDesc')}
             </T>
             {opened && shown >= BOARD_DESIGNS.length ? (
-              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
+              <ScrollView horizontal removeClippedSubviews showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
                 {SNL_BOARDS.map((b, i) => {
                   if (snlLevelOf(i) !== level) return null;
                   const on = boardNo === i;
                   return (
                     <Pressable key={i} onPress={() => setBoardNo(i)} style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
                       <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : [colors.border, colors.border]} style={styles.boardEdge}>
-                        <MiniBoard design={design} board={b} size={150} label={String((i % SNL_PER_LEVEL) + 1)} icons={pictures} />
+                        <MiniBoard design={design} board={b} size={CARD} label={String((i % SNL_PER_LEVEL) + 1)} icons={pictures} />
                       </LinearGradient>
                       {on ? (
                         <View style={styles.boardTick}>
@@ -434,7 +474,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                 })}
               </ScrollView>
             ) : (
-              <Placeholders size={124} count={3} />
+              <Placeholders size={CARD} count={3} />
             )}
           </View>
         ) : null}
@@ -524,6 +564,11 @@ const styles = StyleSheet.create({
   entryChip: { height: 38, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
   choice: { borderRadius: radius.md, padding: spacing.sm, alignItems: 'center', minHeight: 70, justifyContent: 'center' },
   choiceOn: { borderWidth: 2, borderColor: '#FFFFFF' },
+  levelRim: { borderRadius: 18, padding: 2.5 },
+  levelTile: { borderRadius: 16, paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', minHeight: 112 },
+  levelBadge: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', marginBottom: 4, elevation: 3 },
+  levelTitle: { fontFamily: fonts.display, fontSize: 16, lineHeight: 21, color: '#FFFFFF', textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
+  levelDesc: { fontFamily: fonts.semibold, fontSize: 10.5, lineHeight: 14, color: 'rgba(255,255,255,0.95)', textAlign: 'center', marginTop: 2 },
   choiceTick: { position: 'absolute', right: 5, top: 5, width: 18, height: 18, borderRadius: 9, backgroundColor: '#16A34A', alignItems: 'center', justifyContent: 'center' },
   diagram: { width: 46, height: 46, flexDirection: 'row', flexWrap: 'wrap', gap: 1.5 },
   diagramCell: { width: 8, height: 8, borderRadius: 2 },

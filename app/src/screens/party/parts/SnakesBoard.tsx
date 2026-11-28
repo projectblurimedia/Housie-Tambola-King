@@ -616,7 +616,8 @@ export function MiniBoard({ design, board, size, label, icons = true }: { design
   const d = BOARD_DESIGNS[design] ?? BOARD_DESIGNS[0];
   const inner = size - 10;
   return (
-    <View style={[styles.mini, { width: size, backgroundColor: d.frame, borderColor: d.edge }]}>
+    // Kept as a ready-made picture while scrolling (no redraw of hundreds of shapes every frame).
+    <View renderToHardwareTextureAndroid shouldRasterizeIOS style={[styles.mini, { width: size, backgroundColor: d.frame, borderColor: d.edge }]}>
       <View style={styles.miniBanner} />
       <View style={{ width: inner, height: inner, borderRadius: 3, overflow: 'hidden' }}>
         <BoardArt size={inner} board={board} design={design} icons={icons} idPrefix={`m${design}_${size}`} />

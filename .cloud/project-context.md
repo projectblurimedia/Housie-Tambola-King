@@ -70,6 +70,7 @@ _Last updated: 2026-11-19_
 - Party round 16 (2026-11-28, app only): **speed** — the Snakes board draws merged paths (one per colour for tiles, bevels, waves, bubbles, badges, snake patterns, ladder rungs) instead of ~1,500 elements; heavy drawings wait for the screen to open (hooks/useAfterOpen: 2 frames + 180 ms; RN 0.88 has no InteractionManager) with spinners / grey placeholders; Home party cards show a spinner the moment they are tapped. Create Snakes: Difficulty → **Board design first** (mini boards with the game frame + yellow strip, an eye button opens a full-size preview with Use this design) → Pictures switch (track in the game's colour, Toggle tint) → **Snakes & ladders placement** (5 per level, drawn in the chosen design).
 - Party round 17 (2026-11-28, app only): create Snakes — design cards and placement cards are full game-board previews (MiniBoard = frame + strip + full BoardArt with pictures as chosen, 150 px), design cards revealed one every 70 ms, placements after them; pictures switch gold (#F5B700, white knob); selected option tiles (Easy/Medium/Hard and Ashta Chamma choices) turn gold with a white border and a green tick — the game-colour fill was invisible on the game-colour page.
 - Party round 18 (2026-11-28, app only): board line widths (snake outlines, shadows, eyes, tongue, bevels, waves, badges) scale with the board (k = cell / 40), so small previews match the game board instead of looking black-outlined; previews under 240 px skip the badge numbers (unreadable). Create Snakes: Pictures switch moved above the boards; design cards all use one fixed sample layout (SNL_BOARDS[5]), so changing level / layout only redraws the 5 placement cards (it used to redraw all 14 = the lag).
+- Party round 19 (2026-11-28, migration 20261218000001_snakes_giant_snake, applied): layout 1 of every level (boards 0, 5, 10) has a giant snake 99 → 1 and is the default. Create Snakes: preview cards rasterised while scrolling (renderToHardwareTextureAndroid / shouldRasterizeIOS) + removeClippedSubviews; loading placeholders the same size as the cards inside a horizontal scroll (no overflow); new Easy / Medium / Hard tiles (green / amber / red gradients, white badge with 🌱 ⚡ 🔥, chosen one lifts with a gold rim + tick, others dim).
 - Secondary: Caller Mode. (Solo vs bots removed 2026-11-18.)
 
 ### Accounts
@@ -79,7 +80,7 @@ Admin web: mobile + password (temporary), admin 7093054784.
 ## Status
 | Area | State |
 |---|---|
-| DB (39 migrations, latest 20261217000001_snakes_board_design) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
+| DB (40 migrations, latest 20261218000001_snakes_giant_snake) | **Applied** to Supabase project `lpquvqgguvwfmualfkkl` (ap-south-1); pg_cron clock running |
 | Edge Function send-sms-hook | Written; not deployed (phone OTP optional; guests use anonymous sign-in) |
 | App | typecheck clean, 24 unit tests; EAS project @projectblurimedia/housie-tambola-king; latest preview APK versionCode 5 (2026-11-19: PIN login, expo-audio, screen-orientation, blank native splash, new icon) via EAS (local keystore in app/credentials/, gitignored — back it up) |
 | Admin web | Live: https://housie-tambola-king-admin.vercel.app (Vercel account projectblurimedia@gmail.com) |
