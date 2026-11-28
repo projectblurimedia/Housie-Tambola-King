@@ -328,10 +328,13 @@ export function Toggle({
   onValueChange,
   disabled,
   onDark,
+  tint,
 }: {
   value: boolean;
   onValueChange: (v: boolean) => void;
   disabled?: boolean;
+  /** Track colour when on (e.g. a party game's own colour); the thumb turns white. */
+  tint?: string;
   /** On a coloured (primary) background: gold thumb on a light track so it stays visible. */
   onDark?: boolean;
 }) {
@@ -341,8 +344,8 @@ export function Toggle({
       value={value}
       onValueChange={onValueChange}
       disabled={disabled}
-      trackColor={{ false: colors.border, true: onDark ? 'rgba(255,255,255,0.55)' : colors.primaryLight }}
-      thumbColor={value ? (onDark ? '#FBBF24' : colors.primary) : '#f4f3f4'}
+      trackColor={{ false: colors.border, true: tint ?? (onDark ? 'rgba(255,255,255,0.55)' : colors.primaryLight) }}
+      thumbColor={value ? (tint ? '#FFFFFF' : onDark ? '#FBBF24' : colors.primary) : '#f4f3f4'}
       ios_backgroundColor={colors.border}
     />
   );

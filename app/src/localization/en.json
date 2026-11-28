@@ -961,8 +961,8 @@
       "climbed": "{{name}} climbed a ladder to {{to}}! 🪜",
       "bitten": "{{name}} was bitten — down to {{to}} 🐍",
       "tooHigh": "{{name}} needs an exact roll to reach 100",
-      "chooseBoard": "Choose a board",
-      "chooseBoardDesc": "5 boards for each level — each with its own snakes and ladders",
+      "chooseBoard": "Snakes & ladders placement",
+      "chooseBoardDesc": "5 layouts for this level — where the snakes and ladders sit",
       "startArea": "Roll a 1 to start:",
       "needOne": "{{name}} rolled {{roll}} — need a 1 to start",
       "entered": "{{name}} rolled a 1 and is on the board!",
@@ -990,7 +990,9 @@
         "ocean": "Ocean",
         "deepSea": "Deep Sea",
         "waves": "Waves"
-      }
+      },
+      "preview": "Preview",
+      "useDesign": "Use this design"
     },
     "chamma": {
       "title": "Ashta Chamma",

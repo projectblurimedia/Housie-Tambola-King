@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -17,7 +17,8 @@ import type { ScreenProps } from '@/navigation/types';
 import { PARTY_LOOK, PARTY_THEME } from './parts/Premium';
 import { GAME_ART } from './parts/gameArt';
 import { RulesModal } from './parts/RulesModal';
-import { BoardThumb } from './parts/SnakesBoard';
+import { BoardThumb, DesignPreview, MiniBoard } from './parts/SnakesBoard';
+import { useAfterOpen } from '@/hooks/useAfterOpen';
 import { BOARD_DESIGNS } from './parts/snakesThemes';
 import { CodeInput } from './parts/CodeInput';
 import { SNL_BOARDS, SNL_LEVELS, SNL_PER_LEVEL, snlLevelOf } from '@/game/engine/board';
@@ -87,6 +88,20 @@ function Choice({
 }
 
 /** A party game's details: what it is, how it goes, then create (with its options) or join. */
+/** Grey boxes with a spinner while the board pictures are being drawn. */
+function Placeholders({ size, count }: { size: number; count: number }) {
+  const { colors } = useThemeColors();
+  return (
+    <Row gap={spacing.sm} style={{ paddingVertical: spacing.sm }}>
+      {Array.from({ length: count }, (_, i) => (
+        <View key={i} style={[styles.placeholder, { width: size, height: size, backgroundColor: colors.surfaceAlt }]}>
+          {i === 0 ? <ActivityIndicator color={colors.primary} /> : null}
+        </View>
+      ))}
+    </Row>
+  );
+}
+
 export function PartyIntroScreen(props: ScreenProps<'PartyIntro'>) {
   // The whole page in the game's own colours (cards, text, pop-ups) — not just the header.
   return (
@@ -110,6 +125,8 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const level = snlLevelOf(boardNo);
   const [design, setDesign] = useState(0);
   const [pictures, setPictures] = useState(true);
+  const [preview, setPreview] = useState<number | null>(null);
+  const opened = useAfterOpen();
   const [opts, setOpts] = useState<Required<Pick<PartyOptions, 'start' | 'safe' | 'teams' | 'needCut'>>>({
     start: 'enter',
     safe: 'corners',
@@ -207,6 +224,20 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
         </Row>
       </LinearGradient>
       <RulesModal kind={kind} visible={rulesOpen} onClose={() => setRulesOpen(false)} />
+      {kind === 'snakes' ? (
+        <DesignPreview
+          design={preview}
+          board={SNL_BOARDS[boardNo]}
+          icons={pictures}
+          title={preview === null ? '' : t('party.snakes.designs.' + BOARD_DESIGNS[preview].key)}
+          useLabel={t('party.snakes.useDesign')}
+          onUse={() => {
+            if (preview !== null) setDesign(preview);
+            setPreview(null);
+          }}
+          onClose={() => setPreview(null)}
+        />
+      ) : null}
 
       {/* Your open games */}
       {myGames.length ? (
@@ -297,7 +328,9 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
           </Row>
         </View>
 
-        {/* Snakes & Ladders: pick a level (more snakes = harder), then one of its 5 boards */}
+        {/* Snakes & Ladders: level → board design (mini boards like the game, with a preview) →
+            pictures on/off → snakes & ladders placement. The heavy drawings wait until the screen
+            has opened (placeholders first), so tapping the game card opens it at once. */}
         {kind === 'snakes' ? (
           <View>
             <T variant="bodyMedium" style={{ marginBottom: 6 }}>
@@ -311,7 +344,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                   colors={look.colors}
                   title={t('party.snakes.' + lv)}
                   desc={t('party.snakes.' + lv + 'Desc')}
-                  onPress={() => setBoardNo(li * SNL_PER_LEVEL)}
+                  onPress={() => setBoardNo(li * SNL_PER_LEVEL + (boardNo % SNL_PER_LEVEL))}
                 >
                   <T style={{ fontSize: 22, lineHeight: 28 }} maxFontSizeMultiplier={1}>
                     {lv === 'easy' ? '🌱' : lv === 'medium' ? '⚡' : '🔥'}
@@ -319,55 +352,39 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                 </Choice>
               ))}
             </Row>
-            <T variant="bodyMedium">{t('party.snakes.chooseBoard')}</T>
-            <T variant="tiny" muted>
-              {t('party.snakes.chooseBoardDesc')}
-            </T>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
-              {SNL_BOARDS.map((b, i) => {
-                if (snlLevelOf(i) !== level) return null;
-                const on = boardNo === i;
-                return (
-                  <Pressable key={i} onPress={() => setBoardNo(i)} style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
-                    <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : [colors.border, colors.border]} style={styles.boardEdge}>
-                      <BoardThumb index={i} board={b} design={design} size={on ? 150 : 132} />
-                    </LinearGradient>
-                    {on ? (
-                      <View style={styles.boardTick}>
-                        <Ionicons name="checkmark" size={14} color="#3B1D00" />
-                      </View>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
 
-            <T variant="bodyMedium" style={{ marginTop: spacing.md }}>
-              {t('party.snakes.design')}
-            </T>
+            <T variant="bodyMedium">{t('party.snakes.design')}</T>
             <T variant="tiny" muted>
               {t('party.snakes.designDesc')}
             </T>
-            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
-              {BOARD_DESIGNS.map((d, i) => {
-                const on = design === i;
-                return (
-                  <Pressable key={d.key} onPress={() => setDesign(i)} style={({ pressed }) => [{ alignItems: 'center', gap: 4 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
-                    <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : [d.frame, d.frame]} style={styles.boardEdge}>
-                      <BoardThumb index={boardNo} board={SNL_BOARDS[boardNo]} design={i} size={on ? 120 : 104} label={String(i + 1)} />
-                    </LinearGradient>
-                    <T variant="tiny" style={{ fontFamily: on ? fonts.bold : fonts.medium }} numberOfLines={1}>
-                      {t('party.snakes.designs.' + d.key)}
-                    </T>
-                    {on ? (
-                      <View style={styles.boardTick}>
-                        <Ionicons name="checkmark" size={14} color="#3B1D00" />
-                      </View>
-                    ) : null}
-                  </Pressable>
-                );
-              })}
-            </ScrollView>
+            {opened ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
+                {BOARD_DESIGNS.map((d, i) => {
+                  const on = design === i;
+                  return (
+                    <Pressable key={d.key} onPress={() => setDesign(i)} style={({ pressed }) => [{ alignItems: 'center', gap: 4 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
+                      <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : ['transparent', 'transparent']} style={styles.boardEdge}>
+                        <MiniBoard design={i} board={SNL_BOARDS[boardNo]} size={112} label={String(i + 1)} />
+                      </LinearGradient>
+                      <T variant="tiny" style={{ fontFamily: on ? fonts.bold : fonts.medium }} numberOfLines={1}>
+                        {t('party.snakes.designs.' + d.key)}
+                      </T>
+                      <Pressable onPress={() => setPreview(i)} hitSlop={8} style={styles.eye} accessibilityLabel={t('party.snakes.preview')}>
+                        <Ionicons name="eye" size={15} color="#fff" />
+                      </Pressable>
+                      {on ? (
+                        <View style={[styles.boardTick, { left: 8, right: undefined }]}>
+                          <Ionicons name="checkmark" size={14} color="#3B1D00" />
+                        </View>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <Placeholders size={124} count={3} />
+            )}
+
             <Row gap={spacing.md} style={styles.picRow}>
               <View style={{ flex: 1 }}>
                 <T variant="bodyMedium">{t('party.snakes.pictures')}</T>
@@ -375,8 +392,37 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                   {t('party.snakes.picturesDesc')}
                 </T>
               </View>
-              <Toggle value={pictures} onValueChange={setPictures} />
+              <Toggle value={pictures} onValueChange={setPictures} tint={look.colors[0]} />
             </Row>
+
+            <T variant="bodyMedium" style={{ marginTop: spacing.sm }}>
+              {t('party.snakes.chooseBoard')}
+            </T>
+            <T variant="tiny" muted>
+              {t('party.snakes.chooseBoardDesc')}
+            </T>
+            {opened ? (
+              <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
+                {SNL_BOARDS.map((b, i) => {
+                  if (snlLevelOf(i) !== level) return null;
+                  const on = boardNo === i;
+                  return (
+                    <Pressable key={i} onPress={() => setBoardNo(i)} style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
+                      <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : [colors.border, colors.border]} style={styles.boardEdge}>
+                        <BoardThumb index={i} board={b} design={design} size={on ? 132 : 116} />
+                      </LinearGradient>
+                      {on ? (
+                        <View style={styles.boardTick}>
+                          <Ionicons name="checkmark" size={14} color="#3B1D00" />
+                        </View>
+                      ) : null}
+                    </Pressable>
+                  );
+                })}
+              </ScrollView>
+            ) : (
+              <Placeholders size={124} count={3} />
+            )}
           </View>
         ) : null}
 
@@ -467,6 +513,8 @@ const styles = StyleSheet.create({
   diagram: { width: 46, height: 46, flexDirection: 'row', flexWrap: 'wrap', gap: 1.5 },
   diagramCell: { width: 8, height: 8, borderRadius: 2 },
   boardEdge: { borderRadius: 11, padding: 3 },
+  eye: { position: 'absolute', right: 8, top: 8, width: 26, height: 26, borderRadius: 13, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(255,255,255,0.7)' },
+  placeholder: { borderRadius: 10, alignItems: 'center', justifyContent: 'center' },
   picRow: { alignItems: 'center', marginTop: spacing.xs, paddingVertical: spacing.sm },
   boardTick: { position: 'absolute', right: 8, top: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FDE68A', alignItems: 'center', justifyContent: 'center' },
   joinBtn: { height: 50, borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },

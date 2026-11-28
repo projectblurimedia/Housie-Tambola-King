@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
-import { Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -245,6 +245,16 @@ const PEEK_SHRINK = 0.05;
 function PartyCard({ kind, live, onPress, delay }: { kind: PartyKind; live: number; onPress: () => void; delay: number }) {
   const { t } = useTranslation();
   const look = PARTY_LOOK[kind];
+  // Tapped: a spinner shows on the card at once, then the game page opens (next frame).
+  const [opening, setOpening] = useState(false);
+  const open = () => {
+    if (opening) return;
+    setOpening(true);
+    requestAnimationFrame(() => {
+      onPress();
+      setTimeout(() => setOpening(false), 900);
+    });
+  };
   const enter = useRef(new Animated.Value(0)).current;
   const float = useRef(new Animated.Value(0)).current;
   useEffect(() => {
@@ -260,12 +270,17 @@ function PartyCard({ kind, live, onPress, delay }: { kind: PartyKind; live: numb
   }, [enter, float, delay]);
   return (
     <Animated.View style={{ width: '48%', opacity: enter, transform: [{ translateY: enter.interpolate({ inputRange: [0, 1], outputRange: [20, 0] }) }] }}>
-      <Pressable onPress={onPress} style={({ pressed }) => [styles.partyTile, { transform: [{ scale: pressed ? 0.97 : 1 }] }]}>
+      <Pressable onPress={open} style={({ pressed }) => [styles.partyTile, { transform: [{ scale: pressed || opening ? 0.97 : 1 }] }]}>
         <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.partyGradient}>
           <LinearGradient colors={['rgba(255,255,255,0.16)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 0.6 }} style={StyleSheet.absoluteFill} />
           <Animated.View style={{ alignItems: 'center', transform: [{ translateY: float.interpolate({ inputRange: [0, 1], outputRange: [2, -2] }) }] }}>
             <SvgXml xml={GAME_ART[kind]} width={128} height={96} />
           </Animated.View>
+          {opening ? (
+            <View style={styles.partyOpening}>
+              <ActivityIndicator color="#fff" />
+            </View>
+          ) : null}
           {live ? (
             <View style={styles.partyLive}>
               <View style={styles.partyLiveDot} />
@@ -636,6 +651,7 @@ const styles = StyleSheet.create({
   partyGradient: { paddingTop: 8, paddingBottom: 12, paddingHorizontal: 12 },
   partyName: { fontFamily: fonts.display, fontSize: 15, lineHeight: 20, color: '#fff', marginTop: 2 },
   partyLive: { position: 'absolute', right: 10, top: 10, flexDirection: 'row', alignItems: 'center', gap: 4, height: 20, borderRadius: 10, paddingHorizontal: 7, backgroundColor: 'rgba(0,0,0,0.3)' },
+  partyOpening: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, alignItems: 'center', justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.25)', borderRadius: 18 },
   partyLiveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#4ADE80' },
   qaGradient: { height: 116, padding: 14, justifyContent: 'flex-end' },
   qaWatermark: { position: 'absolute', right: -12, bottom: -14 },
