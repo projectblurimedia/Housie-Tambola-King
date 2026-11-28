@@ -975,7 +975,8 @@
       "medium": "Medium",
       "mediumDesc": "6 snakes · 6 ladders",
       "hard": "Hard",
-      "hardDesc": "9 snakes · 4 ladders"
+      "hardDesc": "9 snakes · 4 ladders",
+      "boardTitle": "PARAMAPADA SOPANAM"
     },
     "chamma": {
       "title": "Ashta Chamma",
