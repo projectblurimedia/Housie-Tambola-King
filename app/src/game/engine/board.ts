@@ -119,22 +119,42 @@ export function snlCentre(square: number, size: number): Pt {
  * "slide down the snake" animation both use this, so a bitten pawn follows the body exactly.
  */
 export function snakeCurve(head: Pt, tail: Pt, cell: number) {
-  // Keep the body on the board (the wave would poke out past the edge columns).
-  const lo = cell * 0.28;
-  const hi = cell * 10 - cell * 0.28;
-  const clamp = (v: number) => Math.max(lo, Math.min(hi, v));
+  const lo = cell * 0.3;
+  const hi = cell * 10 - cell * 0.3;
   const dx = tail.x - head.x;
   const dy = tail.y - head.y;
   const len = Math.hypot(dx, dy) || 1;
   const nx = -dy / len;
   const ny = dx / len;
   const waves = Math.max(1, Math.min(2.2, len / (cell * 2.6)));
-  const amp = Math.min(cell * 0.7, len * 0.15);
-  const at = (t: number): Pt => {
+  const make = (amp: number, lean = 0) => (t: number): Pt => {
     const env = Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.85 + 0.15;
-    const off = amp * env * Math.sin(2 * Math.PI * waves * t);
-    return { x: clamp(head.x + dx * t + nx * off), y: clamp(head.y + dy * t + ny * off) };
+    const off = amp * env * (Math.sin(2 * Math.PI * waves * t) + lean);
+    return { x: head.x + dx * t + nx * off, y: head.y + dy * t + ny * off };
   };
+  const fits = (f: (t: number) => Pt) => {
+    for (let i = 0; i <= 40; i++) {
+      const p = f(i / 40);
+      if (p.x < lo || p.x > hi || p.y < lo || p.y > hi) return false;
+    }
+    return true;
+  };
+  // Near an edge the wave would leave the board: try it the other way round, then a gentler
+  // wave — never flatten it against the edge (that drew straight lines).
+  let amp = Math.min(cell * 0.7, len * 0.15);
+  let at = make(amp);
+  // Along an edge the body leans inward (the whole wave on the board side) so it still curves.
+  search: for (let k = 0; k < 12 && !fits(at); k++) {
+    for (const [sign, lean] of [[-1, 0], [1, 1], [1, -1], [-1, 1], [-1, -1]]) {
+      const f = make(sign * amp, lean);
+      if (fits(f)) {
+        at = f;
+        break search;
+      }
+    }
+    amp *= 0.85;
+    at = make(amp);
+  }
   return { at };
 }
 

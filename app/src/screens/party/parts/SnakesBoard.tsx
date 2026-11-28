@@ -23,11 +23,11 @@ const f1 = (v: number) => v.toFixed(1);
 
 /** Real snake skins: shades from dark edge to bright sheen, and the species' pattern. */
 const SKINS = [
-  { base: '#B8893E', dark: '#3E2508', mid: '#7A5420', light: '#E9CD8C', hi: '#FFF4D6', blot: '#4A2E0C', kind: 'saddle' },
-  { base: '#2F8F46', dark: '#0B3018', mid: '#1D6531', light: '#7DD99A', hi: '#E7FFEE', blot: '#E8F5C8', kind: 'dots' },
-  { base: '#2B2F36', dark: '#07080A', mid: '#16191E', light: '#5E6672', hi: '#C9D1DC', blot: '#E9C46A', kind: 'rings' },
-  { base: '#B83227', dark: '#3A0904', mid: '#7E1C14', light: '#E8756A', hi: '#FFE1DC', blot: '#141414', kind: 'rings2' },
-  { base: '#6F7D35', dark: '#232A0C', mid: '#4A5520', light: '#B9C77A', hi: '#F2F8D8', blot: '#2E3612', kind: 'diamond' },
+  { base: '#16A34A', dark: '#052E16', mid: '#0F6B32', light: '#86EFAC', hi: '#F0FFF4', blot: '#FACC15', kind: 'diamond' },
+  { base: '#2563EB', dark: '#0B1B4D', mid: '#1D3F9E', light: '#93C5FD', hi: '#EFF6FF', blot: '#F8FAFC', kind: 'dots' },
+  { base: '#DC2626', dark: '#3F0707', mid: '#991B1B', light: '#FCA5A5', hi: '#FFF1F2', blot: '#111827', kind: 'rings2' },
+  { base: '#D97706', dark: '#3B1A02', mid: '#92400E', light: '#FCD34D', hi: '#FFFBEB', blot: '#431407', kind: 'saddle' },
+  { base: '#7C3AED', dark: '#1E0B4B', mid: '#5B21B6', light: '#C4B5FD', hi: '#F5F3FF', blot: '#FDE047', kind: 'rings' },
 ] as const;
 /** Light comes from the top-left: shading shifts this way across the body. */
 const LX = -0.55;
@@ -43,7 +43,9 @@ const LY = -0.83;
 function SnakeArt({ head, tail, cell, skin, lite }: { head: Pt; tail: Pt; cell: number; skin: number; lite?: boolean }) {
   const s = SKINS[skin];
   const { at } = snakeCurve(head, tail, cell);
-  const W = cell * 0.4;
+  // Short snakes are slim, long ones thick.
+  const rows = Math.abs(tail.y - head.y) / cell;
+  const W = cell * Math.max(0.24, Math.min(0.46, 0.2 + rows * 0.04));
   const width = (t: number) => W * (t < 0.1 ? 0.78 + (t / 0.1) * 0.22 : t < 0.5 ? 1 : Math.max(0.06, 1 - Math.pow((t - 0.5) / 0.5, 1.3)));
   const fr = (t: number) => {
     const p = at(t);
