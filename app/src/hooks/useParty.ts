@@ -16,7 +16,8 @@ export type PartyEvent =
   | { type: 'move' }
   | { type: 'throw' }
   | { type: 'finished' }
-  | { type: 'closed' };
+  | { type: 'closed' }
+  | { type: 'roundWon'; winners: string[]; roundNo: number };
 
 /**
  * A party game's live state: one get_party_state fetch, refetched (coalesced) on every broadcast
@@ -67,6 +68,7 @@ export function useParty(id: string, onEvent?: (e: PartyEvent) => void) {
     on('throw', () => ({ type: 'throw' }));
     on('lobby');
     on('round', () => ({ type: 'round' }));
+    on('roundWon', (p) => ({ type: 'roundWon', winners: (p.winners as string[]) ?? [], roundNo: Number(p.roundNo) || 0 }));
     on('turn', () => ({ type: 'turn' }));
     on('reveal', () => ({ type: 'reveal' }));
     on('finished', () => ({ type: 'finished' }));

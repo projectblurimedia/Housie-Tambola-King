@@ -63,6 +63,13 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
     if (e.type === 'show') buzz(e.first ? 'heavy' : 'light');
     else if (e.type === 'reveal' || e.type === 'finished') buzz('success');
     else if (e.type === 'round') buzz('light');
+    // A series game was won: say who, then the next game starts.
+    if (e.type === 'roundWon') {
+      const cur = qc.getQueryData<PartyState>(partyKey(partyId));
+      const names = e.winners.map((id) => (id === cur?.me.userId ? t('party.you') : cur?.players.find((p) => p.userId === id)?.name ?? '')).filter(Boolean);
+      buzz('success');
+      showToast({ variant: 'success', title: t('party.chamma.roundWon', { name: names.join(' & '), n: e.roundNo }) });
+    }
     if (e.type === 'closed' && !leaving.current) {
       leaving.current = true;
       showToast({ variant: 'info', title: t('party.closed') });

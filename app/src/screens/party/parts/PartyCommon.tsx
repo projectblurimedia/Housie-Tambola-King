@@ -349,7 +349,6 @@ export function PartyFinished({
       {isHost ? (
         <>
           <Button title={t('party.playAgain')} variant="gold" icon="refresh" loading={busy} onPress={onAgain} />
-          <Button title={t('party.endGame')} variant="secondary" icon="stop-circle-outline" onPress={onEnd} />
         </>
       ) : (
         <T variant="small" muted center>
@@ -451,7 +450,6 @@ export function PartyFinished({
         {isHost ? (
           <>
             <Button title={t('party.playAgain')} variant="gold" icon="refresh" loading={busy} onPress={onAgain} />
-            <Button title={t('party.endGame')} variant="secondary" icon="stop-circle-outline" onPress={onEnd} />
           </>
         ) : (
           <T variant="small" muted center>

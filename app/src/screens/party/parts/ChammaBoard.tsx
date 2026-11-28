@@ -69,17 +69,39 @@ const BoardArt = React.memo(function BoardArt({
         <Rect key={i} x={(i % 5) * cell + 1.5} y={Math.floor(i / 5) * cell + 1.5} width={cell - 3} height={cell - 3} rx={5} fill={safeCells.has(i) ? SAFE_SQUARE : SQUARE} />
       ))}
       <Rect x={2 * cell + 1.5} y={2 * cell + 1.5} width={cell - 3} height={cell - 3} rx={5} fill="url(#home)" />
-      {/* Crosses corner to corner: they meet the next safe square's cross at the corners. */}
+      {/* Crosses corner to corner, kept inside the rounded square. */}
       {[...safeCells].map((n) => {
         const x = (n % 5) * cell;
         const y = Math.floor(n / 5) * cell;
         return (
           <G key={`x${n}`}>
-            <Line x1={x + 1} y1={y + 1} x2={x + cell - 1} y2={y + cell - 1} stroke={CHALK} strokeWidth={2.4} strokeLinecap="round" opacity={0.9} />
-            <Line x1={x + cell - 1} y1={y + 1} x2={x + 1} y2={y + cell - 1} stroke={CHALK} strokeWidth={2.4} strokeLinecap="round" opacity={0.9} />
+            <Line x1={x + 4} y1={y + 4} x2={x + cell - 4} y2={y + cell - 4} stroke={CHALK} strokeWidth={2.4} strokeLinecap="round" opacity={0.9} />
+            <Line x1={x + cell - 4} y1={y + 4} x2={x + 4} y2={y + cell - 4} stroke={CHALK} strokeWidth={2.4} strokeLinecap="round" opacity={0.9} />
           </G>
         );
       })}
+      {(() => {
+        const mine = (4 - view) % 4;
+        let d = '';
+        for (let idx = 0; idx < 24; idx++) {
+          if (idx === 15) continue;
+          const here = at(chammaCell(mine, idx));
+          if (safeCells.has(here)) continue;
+          const next = at(chammaCell(mine, idx + 1));
+          const hx = (here % 5) * cell + cell / 2;
+          const hy = Math.floor(here / 5) * cell + cell / 2;
+          const nx = (next % 5) * cell + cell / 2;
+          const ny = Math.floor(next / 5) * cell + cell / 2;
+          const l = Math.hypot(nx - hx, ny - hy) || 1;
+          const ux = (nx - hx) / l;
+          const uy = (ny - hy) / l;
+          const s = cell * 0.11;
+          const tx = hx + ux * s;
+          const ty = hy + uy * s;
+          d += `M${(tx - ux * s * 2 - uy * s).toFixed(1)} ${(ty - uy * s * 2 + ux * s).toFixed(1)}L${tx.toFixed(1)} ${ty.toFixed(1)}L${(tx - ux * s * 2 + uy * s).toFixed(1)} ${(ty - uy * s * 2 - ux * s).toFixed(1)}`;
+        }
+        return <Path d={d} stroke={CHALK} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" fill="none" opacity={0.4} />;
+      })()}
       {Array.from({ length: 8 }, (_, i) => {
         const a = (i * Math.PI) / 4;
         const r = cell * 0.36;
@@ -285,6 +307,16 @@ export function ChammaBoard({
       for (let i = 0; i < steps; i++) timers.push(setTimeout(() => playGameSound('move'), i * STEP + STEP - 30));
       finish(ms);
     }
+    if (last.pawn2 !== undefined && last.pawn2 !== null) {
+      const key2 = `${last.userId}:${last.pawn2}`;
+      const w2 = walk(key2, last.userId, -1, 0, 260);
+      timers.push(
+        setTimeout(() => {
+          const xy = targets[key2];
+          if (xy && anims.current[key2]) Animated.spring(anims.current[key2], { toValue: xy, friction: 7, useNativeDriver: false }).start();
+        }, w2.ms),
+      );
+    }
     return () => timers.forEach(clearTimeout);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [last?.at, JSON.stringify(pawns), size, view]);
@@ -366,7 +398,7 @@ export function ChammaBoard({
         name: nameOf(uid),
         avatarKey: p.avatarKey,
         color: colorOf(uid),
-        value: outOf(uid) ? t('party.board.out') : `🏠 ${home}/4`,
+        value: outOf(uid) ? t('party.board.out') : g.rounds > 1 ? `🏠 ${home}/4 · 🏆 ${s.wins?.[uid] ?? 0}` : `🏠 ${home}/4`,
         misses: s.misses?.[uid] ?? 0,
         out: outOf(uid),
         badge: cut[uid] ? '⚔️' : undefined,
@@ -443,6 +475,14 @@ export function ChammaBoard({
         })}
       </View>
 
+      {/* A series: which game this is. */}
+      {g.rounds > 1 ? (
+        <View style={styles.seriesPill}>
+          <T style={styles.seriesText} maxFontSizeMultiplier={1}>
+            🏆 {t('party.chamma.gameOf', { n: g.roundNo, total: g.rounds })}
+          </T>
+        </View>
+      ) : null}
       <GameDock
         players={dockPlayers}
         meId={me}
@@ -478,6 +518,8 @@ const haloStyle = (size: number, glow: Animated.Value) => ({
 });
 
 const styles = StyleSheet.create({
+  seriesPill: { alignSelf: 'center', marginTop: spacing.sm, paddingHorizontal: 12, height: 26, borderRadius: 13, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.35)', borderWidth: 1, borderColor: 'rgba(253,230,138,0.6)' },
+  seriesText: { color: '#FDE68A', fontSize: 12, lineHeight: 16, fontWeight: '700' },
   frame: { position: 'absolute', padding: FRAME - 2, borderRadius: 12, backgroundColor: '#1C120C', borderWidth: 2, borderColor: '#F5D06F' },
   abs: { position: 'absolute', left: 0, top: 0 },
   halo: { position: 'absolute', backgroundColor: 'rgba(253,230,138,0.6)' },

@@ -439,7 +439,7 @@ try {
 
     // Snakes & Ladders: 2 players, roll until someone reaches 100.
     const coinsBefore = { host: await coinsOf(host), friend: await coinsOf(friend) };
-    const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 5, p_entry: 50, p_options: { board: 12, theme: 7, icons: false } });
+    const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 1, p_entry: 50, p_options: { board: 12, theme: 7, icons: false } });
     await friend.rpc('join_party_by_code', { p_code: snl.code });
     await host.rpc('start_party', { p_game: snl.id });
     let snlState = await stateOf(host, snl.id);
@@ -457,6 +457,12 @@ try {
       const amtState = await host.rpc('get_party_state', { p_game: amt.id });
       check(amtState.game.options?.stake === 'amount' && Number(amtState.game.options?.amount) === 50 && amtState.game.entryCoins === 0, 'party Play for ₹ Amount: ₹50 saved, no coins charged');
       await host.rpc('leave_party', { p_game: amt.id });
+    }
+    {
+      const ser = await host.rpc('create_party', { p_kind: 'chamma', p_rounds: 3, p_entry: 0, p_options: {} });
+      const serState = await host.rpc('get_party_state', { p_game: ser.id });
+      check(serState.game.rounds === 3, 'Ashta Chamma series of 3 games is saved');
+      await host.rpc('leave_party', { p_game: ser.id });
     }
     check(Object.entries(board.snakes).some(([h, t]) => h - t >= 50), 'the board has a big snake');
     const jump = (p) => board.ladders[p] ?? board.snakes[p] ?? p;
@@ -485,7 +491,7 @@ try {
     await host.rpc('end_party', { p_game: snl.id });
 
     // Ashta Chamma: 2 players (opposite sides), seeds, entering on 4 / 8, cuts.
-    const ach = await host.rpc('create_party', { p_kind: 'chamma', p_rounds: 5 });
+    const ach = await host.rpc('create_party', { p_kind: 'chamma', p_rounds: 1 });
     await friend.rpc('join_party_by_code', { p_code: ach.code });
     await third.rpc('join_party_by_code', { p_code: ach.code });
     await host.rpc('start_party', { p_game: ach.id });

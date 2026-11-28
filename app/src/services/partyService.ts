@@ -64,6 +64,8 @@ export interface PartyRoundState {
     pawn?: number;
     throw?: number;
     captured?: { userId: string; pawn: number }[];
+    /** Ashta Chamma: an 8 brought a second pawn in. */
+    pawn2?: number | null;
   };
   /** Ashta Chamma */
   pawns?: Record<string, number[]>;
@@ -72,6 +74,9 @@ export interface PartyRoundState {
   throw?: number | null;
   seeds?: boolean[];
   thrownAt?: number;
+  /** Board-game series: games won so far, and who won the last game. */
+  wins?: Record<string, number>;
+  roundWinners?: string[] | null;
   thrownBy?: string;
   /** Board games: turns the server had to play for each player (3 = out). */
   misses?: Record<string, number>;

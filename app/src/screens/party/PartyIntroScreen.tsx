@@ -188,6 +188,9 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const board = isBoardGame(kind);
   const [rounds, setRounds] = useState(5);
   const [stake, setStake] = useState<'free' | 'coins' | 'amount'>('free');
+  // Ashta Chamma: one game or a series of games (most wins takes it).
+  const [series, setSeries] = useState(false);
+  const [seriesGames, setSeriesGames] = useState(3);
   const [entry, setEntry] = useState(10);
   const [amount, setAmount] = useState('10');
   const [boardNo, setBoardNo] = useState(SNL_PER_LEVEL); // medium, board 1
@@ -234,7 +237,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
     try {
       const kindOpts = kind === 'chamma' ? opts : kind === 'snakes' ? { board: boardNo, theme: design, icons: pictures } : {};
       const playFor = stake === 'amount' ? { stake: 'amount' as const, amount: Number(amount) || 0 } : {};
-      const res = await partyService.create(kind, board ? 1 : rounds, stake === 'coins' ? entry : 0, { ...kindOpts, ...playFor });
+      const res = await partyService.create(kind, kind === 'chamma' ? (series ? seriesGames : 1) : board ? 1 : rounds, stake === 'coins' ? entry : 0, { ...kindOpts, ...playFor });
       navigation.navigate('Party', { partyId: res.id });
     } catch (err) {
       showToast({ variant: 'error', title: errorMessage(err) });
@@ -401,7 +404,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                     keyboardType="number-pad"
                     placeholder="0"
                     placeholderTextColor={colors.textMuted}
-                    style={[styles.amountInput, centeredInput, { color: colors.text }]}
+                    style={[styles.amountInput, centeredInput, { color: colors.text, width: Math.max(44, (amount.length || 1) * 22 + 12) }]}
                   />
                 </View>
               </LinearGradient>
@@ -519,6 +522,23 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
           <>
             <View>
               <T variant="bodyMedium" style={{ marginBottom: 6 }}>
+                {t('party.chamma.optGames')}
+              </T>
+              <Row gap={spacing.sm}>
+                <Choice active={!series} colors={look.colors} title={t('party.chamma.oneGame')} desc={t('party.chamma.oneGameDesc')} onPress={() => setSeries(false)} />
+                <Choice active={series} colors={look.colors} title={t('party.chamma.series')} desc={t('party.chamma.seriesDesc')} onPress={() => setSeries(true)} />
+              </Row>
+              {series ? (
+                <Row gap={spacing.md} style={{ marginTop: spacing.sm, alignItems: 'center' }}>
+                  <T variant="small" style={{ flex: 1 }}>
+                    {t('party.chamma.seriesGames')}
+                  </T>
+                  <Stepper value={seriesGames} min={2} max={10} onChange={setSeriesGames} width={36} />
+                </Row>
+              ) : null}
+            </View>
+            <View>
+              <T variant="bodyMedium" style={{ marginBottom: 6 }}>
                 {t('party.chamma.optStart')}
               </T>
               <Row gap={spacing.sm}>
@@ -627,7 +647,7 @@ const styles = StyleSheet.create({
   amountFrame: { borderRadius: 16, padding: 2 },
   amountInner: { borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 60 },
   amountRupee: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34 },
-  amountInput: { minWidth: 90, fontFamily: fonts.display, fontSize: 30, height: 56, paddingVertical: 0 },
+  amountInput: { fontFamily: fonts.display, fontSize: 30, height: 56, paddingVertical: 0, textAlign: 'center' },
   newEdge: { marginTop: spacing.lg, borderRadius: 22, padding: 2 },
   newCard: { borderRadius: 20, overflow: 'hidden' },
   newHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: 12 },

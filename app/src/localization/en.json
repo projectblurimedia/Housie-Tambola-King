@@ -1041,7 +1041,15 @@
       "cutNotNeeded": "No cut needed",
       "cutNotNeededDesc": "Go inside any time",
       "throwing": "Throwing…",
-      "yourThrow": "Your turn — tap the seeds to throw"
+      "yourThrow": "Your turn — tap the seeds to throw",
+      "optGames": "Games",
+      "oneGame": "One game",
+      "oneGameDesc": "First to bring all pawns home wins",
+      "series": "Series",
+      "seriesDesc": "Several games — most wins takes it",
+      "seriesGames": "Number of games",
+      "gameOf": "Game {{n}} of {{total}}",
+      "roundWon": "{{name}} won game {{n}}!"
     },
     "coinsOrFree": "Free or play coins",
     "entry": "Entry (coins)",
