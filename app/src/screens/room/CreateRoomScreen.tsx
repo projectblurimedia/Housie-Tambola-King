@@ -65,7 +65,10 @@ export function ChoiceTile({
   onPress,
   compact,
   iconNode,
+  gradient,
 }: {
+  /** The chosen tile's colours (default: Housie's purple; party games pass their own). */
+  gradient?: readonly [string, string, ...string[]];
   active: boolean;
   icon: keyof typeof Ionicons.glyphMap;
   title: string;
@@ -103,7 +106,7 @@ export function ChoiceTile({
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.85 }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
       {active ? (
-        <LinearGradient colors={heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.tile, compact && styles.tileSm, { borderColor: '#FDE68A' }]}>
+        <LinearGradient colors={gradient ?? heroGradient} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.tile, compact && styles.tileSm, { borderColor: '#FDE68A' }]}>
           {body}
         </LinearGradient>
       ) : (

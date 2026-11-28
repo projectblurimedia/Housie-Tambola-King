@@ -339,6 +339,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                 key={m}
                 active={stake === m}
                 compact
+                gradient={look.colors}
                 icon={m === 'free' ? 'gift' : 'cash-outline'}
                 iconNode={m === 'coins' ? <CoinIcon size={24} /> : undefined}
                 title={t(`create.stake_${m}`)}

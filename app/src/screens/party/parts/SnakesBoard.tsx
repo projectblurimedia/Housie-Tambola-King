@@ -699,7 +699,6 @@ export function MiniBoard({ design, board, size, label, icons = true, still = tr
   return (
     // Kept as a ready-made picture while scrolling (no redraw of hundreds of shapes every frame).
     <View renderToHardwareTextureAndroid shouldRasterizeIOS style={[styles.mini, { width: size, backgroundColor: d.frame, borderColor: d.edge }]}>
-      <View style={styles.miniBanner} />
       <View style={{ width: inner, height: inner, borderRadius: 3, overflow: 'hidden' }}>
         {still && uri ? (
           <Image source={{ uri }} style={{ width: inner, height: inner }} fadeDuration={0} />
