@@ -11,116 +11,179 @@ import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 import { Pawn, TOKEN_COLORS } from './BoardBits';
 import { GameDock, type DockPlayer } from './GameDock';
 import { RollingDie } from './RollingDie';
-
-/** Frame colour per level (easy = green, medium = maroon, hard = deep purple); the board itself is the folk board. */
-export const SNL_THEME: Record<SnlLevel, { frame: string; edge: string }> = {
-  easy: { frame: '#1B5E20', edge: '#F5D06F' },
-  medium: { frame: '#7B1F1F', edge: '#F5D06F' },
-  hard: { frame: '#4A148C', edge: '#F5D06F' },
-};
+import { BOARD_DESIGNS, designIcons, designTile, LADDER_LOOKS, SNAKE_PAINTS, type LadderLook, type SnakePaint, type SnakeStyle } from './snakesThemes';
 
 const CLASSIC: SnlBoard = { ladders: LADDERS, snakes: SNAKES };
 const f1 = (v: number) => v.toFixed(1);
 
-/** Hand-painted Paramapadam colours: yellow, pink, leaf green, sky blue, lilac, orange, cream. */
-const PAL = ['#FFF176', '#F8BBD0', '#C5E1A5', '#B3E5FC', '#E1BEE7', '#FFCC80', '#FFFDE7'];
-/** A little picture in every square, like the painted boards (animals, flowers, temples, lamps). */
-const ICONS = ['🐘', '🦚', '🐅', '🐄', '🌺', '🛕', '🐒', '🦜', '🐟', '🐢', '🌸', '🌴', '🪔', '🐎', '🦌', '🐇', '🦋', '🐦', '🌻', '🐊', '🦢', '🐐', '🐓', '🌳', '🌞', '🐪', '🦅', '🐃', '🌿', '🐸'];
-const tileColor = (sq: number, row: number, col: number) => PAL[(row * 3 + col * 5 + Math.floor(sq / 7)) % PAL.length];
-
-/** Snake paints: body, the light stripe down the back, outline, head. */
-const SKINS = [
-  { body: '#D9A86C', belly: '#F6E3C2', line: '#3E2410', head: '#E9C46A' },
-  { body: '#C9B037', belly: '#F4EBA8', line: '#3B3210', head: '#B5C94A' },
-  { body: '#9CB04A', belly: '#E2EDB5', line: '#26300E', head: '#C7D96B' },
-  { body: '#B9773A', belly: '#F2D2A8', line: '#3A1E08', head: '#E0A458' },
-] as const;
-
 /**
- * A painted Paramapadam snake: long and slim (slimmer when short), a dark outline, a light stripe
- * down the back and fine scale lines across it, a fine pointed tail, and a narrow head a little
- * wider than the neck — joined to it — with round eyes and a red forked tongue, inside its square.
+ * A snake in the board design's style — banded sea snake, spotted, python, cute (big eyes and a
+ * smile) or glowing neon — on one smooth body along a natural wave (slim for short snakes, thicker
+ * for long ones, fine pointed tail), with its head pinned on the neck inside its own square.
  */
-function SnakeArt({ head, tail, cell, skin, lite }: { head: Pt; tail: Pt; cell: number; skin: number; lite?: boolean }) {
-  const s = SKINS[skin];
+function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail: Pt; cell: number; style: SnakeStyle; paint: SnakePaint; lite?: boolean; id: string }) {
+  const p = paint;
   const { at } = snakeCurve(head, tail, cell);
   const rows = Math.abs(tail.y - head.y) / cell;
-  const W = cell * Math.max(0.17, Math.min(0.3, 0.15 + rows * 0.025));
-  const width = (t: number) => W * (t < 0.7 ? 1 : Math.max(0.08, 1 - (t - 0.7) / 0.3));
+  const [wMin, wMax] = style === 'python' ? [0.22, 0.37] : style === 'cute' ? [0.26, 0.38] : [0.2, 0.34];
+  const W = cell * Math.max(wMin, Math.min(wMax, wMin - 0.02 + rows * 0.03));
+  const width = (t: number) => W * (t < 0.65 ? 1 : Math.max(0.08, 1 - (t - 0.65) / 0.35));
   const fr = (t: number) => {
-    const p = at(t);
+    const q0 = at(t);
     const q = at(Math.min(1, t + 0.003));
     const r = at(Math.max(0, t - 0.003));
     const l = Math.hypot(q.x - r.x, q.y - r.y) || 1;
-    return { p, tx: (q.x - r.x) / l, ty: (q.y - r.y) / l, ux: -(q.y - r.y) / l, uy: (q.x - r.x) / l };
+    return { p: q0, tx: (q.x - r.x) / l, ty: (q.y - r.y) / l, ux: -(q.y - r.y) / l, uy: (q.x - r.x) / l };
   };
-  const N = lite ? 36 : 70;
-  const band = (k: number, t0 = 0, t1 = 1) => {
+  const N = lite ? 32 : 60;
+  const band = (k: number, t0 = 0, t1 = 1, shift = 0) => {
     const L: string[] = [];
     const R: string[] = [];
     for (let i = 0; i <= N; i++) {
       const t = t0 + (i / N) * (t1 - t0);
-      const { p, ux, uy } = fr(t);
-      const w = (width(t) / 2) * k;
-      L.push(`${f1(p.x + ux * w)} ${f1(p.y + uy * w)}`);
-      R.push(`${f1(p.x - ux * w)} ${f1(p.y - uy * w)}`);
+      const { p: q, ux, uy } = fr(t);
+      const w = width(t) / 2;
+      const cx = q.x - 0.55 * w * shift;
+      const cy = q.y - 0.83 * w * shift;
+      L.push(`${f1(cx + ux * w * k)} ${f1(cy + uy * w * k)}`);
+      R.push(`${f1(cx - ux * w * k)} ${f1(cy - uy * w * k)}`);
     }
     return `M${L.join(' L')} L${R.reverse().join(' L')} Z`;
   };
-  // Scale lines across the body, as one path.
-  let scales = '';
-  if (!lite) {
+  /** Marks along the body, every `gapK` body-widths. */
+  const along = (gapK: number, fn: (f: ReturnType<typeof fr>, w: number, k: number) => React.ReactNode) => {
+    const out: React.ReactNode[] = [];
     let acc = 0;
-    let prev = at(0.05);
-    for (let i = 1; i <= 400; i++) {
-      const t = 0.05 + (i / 400) * 0.88;
-      const p = at(t);
-      acc += Math.hypot(p.x - prev.x, p.y - prev.y);
-      prev = p;
-      if (acc < W * 0.45) continue;
+    let prev = at(0.06);
+    for (let i = 1, k = 0; i <= 300; i++) {
+      const t = 0.06 + (i / 300) * 0.86;
+      const q = at(t);
+      acc += Math.hypot(q.x - prev.x, q.y - prev.y);
+      prev = q;
+      if (acc < W * gapK) continue;
       acc = 0;
-      const { tx, ty, ux, uy } = fr(t);
-      const w = (width(t) / 2) * 0.95;
-      scales += `M${f1(p.x + ux * w)} ${f1(p.y + uy * w)} L${f1(p.x - ux * w + tx * w * 0.5)} ${f1(p.y - uy * w + ty * w * 0.5)} `;
+      k++;
+      out.push(fn(fr(t), width(t) / 2, k));
     }
-  }
+    return out;
+  };
+  const spine = () => {
+    const pts: string[] = [];
+    for (let i = 0; i <= N; i++) {
+      const q = at(i / N);
+      pts.push(`${f1(q.x)} ${f1(q.y)}`);
+    }
+    return `M${pts.join(' L')}`;
+  };
+
+  // Head (pinned on the body's first point, pointing along the neck).
   const h0 = at(0);
   const h1 = at(0.025);
   const dl = Math.hypot(h0.x - h1.x, h0.y - h1.y) || 1;
   const ang = (Math.atan2((h0.y - h1.y) / dl, (h0.x - h1.x) / dl) * 180) / Math.PI;
-  const hl = Math.min(W * 2.3, cell * 0.55);
-  const hw = W * 1.45;
-  const tip = hl * 0.55;
-  const hp = `M${f1(tip)} 0 C${f1(tip)} ${f1(-hw * 0.25)} ${f1(hl * 0.2)} ${f1(-hw * 0.5)} ${f1(-hl * 0.15)} ${f1(-hw * 0.5)} C${f1(-hl * 0.35)} ${f1(-hw * 0.5)} ${f1(-hl * 0.45)} ${f1(-hw * 0.4)} ${f1(-hl * 0.5)} ${f1(-W * 0.5)} L${f1(-hl * 0.5)} ${f1(W * 0.5)} C${f1(-hl * 0.45)} ${f1(hw * 0.4)} ${f1(-hl * 0.35)} ${f1(hw * 0.5)} ${f1(-hl * 0.15)} ${f1(hw * 0.5)} C${f1(hl * 0.2)} ${f1(hw * 0.5)} ${f1(tip)} ${f1(hw * 0.25)} ${f1(tip)} 0 Z`;
-  return (
-    <G>
-      <Path d={band(1)} fill="rgba(0,0,0,0.18)" transform="translate(2 2.5)" />
-      <Path d={band(1)} fill={s.body} stroke={s.line} strokeWidth={1.3} strokeLinejoin="round" />
-      <Path d={band(0.38, 0.02, 0.9)} fill={s.belly} opacity={0.9} />
-      {scales ? <Path d={scales} stroke={s.line} strokeWidth={0.6} opacity={0.5} /> : null}
-      <G transform={`translate(${f1(h0.x)} ${f1(h0.y)}) rotate(${f1(ang)})`}>
-        <Path
-          d={`M${f1(tip - 1)} 0 L${f1(tip + hl * 0.25)} 0 l${f1(hl * 0.1)} ${f1(-hl * 0.08)} M${f1(tip + hl * 0.25)} 0 l${f1(hl * 0.1)} ${f1(hl * 0.08)}`}
-          stroke="#D32F2F"
-          strokeWidth={1.2}
-          strokeLinecap="round"
-          fill="none"
-        />
-        <Path d={hp} fill={s.head} stroke={s.line} strokeWidth={1.3} strokeLinejoin="round" />
-        <Line x1={tip * 0.7} y1={0} x2={-hl * 0.35} y2={0} stroke={s.line} strokeWidth={0.7} opacity={0.5} />
+  const tongue = (x0: number, L: number) => (
+    <Path d={`M${f1(x0)} 0 L${f1(x0 + L)} 0 l${f1(L * 0.4)} ${f1(-L * 0.32)} M${f1(x0 + L)} 0 l${f1(L * 0.4)} ${f1(L * 0.32)}`} stroke="#D32F2F" strokeWidth={1.3} strokeLinecap="round" fill="none" />
+  );
+  let headArt: React.ReactNode;
+  if (style === 'cute') {
+    const r = Math.min(W * 1.05, cell * 0.36);
+    headArt = (
+      <>
+        {tongue(r * 0.9, r * 0.35)}
+        <Ellipse rx={r} ry={r * 0.9} fill={p.head} stroke={p.line} strokeWidth={1.8} />
         {[-1, 1].map((k) => (
           <G key={k}>
-            <Circle cx={hl * 0.08} cy={k * hw * 0.27} r={hw * 0.13} fill="#fff" stroke={s.line} strokeWidth={0.8} />
+            <Circle cx={r * 0.1} cy={k * r * 0.42} r={r * 0.32} fill="#fff" stroke={p.line} strokeWidth={1} />
+            <Circle cx={r * 0.2} cy={k * r * 0.42} r={r * 0.17} fill="#111" />
+            <Circle cx={r * 0.14} cy={k * r * 0.42 - r * 0.08} r={r * 0.06} fill="#fff" />
+          </G>
+        ))}
+        <Path d={`M${f1(r * 0.62)} ${f1(-r * 0.3)} Q${f1(r * 0.85)} 0 ${f1(r * 0.62)} ${f1(r * 0.3)}`} stroke={p.line} strokeWidth={1.1} fill="none" strokeLinecap="round" />
+      </>
+    );
+  } else {
+    const round = style !== 'python';
+    const hl = Math.min(W * (round ? 1.9 : 2.3), cell * 0.55);
+    const hw = W * (round ? 1.5 : 1.42);
+    const tip = hl * 0.55;
+    const hp = round
+      ? `M${f1(tip)} 0 C${f1(tip)} ${f1(-hw * 0.45)} ${f1(hl * 0.05)} ${f1(-hw * 0.55)} ${f1(-hl * 0.2)} ${f1(-hw * 0.5)} C${f1(-hl * 0.4)} ${f1(-hw * 0.45)} ${f1(-hl * 0.5)} ${f1(-W * 0.6)} ${f1(-hl * 0.5)} ${f1(-W * 0.5)} L${f1(-hl * 0.5)} ${f1(W * 0.5)} C${f1(-hl * 0.5)} ${f1(W * 0.6)} ${f1(-hl * 0.4)} ${f1(hw * 0.45)} ${f1(-hl * 0.2)} ${f1(hw * 0.5)} C${f1(hl * 0.05)} ${f1(hw * 0.55)} ${f1(tip)} ${f1(hw * 0.45)} ${f1(tip)} 0 Z`
+      : `M${f1(tip)} 0 C${f1(tip)} ${f1(-hw * 0.25)} ${f1(hl * 0.2)} ${f1(-hw * 0.5)} ${f1(-hl * 0.15)} ${f1(-hw * 0.5)} C${f1(-hl * 0.35)} ${f1(-hw * 0.5)} ${f1(-hl * 0.45)} ${f1(-hw * 0.4)} ${f1(-hl * 0.5)} ${f1(-W * 0.5)} L${f1(-hl * 0.5)} ${f1(W * 0.5)} C${f1(-hl * 0.45)} ${f1(hw * 0.4)} ${f1(-hl * 0.35)} ${f1(hw * 0.5)} ${f1(-hl * 0.15)} ${f1(hw * 0.5)} C${f1(hl * 0.2)} ${f1(hw * 0.5)} ${f1(tip)} ${f1(hw * 0.25)} ${f1(tip)} 0 Z`;
+    const neon = style === 'neon';
+    headArt = (
+      <>
+        {tongue(tip - 1, hl * 0.25)}
+        {neon ? (
+          <>
+            <Path d={hp} fill={p.body} opacity={0.3} transform="scale(1.3)" />
+            <Path d={hp} fill="#0B0F1E" stroke={p.body} strokeWidth={2} />
+          </>
+        ) : (
+          <Path d={hp} fill={`url(#${id})`} stroke={p.line} strokeWidth={1.2} strokeLinejoin="round" />
+        )}
+        {[-1, 1].map((k) => (
+          <G key={k}>
+            <Circle cx={hl * 0.08} cy={k * hw * 0.27} r={hw * 0.14} fill={neon ? p.belly ?? '#fff' : '#fff'} stroke={neon ? undefined : p.line} strokeWidth={0.8} />
             <Circle cx={hl * 0.1} cy={k * hw * 0.27} r={hw * 0.07} fill="#111" />
           </G>
         ))}
-      </G>
+      </>
+    );
+  }
+
+  let body: React.ReactNode;
+  if (style === 'neon') {
+    body = (
+      <>
+        <Path d={band(1.9)} fill={p.body} opacity={0.18} />
+        <Path d={band(1.3)} fill={p.body} opacity={0.3} />
+        <Path d={band(1)} fill="#0B0F1E" stroke={p.body} strokeWidth={2} />
+        {lite ? null : <Path d={spine()} stroke={p.belly} strokeWidth={1.2} fill="none" opacity={0.9} strokeDasharray="3 4" />}
+      </>
+    );
+  } else {
+    body = (
+      <>
+        <Path d={band(1)} fill="rgba(0,0,0,0.22)" transform="translate(2 2.5)" />
+        <Path d={band(1)} fill={p.body} stroke={p.line} strokeWidth={style === 'cute' ? 1.8 : 1.2} strokeLinejoin="round" />
+        {lite
+          ? null
+          : style === 'bands'
+            ? along(0.75, ({ p: q, ux, uy }, w, k) => (
+                <Line key={k} x1={q.x + ux * w} y1={q.y + uy * w} x2={q.x - ux * w} y2={q.y - uy * w} stroke={p.bands![k % p.bands!.length]} strokeWidth={W * 0.45} />
+              ))
+            : style === 'python'
+              ? along(1.1, ({ p: q, tx, ty }, w, k) => (
+                  <Ellipse key={k} cx={q.x} cy={q.y} rx={w * 0.55} ry={w * 0.78} transform={`rotate(${f1((Math.atan2(ty, tx) * 180) / Math.PI)} ${f1(q.x)} ${f1(q.y)})`} fill={p.mark} stroke={p.line} strokeWidth={0.6} />
+                ))
+              : along(0.8, ({ p: q, ux, uy }, w, k) => <Circle key={k} cx={q.x + ux * w * 0.4 * (k % 2 ? 1 : -1)} cy={q.y + uy * w * 0.4 * (k % 2 ? 1 : -1)} r={w * 0.24} fill={p.mark} />)}
+        {style === 'bands' && !lite ? <Path d={band(1)} fill="none" stroke={p.line} strokeWidth={1.2} /> : null}
+        {style === 'cute' ? null : (
+          <>
+            <Path d={band(0.4, 0, 0.9, -0.75)} fill="#000" opacity={0.15} />
+            <Path d={band(0.16, 0.02, 0.8, 0.6)} fill="#fff" opacity={0.55} />
+          </>
+        )}
+      </>
+    );
+  }
+  return (
+    <G>
+      <Defs>
+        <RadialGradient id={id} cx="40%" cy="35%" r="75%">
+          <Stop offset="0" stopColor="#FFFFFF" stopOpacity={0.7} />
+          <Stop offset="0.5" stopColor={p.head} />
+          <Stop offset="1" stopColor={p.line} />
+        </RadialGradient>
+      </Defs>
+      {body}
+      <G transform={`translate(${f1(h0.x)} ${f1(h0.y)}) rotate(${f1(ang)})`}>{headArt}</G>
     </G>
   );
 }
 
-/** A painted ladder: two thin dark rails and close rungs. */
-function LadderArt({ from, to, cell }: { from: Pt; to: Pt; cell: number }) {
+/** A ladder in the design's style: rope, rainbow steps, gold, candy stripes or white. */
+function LadderArt({ from, to, cell, look }: { from: Pt; to: Pt; cell: number; look: LadderLook }) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const len = Math.hypot(dx, dy) || 1;
@@ -128,27 +191,36 @@ function LadderArt({ from, to, cell }: { from: Pt; to: Pt; cell: number }) {
   const uy = dy / len;
   const A = { x: from.x - ux * cell * 0.2, y: from.y - uy * cell * 0.2 };
   const B = { x: to.x + ux * cell * 0.15, y: to.y + uy * cell * 0.15 };
-  const px = -uy * cell * 0.17;
-  const py = ux * cell * 0.17;
-  const n = Math.max(4, Math.round(Math.hypot(B.x - A.x, B.y - A.y) / (cell * 0.26)));
-  const sw = Math.max(0.5, cell / 40);
+  const half = cell * (look.half ?? 0.19);
+  const px = -uy * half;
+  const py = ux * half;
+  const n = Math.max(4, Math.round(Math.hypot(B.x - A.x, B.y - A.y) / (cell * (look.gap ?? 0.3))));
+  const sw = Math.max(0.5, cell / 36);
+  const rail = (k: number, sx = 0, sy = 0) => ({ x1: A.x + k * px + sx, y1: A.y + k * py + sy, x2: B.x + k * px + sx, y2: B.y + k * py + sy });
   return (
     <G>
+      {[1, -1].map((k) => (
+        <Line key={`s${k}`} {...rail(k, 2, 3)} stroke="rgba(0,0,0,0.22)" strokeWidth={(look.rail + 1) * sw} strokeLinecap="round" />
+      ))}
       {Array.from({ length: n }, (_, i) => {
         const t = (i + 0.5) / n;
         const x = A.x + (B.x - A.x) * t;
         const y = A.y + (B.y - A.y) * t;
+        const rc = Array.isArray(look.rung) ? look.rung[i % look.rung.length] : look.rung;
         return (
           <G key={i}>
-            <Line x1={x + px} y1={y + py} x2={x - px} y2={y - py} stroke="#3E2723" strokeWidth={2.6 * sw} strokeLinecap="round" />
-            <Line x1={x + px} y1={y + py} x2={x - px} y2={y - py} stroke="#A1887F" strokeWidth={1.1 * sw} strokeLinecap="round" />
+            {look.edge ? <Line x1={x + px} y1={y + py} x2={x - px} y2={y - py} stroke={look.edge} strokeWidth={(look.rungW + 1.4) * sw} strokeLinecap="round" /> : null}
+            <Line x1={x + px} y1={y + py} x2={x - px} y2={y - py} stroke={rc} strokeWidth={look.rungW * sw} strokeLinecap="round" />
           </G>
         );
       })}
       {[1, -1].map((k) => (
-        <G key={k}>
-          <Line x1={A.x + k * px} y1={A.y + k * py} x2={B.x + k * px} y2={B.y + k * py} stroke="#3E2723" strokeWidth={3.6 * sw} strokeLinecap="round" />
-          <Line x1={A.x + k * px} y1={A.y + k * py} x2={B.x + k * px} y2={B.y + k * py} stroke="#8D6E63" strokeWidth={1.6 * sw} strokeLinecap="round" />
+        <G key={`r${k}`}>
+          {look.edge ? <Line {...rail(k)} stroke={look.edge} strokeWidth={(look.rail + 1.6) * sw} strokeLinecap="round" /> : null}
+          <Line {...rail(k)} stroke={look.railC} strokeWidth={look.rail * sw} strokeLinecap="round" />
+          {look.kind === 'candy' ? <Line {...rail(k)} stroke="#fff" strokeWidth={look.rail * sw} strokeDasharray="4 4" /> : null}
+          {look.kind === 'rope' ? <Line {...rail(k)} stroke="#8D6E63" strokeWidth={look.rail * 0.6 * sw} strokeDasharray="1.5 2.5" /> : null}
+          {look.shine ? <Line {...rail(k, -0.8)} stroke="#fff" strokeOpacity={0.7} strokeWidth={1} /> : null}
         </G>
       ))}
     </G>
@@ -156,56 +228,82 @@ function LadderArt({ from, to, cell }: { from: Pt; to: Pt; cell: number }) {
 }
 
 /**
- * The board, like the painted Paramapadam boards: bright squares in folk colours (yellow, pink,
- * green, blue, lilac, orange, cream) with fine brown lines, a little picture in every square,
- * the number in its corner, a temple on 100, painted ladders and snakes.
+ * The board in the chosen design: its squares (mixed folk colours or sea rows), raised edges,
+ * waves or bubbles, a picture in every square (no picture repeats near itself) unless pictures
+ * are turned off — then the numbers sit big in the middle — the number badge, the design's
+ * ladders and snakes (every snake its own colour).
  */
 export const BoardArt = React.memo(
-  function BoardArt({ size, board, numbers = true }: { size: number; board: SnlBoard; level: SnlLevel; numbers?: boolean; idPrefix?: string }) {
+  function BoardArt({ size, board, design, icons = true, numbers = true, idPrefix = 'b' }: { size: number; board: SnlBoard; design: number; icons?: boolean; numbers?: boolean; idPrefix?: string }) {
     const cell = size / 10;
+    const d = BOARD_DESIGNS[design] ?? BOARD_DESIGNS[0];
     const c = (sq: number) => snlCentre(sq, size);
+    const pics = icons && numbers ? designIcons(d) : null;
+    const gap = d.gap ?? 0.6;
+    const rx = d.rx ?? 0;
+    const paints = SNAKE_PAINTS[d.snake];
     return (
       <Svg width={size} height={size}>
-        <Rect x={0} y={0} width={size} height={size} fill="#5D4037" />
+        <Rect x={0} y={0} width={size} height={size} fill={d.grout} />
         {Array.from({ length: 100 }, (_, i) => {
           const sq = i + 1;
           const { row, col } = snlCell(sq);
           const x0 = col * cell;
           const y0 = row * cell;
+          const wide = sq > 99 ? 0.5 : sq > 9 ? 0.4 : 0.3;
           return (
             <G key={sq}>
-              <Rect x={x0 + 0.5} y={y0 + 0.5} width={cell - 1} height={cell - 1} fill={sq === 100 ? '#FFD54F' : tileColor(sq, row, col)} />
-              {numbers ? (
+              <Rect x={x0 + gap} y={y0 + gap} width={cell - gap * 2} height={cell - gap * 2} rx={rx} fill={designTile(d, sq)} />
+              {numbers && d.bevel ? (
                 <>
-                  <SvgText x={x0 + cell * 0.55} y={y0 + cell * 0.82} fontSize={cell * 0.42} textAnchor="middle" opacity={0.9}>
-                    {sq === 100 ? '🛕' : ICONS[(sq * 7) % ICONS.length]}
-                  </SvgText>
-                  <SvgText x={x0 + cell * 0.07} y={y0 + cell * 0.27} fontSize={cell * 0.24} fontWeight="800" fill="#3E2723">
+                  <Path d={`M${x0 + 2} ${y0 + cell - 2} L${x0 + 2} ${y0 + 2} L${x0 + cell - 2} ${y0 + 2}`} stroke="#fff" strokeOpacity={0.5} strokeWidth={1.2} fill="none" />
+                  <Path d={`M${x0 + cell - 2} ${y0 + 2} L${x0 + cell - 2} ${y0 + cell - 2} L${x0 + 2} ${y0 + cell - 2}`} stroke="#000" strokeOpacity={0.18} strokeWidth={1.2} fill="none" />
+                </>
+              ) : null}
+              {numbers && d.waves && sq % 3 === 0 ? (
+                <Path d={`M${x0 + 3} ${y0 + cell * 0.72} q${cell * 0.12} ${-cell * 0.1} ${cell * 0.24} 0 t${cell * 0.24} 0 t${cell * 0.24} 0`} stroke={d.waves} strokeWidth={1} fill="none" opacity={0.55} />
+              ) : null}
+              {numbers && d.bubbles && sq % 2 ? (
+                <>
+                  <Circle cx={x0 + cell * 0.82} cy={y0 + cell * 0.3} r={cell * 0.06} fill="none" stroke={d.bubbles} strokeWidth={0.8} opacity={0.7} />
+                  <Circle cx={x0 + cell * 0.72} cy={y0 + cell * 0.16} r={cell * 0.035} fill="none" stroke={d.bubbles} strokeWidth={0.7} opacity={0.7} />
+                </>
+              ) : null}
+              {pics ? (
+                <SvgText x={x0 + cell * 0.56} y={y0 + cell * 0.84} fontSize={cell * 0.42} textAnchor="middle" opacity={0.92}>
+                  {pics[i]}
+                </SvgText>
+              ) : null}
+              {!numbers ? null : pics ? (
+                <>
+                  <Rect x={x0 + 1.8} y={y0 + 1.8} width={cell * wide} height={cell * 0.3} rx={cell * 0.15} fill={d.badge} stroke={d.badgeLine ?? 'rgba(0,0,0,0.35)'} strokeWidth={0.6} />
+                  <SvgText x={x0 + 1.8 + (cell * wide) / 2} y={y0 + cell * 0.26} fontSize={cell * 0.22} fontWeight="800" fill={d.numC} textAnchor="middle">
                     {sq}
                   </SvgText>
                 </>
-              ) : null}
+              ) : sq === 100 ? (
+                <SvgText x={x0 + cell / 2} y={y0 + cell * 0.7} fontSize={cell * 0.44} textAnchor="middle">
+                  {d.topIcon}
+                </SvgText>
+              ) : (
+                <SvgText x={x0 + cell / 2} y={y0 + cell * 0.64} fontSize={cell * 0.36} fontWeight="800" fill={d.numC} textAnchor="middle" opacity={0.85}>
+                  {sq}
+                </SvgText>
+              )}
             </G>
           );
         })}
         {Object.entries(board.ladders).map(([f, to]) => (
-          <LadderArt key={`l${f}`} from={c(Number(f))} to={c(to)} cell={cell} />
+          <LadderArt key={`l${f}`} from={c(Number(f))} to={c(to)} cell={cell} look={LADDER_LOOKS[d.ladder]} />
         ))}
         {Object.entries(board.snakes).map(([h, tl], i) => (
-          <SnakeArt key={`s${h}`} skin={i % SKINS.length} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
+          <SnakeArt key={`s${h}`} id={`${idPrefix}h${h}`} style={d.snake} paint={paints[i % paints.length]} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
         ))}
       </Svg>
     );
   },
-  (a, b) => a.size === b.size && a.numbers === b.numbers && JSON.stringify(a.board) === JSON.stringify(b.board),
+  (a, b) => a.size === b.size && a.numbers === b.numbers && a.design === b.design && a.icons === b.icons && JSON.stringify(a.board) === JSON.stringify(b.board),
 );
-
-/** Which level a running game's board belongs to. */
-function levelOfBoard(board: SnlBoard, option?: number): SnlLevel {
-  if (typeof option === 'number') return snlLevelOf(option);
-  const n = Object.keys(board.snakes).length;
-  return n <= 4 ? 'easy' : n >= 9 ? 'hard' : 'medium';
-}
 
 const STEP_MS = 210;
 /** Time the die needs to land before the pawn starts walking. */
@@ -228,8 +326,11 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
   const order = s.order ?? state.players.map((p) => p.userId);
   const pos = s.pos ?? {};
   const board = (s as { board?: SnlBoard }).board ?? CLASSIC;
-  const level = levelOfBoard(board, (g.options as { board?: number } | undefined)?.board);
-  const theme = SNL_THEME[level];
+  // The host's design (0–8) and whether squares show pictures — the same for everyone.
+  const opts = (g.options ?? {}) as { theme?: number; icons?: boolean };
+  const design = Math.max(0, Math.min(BOARD_DESIGNS.length - 1, opts.theme ?? 0));
+  const showIcons = opts.icons !== false;
+  const theme = BOARD_DESIGNS[design];
   const colorOf = (uid?: string) => TOKEN_COLORS[Math.max(0, order.indexOf(uid ?? '')) % TOKEN_COLORS.length];
   const isMyTurn = s.turn === state.me.userId;
   const outOf = (uid: string) => !state.players.find((p) => p.userId === uid)?.active;
@@ -395,12 +496,12 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
         {/* Title banner, like the painted Paramapadam boards */}
         <View style={styles.banner}>
           <T style={styles.bannerText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE} numberOfLines={1}>
-            🪔  {t('party.snakes.boardTitle')}  🪔
+            🪔  {t('party.snakes.title').toUpperCase()}  🪔
           </T>
         </View>
         <View style={{ width: size + 4, padding: 2, borderRadius: 7, backgroundColor: '#1E1006' }}>
         <View style={{ width: size, height: size, borderRadius: 5, overflow: 'hidden' }}>
-          <BoardArt size={size} board={board} level={level} />
+          <BoardArt size={size} board={board} design={design} icons={showIcons} />
           {order.map((uid) => {
             const c = colorOf(uid);
             const on = !outOf(uid) && ((pos[uid] ?? 0) > 0 || moving === uid);
@@ -425,14 +526,6 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
           })}
           </View>
         </View>
-        {/* Elephant strip, like the painted boards' bottom border */}
-        <View style={styles.strip}>
-          {Array.from({ length: 11 }, (_, i) => (
-            <T key={i} style={styles.stripIcon} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
-              🐘
-            </T>
-          ))}
-        </View>
       </View>
 
       <GameDock
@@ -452,13 +545,13 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
 }
 
 /** A small preview of one board (for choosing at create). */
-export function BoardThumb({ index, board, size }: { index: number; board: SnlBoard; size: number }) {
+export function BoardThumb({ index, board, size, design = 0, label }: { index: number; board: SnlBoard; size: number; design?: number; label?: string }) {
   return (
     <View style={{ width: size, height: size, borderRadius: 8, overflow: 'hidden' }}>
-      <BoardArt size={size} board={board} level={snlLevelOf(index)} numbers={false} idPrefix={`t${index}`} />
+      <BoardArt size={size} board={board} design={design} numbers={false} idPrefix={`t${index}_${design}`} />
       <View style={styles.thumbNum}>
         <T style={styles.thumbNumText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
-          {(index % 5) + 1}
+          {label ?? (index % 5) + 1}
         </T>
       </View>
     </View>
@@ -469,8 +562,6 @@ const styles = StyleSheet.create({
   boardWrap: { alignSelf: 'center', padding: 5, borderRadius: 14, borderWidth: 2.5 },
   banner: { height: 28, marginBottom: 5, borderRadius: 7, backgroundColor: '#FFF176', borderWidth: 1, borderColor: '#5D4037', alignItems: 'center', justifyContent: 'center' },
   bannerText: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 18, color: '#B71C1C', letterSpacing: 1 },
-  strip: { height: 20, marginTop: 5, borderRadius: 6, backgroundColor: '#E1BEE7', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-evenly' },
-  stripIcon: { fontSize: 12, lineHeight: 16 },
   token: { position: 'absolute', left: 0, top: 0 },
   thumbNum: { position: 'absolute', left: 4, top: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   thumbNumText: { color: '#fff', fontSize: 11, lineHeight: 14, fontWeight: '700' },

@@ -439,7 +439,7 @@ try {
 
     // Snakes & Ladders: 2 players, roll until someone reaches 100.
     const coinsBefore = { host: await coinsOf(host), friend: await coinsOf(friend) };
-    const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 5, p_entry: 50, p_options: { board: 12 } });
+    const snl = await host.rpc('create_party', { p_kind: 'snakes', p_rounds: 5, p_entry: 50, p_options: { board: 12, theme: 7, icons: false } });
     await friend.rpc('join_party_by_code', { p_code: snl.code });
     await host.rpc('start_party', { p_game: snl.id });
     let snlState = await stateOf(host, snl.id);
@@ -451,6 +451,7 @@ try {
     check(nL >= 4 && nS >= 4 && !Object.values(board.ladders).includes(100) && new Set(ends).size === ends.length,
       `the chosen board (${nL} ladders, ${nS} snakes, none to 100, no shared ends)`);
     check(board.ladders['18'] === 83 && board.snakes['91'] === 11 && Object.keys(board.snakes).length === 9, 'hard board 3 (of 15) is the one the host picked');
+    check(snlState.game.options?.theme === 7 && snlState.game.options?.icons === false, 'board design 8 with pictures off is saved for everyone');
     check(Object.entries(board.snakes).some(([h, t]) => h - t >= 50), 'the board has a big snake');
     const jump = (p) => board.ladders[p] ?? board.snakes[p] ?? p;
     const duo = { [snlState.me.userId]: host, [(await stateOf(friend, snl.id)).me.userId]: friend };

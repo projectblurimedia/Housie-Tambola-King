@@ -308,9 +308,9 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
         onCancel={() => setConfirm(null)}
       />
     </Screen>
-      {/* During a game, Leave sits at the bottom of the screen (opposite the chat button), not under the board. */}
+      {/* During a game, Leave sits at the bottom centre of the screen, not under the board. */}
       {g.status === 'playing' ? (
-        <Pressable onPress={() => setConfirm('leave')} accessibilityLabel={t('party.leave')} style={({ pressed }) => [styles.leave, { bottom: spacing.lg + insets.bottom }, pressed && { opacity: 0.85 }]}>
+        <Pressable onPress={() => setConfirm('leave')} accessibilityLabel={t('party.leave')} style={({ pressed }) => [styles.leave, { bottom: spacing.lg + insets.bottom + 4 }, pressed && { opacity: 0.85 }]}>
           <Ionicons name="exit-outline" size={18} color="#fff" />
           <T variant="smallBold" color="#fff">
             {t('party.leave')}
@@ -323,5 +323,6 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
 }
 
 const styles = StyleSheet.create({
-  leave: { position: 'absolute', right: spacing.lg, height: 48, paddingHorizontal: 18, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(185,28,28,0.92)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)', elevation: 6, zIndex: 20 },
+  // Centred at the bottom (the chat button is bottom-left).
+  leave: { position: 'absolute', alignSelf: 'center', height: 48, paddingHorizontal: 18, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(185,28,28,0.92)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)', elevation: 6, zIndex: 20 },
 });

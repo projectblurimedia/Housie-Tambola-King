@@ -91,8 +91,10 @@ export interface ShowItem {
 
 /** Show's card category: built-in, or the host's own items. */
 export interface PartyOptions {
-  // Snakes & Ladders: which of the 5 boards
+  // Snakes & Ladders: layout (level + 1 of 5), board design (0–8) and pictures in the squares
   board?: number;
+  theme?: number;
+  icons?: boolean;
   // Ashta Chamma
   start?: 'enter' | 'board';
   safe?: 'corners' | 'straight';

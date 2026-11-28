@@ -18,6 +18,7 @@ import { PARTY_LOOK, PARTY_THEME } from './parts/Premium';
 import { GAME_ART } from './parts/gameArt';
 import { RulesModal } from './parts/RulesModal';
 import { BoardThumb } from './parts/SnakesBoard';
+import { BOARD_DESIGNS } from './parts/snakesThemes';
 import { CodeInput } from './parts/CodeInput';
 import { SNL_BOARDS, SNL_LEVELS, SNL_PER_LEVEL, snlLevelOf } from '@/game/engine/board';
 
@@ -107,6 +108,8 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const [entry, setEntry] = useState(0);
   const [boardNo, setBoardNo] = useState(SNL_PER_LEVEL); // medium, board 1
   const level = snlLevelOf(boardNo);
+  const [design, setDesign] = useState(0);
+  const [pictures, setPictures] = useState(true);
   const [opts, setOpts] = useState<Required<Pick<PartyOptions, 'start' | 'safe' | 'teams' | 'needCut'>>>({
     start: 'enter',
     safe: 'corners',
@@ -141,7 +144,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const create = async () => {
     setBusy('create');
     try {
-      const res = await partyService.create(kind, board ? 1 : rounds, entry, kind === 'chamma' ? opts : kind === 'snakes' ? { board: boardNo } : null);
+      const res = await partyService.create(kind, board ? 1 : rounds, entry, kind === 'chamma' ? opts : kind === 'snakes' ? { board: boardNo, theme: design, icons: pictures } : null);
       navigation.navigate('Party', { partyId: res.id });
     } catch (err) {
       showToast({ variant: 'error', title: errorMessage(err) });
@@ -327,7 +330,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                 return (
                   <Pressable key={i} onPress={() => setBoardNo(i)} style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
                     <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : [colors.border, colors.border]} style={styles.boardEdge}>
-                      <BoardThumb index={i} board={b} size={on ? 150 : 132} />
+                      <BoardThumb index={i} board={b} design={design} size={on ? 150 : 132} />
                     </LinearGradient>
                     {on ? (
                       <View style={styles.boardTick}>
@@ -338,6 +341,42 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                 );
               })}
             </ScrollView>
+
+            <T variant="bodyMedium" style={{ marginTop: spacing.md }}>
+              {t('party.snakes.design')}
+            </T>
+            <T variant="tiny" muted>
+              {t('party.snakes.designDesc')}
+            </T>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
+              {BOARD_DESIGNS.map((d, i) => {
+                const on = design === i;
+                return (
+                  <Pressable key={d.key} onPress={() => setDesign(i)} style={({ pressed }) => [{ alignItems: 'center', gap: 4 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
+                    <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : [d.frame, d.frame]} style={styles.boardEdge}>
+                      <BoardThumb index={boardNo} board={SNL_BOARDS[boardNo]} design={i} size={on ? 120 : 104} label={String(i + 1)} />
+                    </LinearGradient>
+                    <T variant="tiny" style={{ fontFamily: on ? fonts.bold : fonts.medium }} numberOfLines={1}>
+                      {t('party.snakes.designs.' + d.key)}
+                    </T>
+                    {on ? (
+                      <View style={styles.boardTick}>
+                        <Ionicons name="checkmark" size={14} color="#3B1D00" />
+                      </View>
+                    ) : null}
+                  </Pressable>
+                );
+              })}
+            </ScrollView>
+            <Row gap={spacing.md} style={styles.picRow}>
+              <View style={{ flex: 1 }}>
+                <T variant="bodyMedium">{t('party.snakes.pictures')}</T>
+                <T variant="tiny" muted>
+                  {t('party.snakes.picturesDesc')}
+                </T>
+              </View>
+              <Toggle value={pictures} onValueChange={setPictures} />
+            </Row>
           </View>
         ) : null}
 
@@ -428,6 +467,7 @@ const styles = StyleSheet.create({
   diagram: { width: 46, height: 46, flexDirection: 'row', flexWrap: 'wrap', gap: 1.5 },
   diagramCell: { width: 8, height: 8, borderRadius: 2 },
   boardEdge: { borderRadius: 11, padding: 3 },
+  picRow: { alignItems: 'center', marginTop: spacing.xs, paddingVertical: spacing.sm },
   boardTick: { position: 'absolute', right: 8, top: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FDE68A', alignItems: 'center', justifyContent: 'center' },
   joinBtn: { height: 50, borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
   joinText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 22, color: '#fff' },

@@ -976,7 +976,21 @@
       "mediumDesc": "6 snakes · 6 ladders",
       "hard": "Hard",
       "hardDesc": "9 snakes · 4 ladders",
-      "boardTitle": "PARAMAPADA SOPANAM"
+      "design": "Board design",
+      "designDesc": "Pick the look — everyone in the game sees this board",
+      "pictures": "Pictures in squares",
+      "picturesDesc": "Animals, flowers, sea life… Turn off for plain squares with big numbers",
+      "designs": {
+        "folkBright": "Folk Bright",
+        "flowerGarden": "Flower Garden",
+        "royalFolk": "Royal Folk",
+        "kidsFolk": "Kids",
+        "festivalFolk": "Festival",
+        "folkSea": "Folk Sea",
+        "ocean": "Ocean",
+        "deepSea": "Deep Sea",
+        "waves": "Waves"
+      }
     },
     "chamma": {
       "title": "Ashta Chamma",
