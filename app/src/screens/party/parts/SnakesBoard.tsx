@@ -55,7 +55,7 @@ function SnakeArt({ head, tail, cell, skin, lite }: { head: Pt; tail: Pt; cell: 
     return { p, tx: (q.x - r.x) / l, ty: (q.y - r.y) / l, ux: -(q.y - r.y) / l, uy: (q.x - r.x) / l };
   };
   const N = lite ? 36 : 70;
-  const T0 = 0.04;
+  const T0 = 0; // the neck runs right under the head, so they always join
   const band = (k: number, shift: number, t1 = 1) => {
     const L: string[] = [];
     const R: string[] = [];
@@ -118,10 +118,11 @@ function SnakeArt({ head, tail, cell, skin, lite }: { head: Pt; tail: Pt; cell: 
   const dx = (h0.x - h1.x) / dl;
   const dy = (h0.y - h1.y) / dl;
   const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
-  const cx = head.x - dx * cell * 0.08;
-  const cy = head.y - dy * cell * 0.08;
-  const hl = cell * 0.56;
-  const hw = cell * 0.42;
+  // The head is sized to the body (slim snake = small head) and sits on the neck.
+  const cx = head.x - dx * W * 0.2;
+  const cy = head.y - dy * W * 0.2;
+  const hl = W * 1.5;
+  const hw = W * 1.18;
   const tip = hl * 0.5;
   const hp = `M${f1(tip)} 0 C${f1(tip)} ${f1(-hw * 0.3)} ${f1(hl * 0.1)} ${f1(-hw * 0.5)} ${f1(-hl * 0.18)} ${f1(-hw * 0.5)} C${f1(-hl * 0.42)} ${f1(-hw * 0.48)} ${f1(-hl * 0.5)} ${f1(-hw * 0.2)} ${f1(-hl * 0.5)} 0 C${f1(-hl * 0.5)} ${f1(hw * 0.2)} ${f1(-hl * 0.42)} ${f1(hw * 0.48)} ${f1(-hl * 0.18)} ${f1(hw * 0.5)} C${f1(hl * 0.1)} ${f1(hw * 0.5)} ${f1(tip)} ${f1(hw * 0.3)} ${f1(tip)} 0 Z`;
   const crown = `M${f1(tip * 0.9)} 0 C${f1(tip * 0.8)} ${f1(-hw * 0.3)} ${f1(-hl * 0.1)} ${f1(-hw * 0.4)} ${f1(-hl * 0.42)} ${f1(-hw * 0.2)} L${f1(-hl * 0.42)} ${f1(hw * 0.2)} C${f1(-hl * 0.1)} ${f1(hw * 0.4)} ${f1(tip * 0.8)} ${f1(hw * 0.3)} ${f1(tip * 0.9)} 0 Z`;
@@ -137,9 +138,9 @@ function SnakeArt({ head, tail, cell, skin, lite }: { head: Pt; tail: Pt; cell: 
       <Path d={band(0.16, 0.62, 0.82)} fill={s.hi} opacity={0.55} />
       <G transform={`translate(${f1(cx)} ${f1(cy)}) rotate(${f1(ang)})`}>
         <Path
-          d={`M${f1(tip - 1)} 0 L${f1(tip + cell * 0.09)} 0 l${f1(cell * 0.05)} ${f1(-cell * 0.04)} M${f1(tip + cell * 0.09)} 0 l${f1(cell * 0.05)} ${f1(cell * 0.04)}`}
+          d={`M${f1(tip - 1)} 0 L${f1(tip + W * 0.3)} 0 l${f1(W * 0.14)} ${f1(-W * 0.12)} M${f1(tip + W * 0.3)} 0 l${f1(W * 0.14)} ${f1(W * 0.12)}`}
           stroke="#B91C1C"
-          strokeWidth={cell * 0.03}
+          strokeWidth={Math.max(1, W * 0.08)}
           strokeLinecap="round"
           fill="none"
         />
@@ -149,9 +150,9 @@ function SnakeArt({ head, tail, cell, skin, lite }: { head: Pt; tail: Pt; cell: 
         <Ellipse cx={-hl * 0.1} cy={-hw * 0.12} rx={hl * 0.25} ry={hw * 0.12} fill={s.hi} opacity={0.35} />
         {[-1, 1].map((k) => (
           <G key={k}>
-            <Ellipse cx={hl * 0.12} cy={k * hw * 0.34} rx={cell * 0.055} ry={cell * 0.04} fill="#D4A017" stroke={s.dark} strokeWidth={0.8} />
-            <Ellipse cx={hl * 0.12} cy={k * hw * 0.34} rx={cell * 0.011} ry={cell * 0.034} fill="#000" />
-            <Circle cx={tip * 0.8} cy={k * hw * 0.1} r={cell * 0.011} fill={s.dark} />
+            <Ellipse cx={hl * 0.12} cy={k * hw * 0.34} rx={hw * 0.14} ry={hw * 0.1} fill="#D4A017" stroke={s.dark} strokeWidth={0.8} />
+            <Ellipse cx={hl * 0.12} cy={k * hw * 0.34} rx={hw * 0.028} ry={hw * 0.085} fill="#000" />
+            <Circle cx={tip * 0.8} cy={k * hw * 0.1} r={hw * 0.028} fill={s.dark} />
           </G>
         ))}
       </G>
@@ -233,11 +234,19 @@ export const BoardArt = React.memo(
           const sq = i + 1;
           const { row, col } = snlCell(sq);
           const fill = sq === 100 ? `url(#${idPrefix}gold)` : (row + col) % 2 ? `url(#${idPrefix}tb)` : `url(#${idPrefix}ta)`;
+          const x0 = col * cell;
+          const y0 = row * cell;
           return (
             <G key={sq}>
               <Rect x={col * cell + 0.8} y={row * cell + 0.8} width={cell - 1.6} height={cell - 1.6} rx={3} fill={fill} />
+              {/* Raised tile: light top-left edge, soft shadow bottom-right */}
+              <Path d={`M${x0 + 2} ${y0 + cell - 2} L${x0 + 2} ${y0 + 2} L${x0 + cell - 2} ${y0 + 2}`} stroke="#fff" strokeOpacity={0.85} strokeWidth={1.2} fill="none" />
+              <Path d={`M${x0 + cell - 2} ${y0 + 2} L${x0 + cell - 2} ${y0 + cell - 2} L${x0 + 2} ${y0 + cell - 2}`} stroke="#000" strokeOpacity={0.12} strokeWidth={1.2} fill="none" />
+              {/* Danger / lucky squares: a snake's head tile glows red, a ladder's foot tile green */}
+              {board.snakes[sq] ? <Rect x={x0 + 3} y={y0 + 3} width={cell - 6} height={cell - 6} rx={4} fill="#EF4444" opacity={0.18} /> : null}
+              {board.ladders[sq] ? <Rect x={x0 + 3} y={y0 + 3} width={cell - 6} height={cell - 6} rx={4} fill="#22C55E" opacity={0.22} /> : null}
               {numbers && sq !== 100 ? (
-                <SvgText x={col * cell + cell / 2} y={row * cell + cell * 0.64} fontSize={cell * 0.38} fontWeight="800" fill={th.num} textAnchor="middle" opacity={0.42}>
+                <SvgText x={col * cell + cell / 2} y={row * cell + cell * 0.64} fontSize={cell * 0.38} fontWeight="800" fill={th.num} textAnchor="middle" opacity={0.5}>
                   {sq}
                 </SvgText>
               ) : null}
@@ -356,6 +365,9 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
 
     const mid = last.mid ?? last.to;
     const steps = last.from === 0 ? (mid === 1 ? [1] : []) : snlSteps(last.from, mid);
+    // Still waiting for a 1, or no move at all: the pawn stays where it is (off the board, under
+    // the board in the dock) — never shown on square 1 and taken back.
+    if (steps.length === 0 && last.to === last.from) return () => timers.forEach(clearTimeout);
     const seq: Animated.CompositeAnimation[] = [Animated.delay(LAND_MS)];
     let t0 = LAND_MS;
     // Coming onto the board: from just left of square 1.
@@ -441,6 +453,8 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
         value: outOf(uid) ? t('party.board.out') : sq === 0 ? '' : `#${sq}`,
         misses: s.misses?.[uid] ?? 0,
         out: outOf(uid),
+        // Not on the board yet (needs a 1): the pawn waits here, under the board.
+        piece: !outOf(uid) && sq === 0 && moving !== uid ? <Pawn color={colorOf(uid).hex} dark={colorOf(uid).dark} size={18} /> : undefined,
       },
     ];
   });

@@ -141,9 +141,9 @@ export function PartyLobby({
       {/* Game code: a dark glass card with a gold edge (same look as the join-code box) — the code
           big and spaced in a pill, copy right inside it, then Copy and Invite. */}
       <LinearGradient colors={['#FFF1A8', '#D4A017', '#8A6100', '#F5D06F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.codeEdge}>
-        <LinearGradient colors={['#1E1033', '#2A1648']} style={styles.codeCard}>
+        <LinearGradient colors={look.colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.codeCard}>
           <Row gap={6} style={{ alignSelf: 'stretch' }}>
-            <LinearGradient colors={look.colors} style={styles.codeBadge}>
+            <LinearGradient colors={['rgba(255,255,255,0.35)', 'rgba(255,255,255,0.12)']} style={styles.codeBadge}>
               <T style={{ fontSize: 14, lineHeight: 18 }} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
                 {look.emoji}
               </T>
@@ -153,7 +153,7 @@ export function PartyLobby({
             </T>
           </Row>
           <Pressable onPress={copy} accessibilityLabel={t('party.copyCode')} style={({ pressed }) => [styles.codePill, pressed && { transform: [{ scale: 0.98 }] }]}>
-            <View style={[styles.codeKey, { backgroundColor: look.colors[0] }]}>
+            <View style={[styles.codeKey, { backgroundColor: 'rgba(255,255,255,0.18)' }]}>
               <Ionicons name="key" size={16} color="#fff" />
             </View>
             <T style={styles.codeBig} maxFontSizeMultiplier={FIXED_SHAPE_SCALE} numberOfLines={1} adjustsFontSizeToFit>
@@ -495,17 +495,17 @@ const styles = StyleSheet.create({
   codeCard: { borderRadius: 21, padding: spacing.md, alignItems: 'center', overflow: 'hidden' },
   codeBadge: { width: 26, height: 26, borderRadius: 13, alignItems: 'center', justifyContent: 'center' },
   codePill: { alignSelf: 'stretch', flexDirection: 'row', alignItems: 'center', gap: 8, height: 62, marginTop: spacing.sm, borderRadius: 31, paddingLeft: 9, paddingRight: 7, backgroundColor: 'rgba(0,0,0,0.4)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.16)' },
-  codeKey: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  codeKey: { width: 42, height: 42, borderRadius: 21, borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)', alignItems: 'center', justifyContent: 'center' },
   codeBig: { flex: 1, textAlign: 'center', color: '#FDE68A', fontFamily: fonts.display, fontSize: 30, lineHeight: 38, letterSpacing: 7, includeFontPadding: false, textAlignVertical: 'center' },
-  codeInvite: { height: 42, borderRadius: 21, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#92400E' },
+  codeInvite: { height: 44, borderRadius: 22, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderWidth: 1, borderColor: '#92400E' },
   codeWatermark: { position: 'absolute', right: -10, bottom: -20, fontSize: 110, lineHeight: 130, opacity: 0.18 },
-  copyBtn: { width: 46, height: 46, borderRadius: 23, backgroundColor: '#F5B700', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFF1A8' },
+  copyBtn: { width: 42, height: 42, borderRadius: 21, backgroundColor: '#F5B700', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFF1A8' },
   copyBtnDone: { backgroundColor: '#86EFAC' },
   codeActionDone: { backgroundColor: '#86EFAC' },
   codeTile: { width: 36, height: 46, borderRadius: 10, alignItems: 'center', justifyContent: 'center', overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.9)', shadowColor: '#000', shadowOpacity: 0.3, shadowRadius: 4, shadowOffset: { width: 0, height: 3 }, elevation: 4 },
   codeTileShine: { position: 'absolute', left: 0, right: 0, top: 0, height: '45%', backgroundColor: 'rgba(255,255,255,0.6)' },
   codeChar: { fontFamily: fonts.display, fontSize: 24, lineHeight: 30 },
-  codeAction: { flex: 1, height: 42, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 21, backgroundColor: 'rgba(255,255,255,0.12)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
+  codeAction: { flex: 1, height: 44, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, borderRadius: 22, backgroundColor: 'rgba(0,0,0,0.25)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.45)' },
   codeActionMain: { backgroundColor: '#fff' },
   infoCard: { marginTop: spacing.md, borderRadius: radius.lg, borderWidth: 1, padding: spacing.md, gap: spacing.sm },
   ruleChips: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },

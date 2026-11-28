@@ -21,6 +21,8 @@ export type DockPlayer = {
   /** Small extra line (team) and badge (⚔️). */
   sub?: { text: string; color: string };
   badge?: string;
+  /** A playing piece shown in the card (e.g. a pawn still waiting to come onto the board). */
+  piece?: React.ReactNode;
 };
 
 const STAGE = 112;
@@ -187,6 +189,7 @@ function Chip({ p, active, me, side }: { p: DockPlayer; active: boolean; me: boo
           ) : null}
         </View>
       </View>
+      {p.piece ? <View style={styles.piece}>{p.piece}</View> : null}
       {active ? <Ionicons name={side === 'left' ? 'caret-forward' : 'caret-back'} size={12} color="#FDE68A" /> : null}
     </View>
   );
@@ -216,6 +219,7 @@ const styles = StyleSheet.create({
   secsText: { fontFamily: fonts.bold, fontSize: 10, lineHeight: 13, color: '#fff' },
   chipEdge: { borderRadius: 14, padding: 1.2, width: '100%', maxWidth: 160 },
   chip: { height: CHIP_H - 2.4, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 13, paddingHorizontal: 5, backgroundColor: '#1A1030' },
+  piece: { paddingHorizontal: 1 },
   avatarRing: { padding: 2, borderRadius: 16 },
   chipName: { color: '#fff', fontFamily: fonts.semibold, fontSize: 11, lineHeight: 14 },
   chipLine: { flexDirection: 'row', alignItems: 'center', gap: 4 },
