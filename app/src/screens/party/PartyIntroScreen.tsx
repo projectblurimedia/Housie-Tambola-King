@@ -14,7 +14,7 @@ import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
 import { fonts, radius, spacing, ThemeOverride, useThemeColors } from '@/theme';
 import type { ScreenProps } from '@/navigation/types';
-import { PARTY_LOOK, PARTY_THEME, ShineSweep } from './parts/Premium';
+import { PARTY_LOOK, PARTY_THEME } from './parts/Premium';
 import { GAME_ART } from './parts/gameArt';
 import { RulesModal } from './parts/RulesModal';
 import { BoardThumb } from './parts/SnakesBoard';
@@ -393,13 +393,8 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
           </>
         ) : null}
 
-        <Pressable onPress={create} disabled={busy !== null} style={({ pressed }) => [pressed && { transform: [{ scale: 0.98 }] }]}>
-          <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.createBtn}>
-            <ShineSweep />
-            <Ionicons name="add-circle" size={20} color="#3B1D00" />
-            <T style={styles.createText}>{busy === 'create' ? t('common.loading') : t('party.create')}</T>
-          </LinearGradient>
-        </Pressable>
+        {/* Same plain gold button as Housie's Start game. */}
+        <Button title={t('party.create')} variant="gold" icon="add-circle" loading={busy === 'create'} disabled={busy !== null && busy !== 'create'} onPress={create} />
       </View>
 
       {/* Join */}
@@ -436,7 +431,5 @@ const styles = StyleSheet.create({
   boardTick: { position: 'absolute', right: 8, top: 8, width: 24, height: 24, borderRadius: 12, backgroundColor: '#FDE68A', alignItems: 'center', justifyContent: 'center' },
   joinBtn: { height: 50, borderRadius: 25, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, borderWidth: 1, borderColor: 'rgba(255,255,255,0.25)' },
   joinText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 22, color: '#fff' },
-  createBtn: { height: 52, borderRadius: 26, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8, overflow: 'hidden' },
-  createText: { fontFamily: fonts.display, fontSize: 16, lineHeight: 22, color: '#3B1D00' },
   code: { flex: 1, height: 50, borderRadius: radius.md, borderWidth: 1, fontFamily: fonts.bold, fontSize: 20, letterSpacing: 4 },
 });

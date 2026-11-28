@@ -175,17 +175,21 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
   }, [leaveIn]);
 
   const title = state ? t(`party.${state.game.kind}.title`) : '';
+  // Every state of this screen (loading, closed, finished) keeps the game's own colours.
+  const kind = state?.game.kind ?? qc.getQueryData<PartyState>(partyKey(partyId))?.game.kind;
+  const look = kind ? PARTY_LOOK[kind] : undefined;
+  const page = kind ? PARTY_THEME[kind].page : undefined;
 
   if (party.isLoading) {
     return (
-      <Screen title="">
+      <Screen title="" headerColors={look?.colors} backgroundColors={page}>
         <Loading />
       </Screen>
     );
   }
   if (!state || state.game.status === 'closed') {
     return (
-      <Screen title={title}>
+      <Screen title={title} headerColors={look?.colors} backgroundColors={page}>
         <EmptyState
           icon="close-circle-outline"
           title={party.error ? errorMessage(party.error) : t('party.closed')}

@@ -94,7 +94,7 @@ export function GameDock({
   const R = PAD / 2;
 
   const column = (list: DockPlayer[], side: 'left' | 'right') => (
-    <View style={[styles.col, { alignItems: side === 'left' ? 'flex-end' : 'flex-start' }]}>
+    <View style={[styles.col, { alignItems: side === 'left' ? 'flex-start' : 'flex-end' }]}>
       {list.map((p) => (
         <Chip key={p.userId} p={p} active={p.userId === turnId} me={p.userId === meId} side={side} />
       ))}
@@ -122,11 +122,19 @@ export function GameDock({
           <View pointerEvents="none" style={styles.center}>
             {center}
           </View>
+          {/* My turn: the seconds left sit on the pad's corner (the label below says what to do). */}
+          {canAct ? (
+            <View pointerEvents="none" style={styles.secsBadge}>
+              <T style={styles.secsBadgeText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
+                {seconds}
+              </T>
+            </View>
+          ) : null}
           <View pointerEvents="none" style={styles.labelWrap}>
             {canAct ? (
               <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.label}>
                 <T style={styles.labelText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE} numberOfLines={1}>
-                  {actLabel} · {seconds}s
+                  {actLabel}
                 </T>
               </LinearGradient>
             ) : (
@@ -152,16 +160,16 @@ export function GameDock({
 
 function Chip({ p, active, me, side }: { p: DockPlayer; active: boolean; me: boolean; side: 'left' | 'right' }) {
   const body = (
-    <View style={[styles.chip, side === 'left' ? { flexDirection: 'row-reverse' } : null]}>
+    <View style={[styles.chip, side === 'right' ? { flexDirection: 'row-reverse' } : null]}>
       <LinearGradient colors={[p.color.hex, p.color.dark]} style={styles.avatarRing}>
         <Avatar avatarKey={p.avatarKey} size={26} />
       </LinearGradient>
-      <View style={{ flex: 1, alignItems: side === 'left' ? 'flex-end' : 'flex-start' }}>
+      <View style={{ flex: 1, alignItems: side === 'right' ? 'flex-end' : 'flex-start' }}>
         <T style={styles.chipName} numberOfLines={1} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
           {p.badge ? `${p.badge} ` : ''}
           {p.name}
         </T>
-        <View style={[styles.chipLine, side === 'left' ? { flexDirection: 'row-reverse' } : null]}>
+        <View style={[styles.chipLine, side === 'right' ? { flexDirection: 'row-reverse' } : null]}>
           <T style={styles.chipValue} maxFontSizeMultiplier={FIXED_SHAPE_SCALE} numberOfLines={1}>
             {p.value}
           </T>
@@ -199,7 +207,9 @@ const styles = StyleSheet.create({
   pad: { position: 'absolute', top: (STAGE - 18 - PAD) / 2 - 2, alignSelf: 'center' },
   glow: { position: 'absolute', top: (STAGE - 18 - PAD) / 2 - 4, width: PAD + 8, height: PAD + 8, borderRadius: PAD, borderWidth: 3, borderColor: '#FACC15', backgroundColor: 'rgba(250,204,21,0.12)' },
   center: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 18, alignItems: 'center', justifyContent: 'center' },
-  labelWrap: { position: 'absolute', bottom: 4, left: 0, right: 0, alignItems: 'center' },
+  labelWrap: { position: 'absolute', bottom: 2, left: -10, right: -10, alignItems: 'center' },
+  secsBadge: { position: 'absolute', top: 2, right: 6, minWidth: 26, height: 26, borderRadius: 13, paddingHorizontal: 4, alignItems: 'center', justifyContent: 'center', backgroundColor: '#B91C1C', borderWidth: 2, borderColor: '#FDE68A' },
+  secsBadgeText: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 14, color: '#fff' },
   label: { paddingHorizontal: 10, height: 20, borderRadius: 10, justifyContent: 'center', borderWidth: 1, borderColor: '#92400E' },
   labelText: { fontFamily: fonts.bold, fontSize: 10, lineHeight: 13, color: '#3B1D00', letterSpacing: 0.4 },
   secs: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, height: 20, borderRadius: 10, borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.55)' },

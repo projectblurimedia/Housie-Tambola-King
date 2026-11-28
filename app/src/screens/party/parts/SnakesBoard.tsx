@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { Animated, Easing, StyleSheet, useWindowDimensions, View } from 'react-native';
-import Svg, { Circle, Defs, Ellipse, G, Line, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
+import Svg, { Circle, Defs, Ellipse, G, Line, LinearGradient, Path, RadialGradient, Rect, Stop, Text as SvgText } from 'react-native-svg';
 import { useTranslation } from 'react-i18next';
 import { T } from '@/components/ui';
 import { LADDERS, type Pt, shareLayout, SNAKES, snakeCurve, snlCell, snlCentre, snlLevelOf, snlSteps, type SnlBoard, type SnlLevel } from '@/game/engine/board';
@@ -12,99 +12,103 @@ import { Pawn, TOKEN_COLORS } from './BoardBits';
 import { GameDock, type DockPlayer } from './GameDock';
 import { RollingDie } from './RollingDie';
 
-/** Board colours per level: easy = mint, medium = honey, hard = rose. */
-export const SNL_THEME: Record<SnlLevel, { a: string; b: string; num: string; frame: string; edge: string }> = {
-  easy: { a: '#F2FBF3', b: '#BDE8C8', num: '#2E6B3E', frame: '#1F5130', edge: '#86EFAC' },
-  medium: { a: '#FFF6DE', b: '#FFD98E', num: '#8A5210', frame: '#7A4513', edge: '#F5D06F' },
-  hard: { a: '#FFF3F0', b: '#FFC9B8', num: '#9A3412', frame: '#7C2D12', edge: '#FDA4AF' },
+/** Board colours per level (easy = mint, medium = honey, hard = rose): tiles, grout, numbers, frame. */
+export const SNL_THEME: Record<SnlLevel, { a: string; b: string; b2: string; grout: string; num: string; frame: string; edge: string }> = {
+  easy: { a: '#F3FBF4', b: '#B7E4C2', b2: '#D7F2DE', grout: '#9FD3AE', num: '#1F5130', frame: '#163D24', edge: '#F5D06F' },
+  medium: { a: '#FFF8E8', b: '#F6D9A0', b2: '#FCE7BE', grout: '#E6C58A', num: '#7A4A12', frame: '#4A2A10', edge: '#F5D06F' },
+  hard: { a: '#FFF4F1', b: '#F7C1B2', b2: '#FCDCD3', grout: '#E9A897', num: '#7C2D12', frame: '#4C150B', edge: '#F5D06F' },
 };
 const CLASSIC: SnlBoard = { ladders: LADDERS, snakes: SNAKES };
 const f1 = (v: number) => v.toFixed(1);
 
-/** Real snake skins: base, light (sheen), dark (outline / shade), pattern colour and kind. */
+/** Real snake skins: shades from dark edge to bright sheen, and the species' pattern. */
 const SKINS = [
-  { base: '#C9A25A', light: '#F3E2B3', dark: '#4A3014', blot: '#6B4A22', kind: 'blotch' },
-  { base: '#2E9E4F', light: '#A8F0C0', dark: '#0B3D1D', blot: '#F5F5DC', kind: 'spots' },
-  { base: '#1F2937', light: '#6B7280', dark: '#05070A', blot: '#F4D03F', kind: 'bands' },
-  { base: '#C0392B', light: '#F5B7B1', dark: '#3B0A06', blot: '#111111', kind: 'bands2' },
-  { base: '#7D8B3A', light: '#D6E29A', dark: '#2B3010', blot: '#3E4A16', kind: 'zig' },
+  { base: '#B8893E', dark: '#3E2508', mid: '#7A5420', light: '#E9CD8C', hi: '#FFF4D6', blot: '#4A2E0C', kind: 'saddle' },
+  { base: '#2F8F46', dark: '#0B3018', mid: '#1D6531', light: '#7DD99A', hi: '#E7FFEE', blot: '#E8F5C8', kind: 'dots' },
+  { base: '#2B2F36', dark: '#07080A', mid: '#16191E', light: '#5E6672', hi: '#C9D1DC', blot: '#E9C46A', kind: 'rings' },
+  { base: '#B83227', dark: '#3A0904', mid: '#7E1C14', light: '#E8756A', hi: '#FFE1DC', blot: '#141414', kind: 'rings2' },
+  { base: '#6F7D35', dark: '#232A0C', mid: '#4A5520', light: '#B9C77A', hi: '#F2F8D8', blot: '#2E3612', kind: 'diamond' },
 ] as const;
-
-/** Shared shading for every snake on a board: a lit sphere per skin (body and pattern). */
-function SkinDefs({ prefix }: { prefix: string }) {
-  return (
-    <Defs>
-      {SKINS.map((s, i) => (
-        <React.Fragment key={i}>
-          <RadialGradient id={`${prefix}g${i}`} cx="35%" cy="30%" r="75%">
-            <Stop offset="0" stopColor={s.light} />
-            <Stop offset="0.45" stopColor={s.base} />
-            <Stop offset="1" stopColor={s.dark} />
-          </RadialGradient>
-          <RadialGradient id={`${prefix}p${i}`} cx="35%" cy="30%" r="75%">
-            <Stop offset="0" stopColor={s.blot} />
-            <Stop offset="1" stopColor={s.dark} />
-          </RadialGradient>
-        </React.Fragment>
-      ))}
-    </Defs>
-  );
-}
+/** Light comes from the top-left: shading shifts this way across the body. */
+const LX = -0.55;
+const LY = -0.83;
 
 /**
- * A realistic snake: the body is built from overlapping lit segments along a natural wave (thick
- * in the middle, a fine pointed tail), so it looks round like a real body, with its species'
- * pattern (python blotches, tree-snake spots, krait bands, coral rings, viper zig-zag), a soft
- * shadow on the board, and a real head — narrow eyes with slit pupils, nostrils, a forked
- * tongue — kept inside its own square.
+ * A realistic snake: one smooth body along a natural wave (thick in the middle, tapering to a
+ * fine tail), shaded across its width like a real round body — dark edge, colour, a lit side and
+ * a glossy streak — with its species' pattern (python saddles, tree-snake spots, krait bands,
+ * coral rings, viper diamonds) and a real head: a scaled crown, narrow golden eyes with slit
+ * pupils, nostrils and a forked tongue, kept inside its own square.
  */
-function SnakeArt({ head, tail, cell, skin, prefix, lite }: { head: Pt; tail: Pt; cell: number; skin: number; prefix: string; lite?: boolean }) {
+function SnakeArt({ head, tail, cell, skin, lite }: { head: Pt; tail: Pt; cell: number; skin: number; lite?: boolean }) {
   const s = SKINS[skin];
   const { at } = snakeCurve(head, tail, cell);
-  const R = cell * 0.21;
-  const rad = (t: number) => R * (t < 0.1 ? 0.8 + (t / 0.1) * 0.2 : t < 0.55 ? 1 : Math.max(0.12, 1 - (t - 0.55) / 0.45));
-  // Points along the body by length (so segments are evenly spaced).
-  const pts: { t: number; p: Pt; l: number }[] = [];
-  let prev = at(0);
-  let L = 0;
-  for (let i = 0; i <= 400; i++) {
-    const t = i / 400;
+  const W = cell * 0.4;
+  const width = (t: number) => W * (t < 0.1 ? 0.78 + (t / 0.1) * 0.22 : t < 0.5 ? 1 : Math.max(0.06, 1 - Math.pow((t - 0.5) / 0.5, 1.3)));
+  const fr = (t: number) => {
     const p = at(t);
-    L += Math.hypot(p.x - prev.x, p.y - prev.y);
-    prev = p;
-    pts.push({ t, p, l: L });
-  }
-  const segs: { t: number; p: Pt; l: number }[] = [];
-  let next = 0;
-  for (const q of pts) {
-    if (q.t < 0.03 || q.l < next) continue;
-    segs.push(q);
-    next = q.l + rad(q.t) * (lite ? 0.9 : 0.5);
-  }
-  segs.reverse(); // tail first, so the neck lies on top
-  // Shadow: one outline of the whole body, offset.
-  const left: string[] = [];
-  const right: string[] = [];
-  for (let i = 0; i <= 50; i++) {
-    const t = 0.03 + (i / 50) * 0.97;
-    const p = at(t);
-    const q = at(Math.min(1, t + 0.004));
-    const l = Math.hypot(q.x - p.x, q.y - p.y) || 1;
-    const ux = -(q.y - p.y) / l;
-    const uy = (q.x - p.x) / l;
-    const r = rad(t);
-    left.push(`${f1(p.x + ux * r)} ${f1(p.y + uy * r)}`);
-    right.push(`${f1(p.x - ux * r)} ${f1(p.y - uy * r)}`);
-  }
-  const shadow = `M${left.join(' L')} L${right.reverse().join(' L')} Z`;
-  const patterned = (l: number) => {
-    const u = l / (R * 1.6);
-    if (s.kind === 'bands') return Math.floor(u) % 2 === 0 && u % 1 < 0.35;
-    if (s.kind === 'bands2') return u % 1.6 < 0.5;
-    if (s.kind === 'blotch') return u % 1.4 < 0.6;
-    if (s.kind === 'zig') return u % 1 < 0.45;
-    return false;
+    const q = at(Math.min(1, t + 0.003));
+    const r = at(Math.max(0, t - 0.003));
+    const l = Math.hypot(q.x - r.x, q.y - r.y) || 1;
+    return { p, tx: (q.x - r.x) / l, ty: (q.y - r.y) / l, ux: -(q.y - r.y) / l, uy: (q.x - r.x) / l };
   };
+  const N = lite ? 36 : 70;
+  const T0 = 0.04;
+  const band = (k: number, shift: number, t1 = 1) => {
+    const L: string[] = [];
+    const R: string[] = [];
+    for (let i = 0; i <= N; i++) {
+      const t = T0 + (i / N) * (t1 - T0);
+      const { p, ux, uy } = fr(t);
+      const w = width(t) / 2;
+      const cx = p.x + LX * w * shift;
+      const cy = p.y + LY * w * shift;
+      L.push(`${f1(cx + ux * w * k)} ${f1(cy + uy * w * k)}`);
+      R.push(`${f1(cx - ux * w * k)} ${f1(cy - uy * w * k)}`);
+    }
+    return `M${L.join(' L')} L${R.reverse().join(' L')} Z`;
+  };
+  // The pattern, following the body.
+  const marks: React.ReactNode[] = [];
+  const step = W * (s.kind === 'dots' ? 0.9 : 1.15);
+  let acc = 0;
+  let prev = at(T0);
+  for (let i = 1, k = 0; i <= 300; i++) {
+    const t = T0 + (i / 300) * (0.9 - T0);
+    const p = at(t);
+    acc += Math.hypot(p.x - prev.x, p.y - prev.y);
+    prev = p;
+    if (acc < step) continue;
+    acc = 0;
+    k++;
+    const { tx, ty, ux, uy } = fr(t);
+    const w = width(t) / 2;
+    const ang = (Math.atan2(ty, tx) * 180) / Math.PI;
+    if (s.kind === 'saddle') marks.push(<Ellipse key={k} cx={p.x} cy={p.y} rx={w * 0.55} ry={w * 0.8} transform={`rotate(${f1(ang)} ${f1(p.x)} ${f1(p.y)})`} fill={s.blot} opacity={0.75} />);
+    else if (s.kind === 'dots') {
+      const side = k % 2 ? 1 : -1;
+      marks.push(<Circle key={k} cx={p.x + ux * w * 0.35 * side} cy={p.y + uy * w * 0.35 * side} r={w * 0.18} fill={s.blot} opacity={0.9} />);
+    } else if (s.kind === 'rings' || s.kind === 'rings2')
+      marks.push(
+        <Path
+          key={k}
+          d={`M${f1(p.x + ux * w * 0.92 - tx * w * 0.18)} ${f1(p.y + uy * w * 0.92 - ty * w * 0.18)} Q${f1(p.x + tx * w * 0.12)} ${f1(p.y + ty * w * 0.12)} ${f1(p.x - ux * w * 0.92 - tx * w * 0.18)} ${f1(p.y - uy * w * 0.92 - ty * w * 0.18)}`}
+          stroke={s.blot}
+          strokeWidth={w * (s.kind === 'rings' ? 0.28 : 0.42)}
+          fill="none"
+          opacity={0.92}
+        />,
+      );
+    else
+      marks.push(
+        <Path
+          key={k}
+          d={`M${f1(p.x + tx * w * 0.7)} ${f1(p.y + ty * w * 0.7)} L${f1(p.x + ux * w * 0.55)} ${f1(p.y + uy * w * 0.55)} L${f1(p.x - tx * w * 0.7)} ${f1(p.y - ty * w * 0.7)} L${f1(p.x - ux * w * 0.55)} ${f1(p.y - uy * w * 0.55)} Z`}
+          fill={s.blot}
+          opacity={0.75}
+        />,
+      );
+  }
   // Head, pointing away from the neck.
   const h0 = at(0);
   const h1 = at(0.04);
@@ -118,17 +122,17 @@ function SnakeArt({ head, tail, cell, skin, prefix, lite }: { head: Pt; tail: Pt
   const hw = cell * 0.42;
   const tip = hl * 0.5;
   const hp = `M${f1(tip)} 0 C${f1(tip)} ${f1(-hw * 0.3)} ${f1(hl * 0.1)} ${f1(-hw * 0.5)} ${f1(-hl * 0.18)} ${f1(-hw * 0.5)} C${f1(-hl * 0.42)} ${f1(-hw * 0.48)} ${f1(-hl * 0.5)} ${f1(-hw * 0.2)} ${f1(-hl * 0.5)} 0 C${f1(-hl * 0.5)} ${f1(hw * 0.2)} ${f1(-hl * 0.42)} ${f1(hw * 0.48)} ${f1(-hl * 0.18)} ${f1(hw * 0.5)} C${f1(hl * 0.1)} ${f1(hw * 0.5)} ${f1(tip)} ${f1(hw * 0.3)} ${f1(tip)} 0 Z`;
+  const crown = `M${f1(tip * 0.9)} 0 C${f1(tip * 0.8)} ${f1(-hw * 0.3)} ${f1(-hl * 0.1)} ${f1(-hw * 0.4)} ${f1(-hl * 0.42)} ${f1(-hw * 0.2)} L${f1(-hl * 0.42)} ${f1(hw * 0.2)} C${f1(-hl * 0.1)} ${f1(hw * 0.4)} ${f1(tip * 0.8)} ${f1(hw * 0.3)} ${f1(tip * 0.9)} 0 Z`;
   return (
     <G>
-      <Path d={shadow} fill="rgba(0,0,0,0.22)" transform="translate(2.5 3.5)" />
-      {segs.map((q, i) => (
-        <Circle key={i} cx={q.p.x} cy={q.p.y} r={rad(q.t)} fill={`url(#${prefix}${patterned(q.l) ? 'p' : 'g'}${skin})`} />
-      ))}
-      {s.kind === 'spots' && !lite
-        ? segs
-            .filter((q) => Math.floor((q.l / R) * 0.8) % 3 === 0 && ((q.l / R) * 0.8) % 1 < 0.25)
-            .map((q, i) => <Circle key={`d${i}`} cx={q.p.x - rad(q.t) * 0.2} cy={q.p.y - rad(q.t) * 0.25} r={rad(q.t) * 0.28} fill={s.blot} opacity={0.9} />)
-        : null}
+      <Path d={band(1, 0)} fill="rgba(0,0,0,0.25)" transform="translate(3 4)" />
+      <Path d={band(1, 0)} fill={s.dark} />
+      <Path d={band(0.9, 0.05)} fill={s.mid} />
+      <Path d={band(0.72, 0.15)} fill={s.base} />
+      {marks}
+      <Path d={band(0.5, -0.75)} fill={s.dark} opacity={0.22} />
+      <Path d={band(0.42, 0.42)} fill={s.light} opacity={0.38} />
+      <Path d={band(0.16, 0.62, 0.82)} fill={s.hi} opacity={0.55} />
       <G transform={`translate(${f1(cx)} ${f1(cy)}) rotate(${f1(ang)})`}>
         <Path
           d={`M${f1(tip - 1)} 0 L${f1(tip + cell * 0.09)} 0 l${f1(cell * 0.05)} ${f1(-cell * 0.04)} M${f1(tip + cell * 0.09)} 0 l${f1(cell * 0.05)} ${f1(cell * 0.04)}`}
@@ -138,17 +142,16 @@ function SnakeArt({ head, tail, cell, skin, prefix, lite }: { head: Pt; tail: Pt
           fill="none"
         />
         <Path d={hp} fill="rgba(0,0,0,0.28)" transform="translate(2.5 3.5)" />
-        <Path d={hp} fill={`url(#${prefix}g${skin})`} stroke={s.dark} strokeWidth={0.8} />
-        <Path d={`M${f1(-hl * 0.35)} ${f1(-hw * 0.18)} Q${f1(hl * 0.05)} ${f1(-hw * 0.3)} ${f1(hl * 0.3)} 0 Q${f1(hl * 0.05)} ${f1(hw * 0.3)} ${f1(-hl * 0.35)} ${f1(hw * 0.18)} Z`} fill={s.dark} opacity={0.28} />
+        <Path d={hp} fill={s.mid} stroke={s.dark} strokeWidth={1} />
+        <Path d={crown} fill={s.base} />
+        <Ellipse cx={-hl * 0.1} cy={-hw * 0.12} rx={hl * 0.25} ry={hw * 0.12} fill={s.hi} opacity={0.35} />
         {[-1, 1].map((k) => (
           <G key={k}>
-            <Ellipse cx={hl * 0.12} cy={k * hw * 0.33} rx={cell * 0.06} ry={cell * 0.045} fill="#E8B923" stroke={s.dark} strokeWidth={0.8} />
-            <Ellipse cx={hl * 0.12} cy={k * hw * 0.33} rx={cell * 0.012} ry={cell * 0.038} fill="#000" />
-            <Circle cx={hl * 0.1} cy={k * hw * 0.33 - cell * 0.015} r={cell * 0.01} fill="#fff" />
-            <Circle cx={tip * 0.78} cy={k * hw * 0.1} r={cell * 0.012} fill={s.dark} />
+            <Ellipse cx={hl * 0.12} cy={k * hw * 0.34} rx={cell * 0.055} ry={cell * 0.04} fill="#D4A017" stroke={s.dark} strokeWidth={0.8} />
+            <Ellipse cx={hl * 0.12} cy={k * hw * 0.34} rx={cell * 0.011} ry={cell * 0.034} fill="#000" />
+            <Circle cx={tip * 0.8} cy={k * hw * 0.1} r={cell * 0.011} fill={s.dark} />
           </G>
         ))}
-        <Path d={`M${f1(-hl * 0.4)} ${f1(-hw * 0.12)} Q0 ${f1(-hw * 0.32)} ${f1(tip * 0.7)} ${f1(-hw * 0.12)}`} stroke="#fff" strokeOpacity={0.35} strokeWidth={1.2} fill="none" />
       </G>
     </G>
   );
@@ -197,7 +200,11 @@ function LadderArt({ from, to, cell }: { from: Pt; to: Pt; cell: number }) {
   );
 }
 
-/** The board: a soft two-tone checker (colour by level), small corner numbers, ladders, snakes. */
+/**
+ * The board: polished tiles (a soft light from the top), thin grout lines, numbers set into the
+ * middle of each tile, a gold 100 with a crown, wooden ladders and real snakes. Tile colours by
+ * level: easy = mint, medium = honey, hard = rose.
+ */
 export const BoardArt = React.memo(
   function BoardArt({ size, board, level, numbers = true, idPrefix = 'b' }: { size: number; board: SnlBoard; level: SnlLevel; numbers?: boolean; idPrefix?: string }) {
     const cell = size / 10;
@@ -205,16 +212,30 @@ export const BoardArt = React.memo(
     const c = (sq: number) => snlCentre(sq, size);
     return (
       <Svg width={size} height={size}>
-        <Rect x={0} y={0} width={size} height={size} fill={th.a} />
+        <Defs>
+          <LinearGradient id={`${idPrefix}ta`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor="#FFFFFF" />
+            <Stop offset="1" stopColor={th.a} />
+          </LinearGradient>
+          <LinearGradient id={`${idPrefix}tb`} x1="0" y1="0" x2="0" y2="1">
+            <Stop offset="0" stopColor={th.b2} />
+            <Stop offset="1" stopColor={th.b} />
+          </LinearGradient>
+          <RadialGradient id={`${idPrefix}gold`} cx="50%" cy="40%" r="70%">
+            <Stop offset="0" stopColor="#FFF3B0" />
+            <Stop offset="1" stopColor="#E0A100" />
+          </RadialGradient>
+        </Defs>
+        <Rect x={0} y={0} width={size} height={size} fill={th.grout} />
         {Array.from({ length: 100 }, (_, i) => {
           const sq = i + 1;
           const { row, col } = snlCell(sq);
-          const fill = sq === 100 ? '#FFC93C' : (row + col) % 2 ? th.b : th.a;
+          const fill = sq === 100 ? `url(#${idPrefix}gold)` : (row + col) % 2 ? `url(#${idPrefix}tb)` : `url(#${idPrefix}ta)`;
           return (
             <G key={sq}>
-              {fill === th.a ? null : <Rect x={col * cell} y={row * cell} width={cell} height={cell} fill={fill} />}
-              {numbers ? (
-                <SvgText x={col * cell + cell * 0.08} y={row * cell + cell * 0.3} fontSize={cell * 0.26} fontWeight="700" fill={th.num} opacity={0.8}>
+              <Rect x={col * cell + 0.8} y={row * cell + 0.8} width={cell - 1.6} height={cell - 1.6} rx={3} fill={fill} />
+              {numbers && sq !== 100 ? (
+                <SvgText x={col * cell + cell / 2} y={row * cell + cell * 0.64} fontSize={cell * 0.38} fontWeight="800" fill={th.num} textAnchor="middle" opacity={0.42}>
                   {sq}
                 </SvgText>
               ) : null}
@@ -222,16 +243,15 @@ export const BoardArt = React.memo(
           );
         })}
         {numbers ? (
-          <SvgText x={cell * 0.5} y={cell * 0.8} fontSize={cell * 0.36} textAnchor="middle">
+          <SvgText x={cell * 0.5} y={cell * 0.68} fontSize={cell * 0.42} textAnchor="middle">
             👑
           </SvgText>
         ) : null}
         {Object.entries(board.ladders).map(([f, to]) => (
           <LadderArt key={`l${f}`} from={c(Number(f))} to={c(to)} cell={cell} />
         ))}
-        <SkinDefs prefix={idPrefix} />
         {Object.entries(board.snakes).map(([h, tl], i) => (
-          <SnakeArt key={`s${h}`} prefix={idPrefix} skin={i % SKINS.length} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
+          <SnakeArt key={`s${h}`} skin={i % SKINS.length} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
         ))}
       </Svg>
     );
@@ -261,7 +281,7 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
   const { width } = useWindowDimensions();
   const g = state.game;
   const s = g.state;
-  const size = Math.min(width - 16, 560);
+  const size = Math.min(width - 26, 560);
   const cell = size / 10;
   const pawnSize = cell * 0.62;
   const order = s.order ?? state.players.map((p) => p.userId);
@@ -425,8 +445,9 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
 
   return (
     <View>
-      <View style={[styles.boardWrap, { width: size + 10, marginHorizontal: -(spacing.lg - 3), backgroundColor: theme.frame, borderColor: theme.edge }]}>
-        <View style={{ width: size, height: size, borderRadius: 6, overflow: 'hidden' }}>
+      <View style={[styles.boardWrap, { width: size + 19, marginHorizontal: -(spacing.lg - 1), backgroundColor: theme.frame, borderColor: theme.edge }]}>
+        <View style={{ width: size + 4, padding: 2, borderRadius: 7, backgroundColor: '#1E1006' }}>
+        <View style={{ width: size, height: size, borderRadius: 5, overflow: 'hidden' }}>
           <BoardArt size={size} board={board} level={level} />
           {order.map((uid) => {
             const c = colorOf(uid);
@@ -450,6 +471,7 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
               </Animated.View>
             );
           })}
+          </View>
         </View>
       </View>
 
@@ -484,7 +506,7 @@ export function BoardThumb({ index, board, size }: { index: number; board: SnlBo
 }
 
 const styles = StyleSheet.create({
-  boardWrap: { alignSelf: 'center', padding: 5, borderRadius: 12, borderWidth: 2 },
+  boardWrap: { alignSelf: 'center', padding: 5, borderRadius: 14, borderWidth: 2.5 },
   token: { position: 'absolute', left: 0, top: 0 },
   thumbNum: { position: 'absolute', left: 4, top: 4, width: 20, height: 20, borderRadius: 10, backgroundColor: 'rgba(0,0,0,0.6)', alignItems: 'center', justifyContent: 'center' },
   thumbNumText: { color: '#fff', fontSize: 11, lineHeight: 14, fontWeight: '700' },
