@@ -56,31 +56,72 @@ export function RoundBar({ state, seconds, label }: { state: PartyState; seconds
 }
 
 /** Running totals, best first. */
+const MEDALS = ['🥇', '🥈', '🥉'];
+const RANK_RING: [string, string][] = [
+  ['#FFF1A8', '#D4A017'],
+  ['#F1F5F9', '#94A3B8'],
+  ['#FED7AA', '#C2410C'],
+];
+
+/**
+ * The scores (Find Seeta, Show) as a leaderboard: the leader on a gold card with 🥇 and a ring
+ * round the photo, 🥈 🥉 next, then the rest; my own row is highlighted; scores sit in gold pills.
+ */
 export function ScoreStrip({ players, meId }: { players: PartyPlayer[]; meId: string }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
-  const ranked = [...players].filter((p) => p.active).sort((a, b) => b.score - a.score);
+  const ranked = [...players].filter((p) => p.active).sort((x, y) => y.score - x.score);
   return (
-    <Card style={{ marginTop: spacing.lg, paddingVertical: spacing.sm }}>
-      <T variant="smallBold" muted style={{ marginBottom: 6, letterSpacing: 0.6 }}>
-        {t('party.scores').toUpperCase()}
-      </T>
-      {ranked.map((p, i) => (
-        <Row key={p.userId} gap={spacing.sm} style={{ paddingVertical: 4 }}>
-          <T variant="smallBold" muted style={{ width: 20 }}>
-            {i + 1}
-          </T>
-          <Avatar avatarKey={p.avatarKey} size={26} />
-          <T variant="small" style={{ flex: 1 }} numberOfLines={1} color={p.userId === meId ? colors.primary : undefined}>
-            {p.name}
-            {p.userId === meId ? ` (${t('party.you')})` : ''}
-          </T>
-          <T variant="smallBold" color={colors.goldDark}>
-            {p.score.toLocaleString('en-IN')}
-          </T>
-        </Row>
-      ))}
-    </Card>
+    <View style={[styles.lbCard, { backgroundColor: colors.surface, borderColor: colors.border }]}>
+      <Row gap={6} style={{ marginBottom: 8 }}>
+        <Ionicons name="trophy" size={16} color="#D4A017" />
+        <T variant="smallBold" muted style={{ letterSpacing: 0.8, flex: 1 }}>
+          {t('party.scores').toUpperCase()}
+        </T>
+      </Row>
+      <View style={{ gap: 6 }}>
+        {ranked.map((p, i) => {
+          const mine = p.userId === meId;
+          const lead = i === 0 && p.score > 0;
+          const row = (
+            <>
+              <View style={styles.lbRank}>
+                {i < 3 && p.score > 0 ? (
+                  <T style={{ fontSize: 18, lineHeight: 22 }} maxFontSizeMultiplier={1}>
+                    {MEDALS[i]}
+                  </T>
+                ) : (
+                  <T variant="smallBold" color={lead ? '#3B1D00' : colors.textMuted} maxFontSizeMultiplier={1}>
+                    {i + 1}
+                  </T>
+                )}
+              </View>
+              <LinearGradient colors={i < 3 && p.score > 0 ? RANK_RING[i] : [colors.border, colors.border]} style={styles.lbRing}>
+                <Avatar avatarKey={p.avatarKey} size={30} />
+              </LinearGradient>
+              <T variant="smallBold" style={{ flex: 1 }} numberOfLines={1} color={lead ? '#3B1D00' : mine ? colors.primary : colors.text}>
+                {p.name}
+                {mine ? ` (${t('party.you')})` : ''}
+              </T>
+              <LinearGradient colors={lead ? ['#3B1D00', '#78350F'] : ['#FFF1A8', '#F5B700']} style={styles.lbScore}>
+                <T style={[styles.lbScoreText, { color: lead ? '#FDE68A' : '#3B1D00' }]} maxFontSizeMultiplier={1}>
+                  {p.score.toLocaleString('en-IN')}
+                </T>
+              </LinearGradient>
+            </>
+          );
+          return lead ? (
+            <LinearGradient key={p.userId} colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.lbRow}>
+              {row}
+            </LinearGradient>
+          ) : (
+            <View key={p.userId} style={[styles.lbRow, { backgroundColor: mine ? colors.surfaceAlt : 'transparent', borderColor: mine ? colors.primary : colors.border }]}>
+              {row}
+            </View>
+          );
+        })}
+      </View>
+    </View>
   );
 }
 
@@ -463,6 +504,12 @@ export function PartyFinished({
 }
 
 const styles = StyleSheet.create({
+  lbCard: { marginTop: spacing.lg, borderRadius: 18, borderWidth: 1, padding: spacing.md },
+  lbRow: { flexDirection: 'row', alignItems: 'center', gap: 8, borderRadius: 14, paddingHorizontal: 8, paddingVertical: 6, borderWidth: 1, borderColor: 'transparent' },
+  lbRank: { width: 26, alignItems: 'center' },
+  lbRing: { padding: 2, borderRadius: 18 },
+  lbScore: { minWidth: 46, height: 26, borderRadius: 13, paddingHorizontal: 8, alignItems: 'center', justifyContent: 'center' },
+  lbScoreText: { fontFamily: fonts.bold, fontSize: 13, lineHeight: 17 },
   roundPill: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingHorizontal: 10, paddingVertical: 5, borderRadius: 999 },
   codeEdge: { borderRadius: 22, padding: 1.5 },
   codeCard: { borderRadius: 21, padding: spacing.md, alignItems: 'center', overflow: 'hidden' },

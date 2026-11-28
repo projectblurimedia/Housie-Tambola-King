@@ -13,6 +13,7 @@ import { fonts, spacing } from '@/theme';
 import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 import { RoundBar } from './PartyCommon';
 import { GOLD_EDGE, GoldFrame, Medallion } from './Premium';
+import { playGameSound } from '@/services/sounds';
 
 const ROLE_LOOK: Record<string, { colors: [string, string, string]; emoji: string }> = {
   ram: { colors: ['#2A1403', '#92400E', '#D97706'], emoji: '🏹' },
@@ -32,6 +33,23 @@ export function SeetaBoard({ state, seconds, onGuess }: { state: PartyState; sec
   const g = state.game;
   const me = state.me;
   const ramId = g.state.ramId;
+  // Sounds: a shuffle when roles are dealt, then at the reveal a shimmer and a fanfare (Ram found
+  // Seeta) or a "wah-wah" (missed).
+  const heard = useRef<string>('');
+  useEffect(() => {
+    const key = `${g.roundNo}:${g.phase}`;
+    if (heard.current === key) return;
+    const first = heard.current === '';
+    heard.current = key;
+    if (first) return;
+    if (g.phase === 'guess') playGameSound('deal');
+    if (g.phase === 'reveal') {
+      playGameSound('reveal');
+      const id = setTimeout(() => playGameSound(g.state.correct ? 'right' : 'wrong'), 650);
+      return () => clearTimeout(id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [g.roundNo, g.phase]);
   const ram = state.players.find((p) => p.userId === ramId);
   const iAmRam = ramId === me.userId;
   const [asking, setAsking] = useState<PartyPlayer | null>(null);

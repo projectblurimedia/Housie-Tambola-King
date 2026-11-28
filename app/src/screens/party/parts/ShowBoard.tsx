@@ -12,6 +12,7 @@ import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
 import { showItem } from './CategoryPicker';
 import { RoundBar } from './PartyCommon';
 import { GoldFrame, ShineSweep } from './Premium';
+import { playGameSound } from '@/services/sounds';
 
 const SEAT = 60;
 /** Place in the SHOW race, e.g. "#1" (same in every language). */
@@ -137,6 +138,24 @@ export function ShowBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [g.turnNo, g.roundNo, hand.join(',')]);
 
+  // Sounds: a swish when the cards pass round, a gong when SHOW is called.
+  const heard = useRef({ turn: g.turnNo, phase: g.phase, round: g.roundNo });
+  useEffect(() => {
+    const h = heard.current;
+    if (g.phase === 'show' && h.phase !== 'show') playGameSound('show');
+    else if (g.phase === 'pass' && g.roundNo === h.round && g.turnNo > h.turn) playGameSound('pass');
+    heard.current = { turn: g.turnNo, phase: g.phase, round: g.roundNo };
+  }, [g.turnNo, g.phase, g.roundNo]);
+  const ring = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    if (!canShow) return;
+    const loop = Animated.loop(Animated.timing(ring, { toValue: 1, duration: 1100, easing: Easing.out(Easing.quad), useNativeDriver: true }));
+    loop.start();
+    return () => {
+      loop.stop();
+      ring.setValue(0);
+    };
+  }, [canShow, ring]);
   const pulse = useRef(new Animated.Value(0)).current;
   useEffect(() => {
     if (!canShow) {
@@ -276,7 +295,10 @@ export function ShowBoard({
                   selected={me.pick === i}
                   fresh={freshSlots.includes(i)}
                   disabled={g.phase !== 'pass'}
-                  onPress={() => onPick(i)}
+                  onPress={() => {
+                    playGameSound('pick');
+                    onPick(i);
+                  }}
                 />
               ))}
             </Row>
@@ -284,16 +306,35 @@ export function ShowBoard({
 
           {/* SHOW */}
           <Animated.View style={{ marginTop: spacing.lg, transform: [{ scale: pulse.interpolate({ inputRange: [0, 1], outputRange: [1, 1.05] }) }] }}>
-            <Pressable onPress={onShow} disabled={!canShow}>
+            {/* A glowing ring spreads out from the button while SHOW can be pressed. */}
+            {canShow ? (
+              <Animated.View
+                pointerEvents="none"
+                style={[
+                  styles.showRing,
+                  { opacity: ring.interpolate({ inputRange: [0, 1], outputRange: [0.7, 0] }), transform: [{ scaleX: ring.interpolate({ inputRange: [0, 1], outputRange: [1, 1.08] }) }, { scaleY: ring.interpolate({ inputRange: [0, 1], outputRange: [1, 1.45] }) }] },
+                ]}
+              />
+            ) : null}
+            <Pressable
+              onPress={() => {
+                if (!canShow) return;
+                playGameSound('show');
+                onShow();
+              }}
+              disabled={!canShow}
+            >
               <LinearGradient
-                colors={canShow ? ['#FFF1A8', '#F5B700', '#D97706'] : [colors.surfaceAlt, colors.surfaceAlt]}
+                colors={canShow ? ['#FF5F6D', '#F97316', '#FACC15'] : [colors.surfaceAlt, colors.surfaceAlt]}
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 1 }}
-                style={[styles.showBtn, { borderColor: canShow ? '#B45309' : colors.border }]}
+                style={[styles.showBtn, { borderColor: canShow ? '#FFF1A8' : colors.border }]}
               >
                 {canShow ? <ShineSweep every={900} /> : null}
-                <Ionicons name="hand-left" size={24} color={canShow ? '#3B1D00' : colors.textMuted} />
-                <T style={[styles.showText, { color: canShow ? '#3B1D00' : colors.textMuted }]}>{t('party.show.button')}</T>
+                <View style={[styles.showIcon, { backgroundColor: canShow ? 'rgba(255,255,255,0.25)' : 'transparent' }]}>
+                  <Ionicons name="megaphone" size={22} color={canShow ? '#FFFFFF' : colors.textMuted} />
+                </View>
+                <T style={[styles.showText, { color: canShow ? '#FFFFFF' : colors.textMuted }, canShow && styles.showTextOn]}>{t('party.show.button')}</T>
               </LinearGradient>
             </Pressable>
           </Animated.View>
@@ -331,6 +372,9 @@ const styles = StyleSheet.create({
   faceName: { position: 'absolute', bottom: 5, left: 4, right: 4, textAlign: 'center', fontFamily: fonts.bold, fontSize: 10, lineHeight: 13, color: '#fff' },
   cornerTL: { position: 'absolute', left: 6, top: 6 },
   cornerBR: { position: 'absolute', right: 6, bottom: 6, transform: [{ rotate: '180deg' }] },
-  showBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, height: 62, borderRadius: 31, borderWidth: 2, overflow: 'hidden' },
+  showBtn: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, height: 68, borderRadius: 34, borderWidth: 2.5, overflow: 'hidden' },
+  showRing: { position: 'absolute', left: 0, right: 0, top: 0, height: 68, borderRadius: 34, borderWidth: 3, borderColor: '#FACC15' },
+  showIcon: { width: 40, height: 40, borderRadius: 20, alignItems: 'center', justifyContent: 'center' },
+  showTextOn: { textShadowColor: 'rgba(124,45,18,0.6)', textShadowRadius: 4, textShadowOffset: { width: 0, height: 2 }, letterSpacing: 3 },
   showText: { fontFamily: fonts.display, fontSize: 24, lineHeight: 30, letterSpacing: 3 },
 });

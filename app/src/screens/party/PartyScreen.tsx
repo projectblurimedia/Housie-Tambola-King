@@ -54,6 +54,8 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<'leave' | 'end' | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
+  /** Chat panel open: the floating Leave button hides. */
+  const [chatOpen, setChatOpen] = useState(false);
   /** This phone is already leaving (its own End / Leave) — don't go back twice. */
   const leaving = useRef(false);
 
@@ -316,7 +318,7 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
       />
     </Screen>
       {/* During a game, Leave sits at the bottom centre of the screen, not under the board. */}
-      {g.status === 'playing' ? (
+      {g.status === 'playing' && !chatOpen ? (
         <Pressable onPress={() => setConfirm('leave')} accessibilityLabel={t('party.leave')} style={({ pressed }) => [styles.leave, { bottom: spacing.lg + insets.bottom + 4 }, pressed && { opacity: 0.85 }]}>
           <Ionicons name="exit-outline" size={18} color="#fff" />
           <T variant="smallBold" color="#fff">
@@ -324,7 +326,7 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
           </T>
         </Pressable>
       ) : null}
-      <PartyChat partyId={partyId} meId={state.me.userId} colors={PARTY_LOOK[g.kind].colors} players={state.players.filter((p) => p.active).length} />
+      <PartyChat onOpenChange={setChatOpen} partyId={partyId} meId={state.me.userId} colors={PARTY_LOOK[g.kind].colors} players={state.players.filter((p) => p.active).length} />
     </View>
   );
 }

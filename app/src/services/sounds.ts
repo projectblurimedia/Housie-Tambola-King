@@ -102,7 +102,7 @@ export function playStrikeSound() {
   }
 }
 
-export type GameSound = 'dice' | 'step' | 'ladder' | 'snake' | 'seeds' | 'move' | 'cut' | 'home';
+export type GameSound = 'dice' | 'step' | 'ladder' | 'snake' | 'seeds' | 'move' | 'cut' | 'home' | 'deal' | 'reveal' | 'right' | 'wrong' | 'pass' | 'pick' | 'show';
 const GAME_SOURCES: Record<GameSound, number> = {
   dice: require('../../assets/sounds/dice.wav'),
   step: require('../../assets/sounds/step.wav'),
@@ -112,9 +112,18 @@ const GAME_SOURCES: Record<GameSound, number> = {
   move: require('../../assets/sounds/move.wav'),
   cut: require('../../assets/sounds/cut.wav'),
   home: require('../../assets/sounds/home.wav'),
+  // Find Seeta
+  deal: require('../../assets/sounds/deal.wav'),
+  reveal: require('../../assets/sounds/reveal.wav'),
+  right: require('../../assets/sounds/right.wav'),
+  wrong: require('../../assets/sounds/wrong.wav'),
+  // Show
+  pass: require('../../assets/sounds/pass.wav'),
+  pick: require('../../assets/sounds/pick.wav'),
+  show: require('../../assets/sounds/show.wav'),
 };
 const gamePlayers: Partial<Record<GameSound, Player>> = {};
-const GAME_VOLUME: Record<GameSound, number> = { dice: 0.95, step: 0.5, ladder: 0.85, snake: 0.85, seeds: 0.9, move: 0.55, cut: 0.9, home: 0.85 };
+const GAME_VOLUME: Record<GameSound, number> = { dice: 0.95, step: 0.5, ladder: 0.85, snake: 0.85, seeds: 0.9, move: 0.55, cut: 0.9, home: 0.85, deal: 0.7, reveal: 0.8, right: 0.9, wrong: 0.8, pass: 0.6, pick: 0.5, show: 0.95 };
 
 /**
  * Board-game effects: dice, a pop per square, ladder harp, snake slide (Snakes & Ladders);

@@ -170,3 +170,43 @@ write('home', 0.9, (b) => {
   pluck(b, 0.12, 91, 0.45);
   tone(b, 0.24, 0.6, 96, { vol: 0.15, decay: 4, harmonics: [1] });
 });
+
+// ── Find Seeta ──
+// deal: roles handed out — a quick card shuffle (soft riffle of paper flicks).
+write('deal', 0.7, (b) => {
+  for (let i = 0; i < 9; i++) band(b, i * 0.055, 0.06, 2600 + (i % 3) * 500, { vol: 0.35, decay: 70, q: 2.5 });
+});
+// reveal: the roles are shown — a mystic rising shimmer that lands on a soft chord.
+write('reveal', 1.4, (b) => {
+  sweep(b, 0, 0.6, 420, 1260, { vol: 0.18, decay: 1.2, vibrato: 6 });
+  [72, 76, 79].forEach((m, i) => tone(b, 0.5 + i * 0.05, 0.9, m, { vol: 0.32, decay: 3, harmonics: [1, 0.35, 0.12] }));
+});
+// right: Ram found Seeta — a short bright fanfare.
+write('right', 1.2, (b) => {
+  [67, 72, 76].forEach((m, i) => tone(b, i * 0.1, 0.35, m, { vol: 0.45, decay: 7, harmonics: [1, 0.5, 0.2] }));
+  tone(b, 0.32, 0.85, 79, { vol: 0.5, decay: 3, harmonics: [1, 0.5, 0.25, 0.1] });
+  tone(b, 0.32, 0.85, 84, { vol: 0.25, decay: 3, harmonics: [1, 0.3] });
+});
+// wrong: Ram missed — a playful falling "wah-wah".
+write('wrong', 1.0, (b) => {
+  sweep(b, 0, 0.32, 392, 330, { vol: 0.42, decay: 2, vibrato: 7 });
+  sweep(b, 0.34, 0.6, 311, 233, { vol: 0.42, decay: 2.2, vibrato: 7 });
+});
+
+// ── Show ──
+// pass: a card slides to the next player — a quick paper swish.
+write('pass', 0.35, (b) => {
+  band(b, 0, 0.12, 1800, { vol: 0.3, decay: 22, q: 1.6 });
+  band(b, 0.05, 0.16, 3200, { vol: 0.22, decay: 26, q: 1.4 });
+});
+// pick: choosing a card — a soft wooden click.
+write('pick', 0.2, (b) => {
+  band(b, 0, 0.06, 1400, { vol: 0.5, decay: 90, q: 5 });
+  tone(b, 0, 0.12, 88, { vol: 0.12, decay: 30, harmonics: [1] });
+});
+// show: SHOW! — a big bright gong with a shimmering tail.
+write('show', 1.8, (b) => {
+  tone(b, 0, 1.7, 50, { vol: 0.6, decay: 1.6, harmonics: [1, 0.6, 0.45, 0.3, 0.2, 0.12] });
+  tone(b, 0, 1.2, 62, { vol: 0.25, decay: 2.4, harmonics: [1, 0.4] });
+  band(b, 0, 0.08, 4200, { vol: 0.25, decay: 30, q: 1.2 });
+});

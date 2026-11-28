@@ -22,7 +22,7 @@ import { FIXED_SHAPE_SCALE } from '@/utils/fontScaleCap';
  * usable. Gradient header = drag handle (up = full screen, down = half / close; tap to
  * switch), "X is typing…" with bouncing dots, newest message at the bottom, mine on the right.
  */
-export function PartyChat({ partyId, meId, colors: gradient, players }: { partyId: string; meId: string; colors: [string, string]; players: number }) {
+export function PartyChat({ partyId, meId, colors: gradient, players, onOpenChange }: { partyId: string; meId: string; colors: [string, string]; players: number; onOpenChange?: (open: boolean) => void }) {
   const { t } = useTranslation();
   const { colors } = useThemeColors();
   const insets = useSafeAreaInsets();
@@ -86,6 +86,7 @@ export function PartyChat({ partyId, meId, colors: gradient, players }: { partyI
     setFull(toFull);
     Animated.spring(sheetH, { toValue: toFull ? FULL : HALF, friction: 9, tension: 70, useNativeDriver: false }).start();
   };
+  useEffect(() => onOpenChange?.(open), [open, onOpenChange]);
   const show = () => {
     chat.refetch();
     setMounted(true);
