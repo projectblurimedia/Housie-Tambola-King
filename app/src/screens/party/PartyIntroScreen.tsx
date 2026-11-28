@@ -22,8 +22,10 @@ import { useAfterOpen } from '@/hooks/useAfterOpen';
 import { BOARD_DESIGNS, designTile } from './parts/snakesThemes';
 import { CodeInput } from './parts/CodeInput';
 import { SNL_BOARDS, SNL_LEVELS, SNL_PER_LEVEL, snlLevelOf } from '@/game/engine/board';
+import { ChoiceTile } from '@/screens/room/CreateRoomScreen';
 
-const ENTRY_PRESETS = [0, 10, 25, 50, 100];
+const COIN_PRESETS = [10, 25, 50, 100, 200];
+const AMOUNT_PRESETS = [10, 20, 50, 100, 200];
 const SAFE_CELLS = {
   corners: new Set([22, 14, 2, 10, 12, 6, 8, 16, 18]),
   straight: new Set([22, 14, 2, 10, 12, 7, 11, 13, 17]),
@@ -93,51 +95,43 @@ function Choice({
 /** A party game's details: what it is, how it goes, then create (with its options) or join. */
 /** Easy / Medium / Hard: each in its own colours (green, amber, red) with its badge; the chosen one
  * lifts a little with a gold rim and a tick, the others dim. */
-const LEVEL_LOOK = {
-  easy: { bars: 1, color: '#4ADE80' },
-  medium: { bars: 2, color: '#FBBF24' },
-  hard: { bars: 3, color: '#F87171' },
-} as const;
+const LEVEL_ICON = { easy: 'leaf', medium: 'flash', hard: 'flame' } as const;
 
 /**
- * Easy / Medium / Hard as dark glass cards with a signal-style difficulty meter (1, 2 or 3 bars
- * lit in the level's colour), the name, and the board's snakes and ladders. The chosen one gets a
- * gold edge, a soft gold glow and a tick; the others stay fully readable.
+ * Easy / Medium / Hard as one sliding switch: a dark rounded track, a gold highlight that slides
+ * to the chosen level, and in each part its icon, name, and the board's snakes / ladders.
  */
-function LevelCard({ level, active, title, snakes, ladders, onPress }: { level: keyof typeof LEVEL_LOOK; active: boolean; title: string; snakes: number; ladders: number; onPress: () => void }) {
-  const lk = LEVEL_LOOK[level];
-  const glow = useRef(new Animated.Value(active ? 1 : 0)).current;
+function LevelSwitch({ value, items, onChange }: { value: number; items: { key: keyof typeof LEVEL_ICON; title: string; snakes: number; ladders: number }[]; onChange: (i: number) => void }) {
+  const [w, setW] = useState(0);
+  const slide = useRef(new Animated.Value(value)).current;
   useEffect(() => {
-    Animated.timing(glow, { toValue: active ? 1 : 0, duration: 220, useNativeDriver: true }).start();
-  }, [active, glow]);
+    Animated.spring(slide, { toValue: value, friction: 8, tension: 120, useNativeDriver: true }).start();
+  }, [value, slide]);
+  const part = w / items.length;
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
-      <View style={[styles.lvCard, active ? styles.lvCardOn : null]}>
-        <Animated.View pointerEvents="none" style={[StyleSheet.absoluteFill, styles.lvGlow, { opacity: glow }]} />
-        <View style={styles.lvMeter}>
-          {[0, 1, 2].map((i) => (
-            <View key={i} style={[styles.lvBar, { height: 8 + i * 6, backgroundColor: i < lk.bars ? lk.color : 'rgba(255,255,255,0.22)' }]} />
-          ))}
-        </View>
-        <T style={[styles.lvName, { color: active ? '#FDE68A' : '#FFFFFF' }]} numberOfLines={1} maxFontSizeMultiplier={1}>
-          {title}
-        </T>
-        <View style={styles.lvRow}>
-          <T style={styles.lvStat} maxFontSizeMultiplier={1}>
-            🐍 {snakes}
-          </T>
-          <View style={styles.lvDot} />
-          <T style={styles.lvStat} maxFontSizeMultiplier={1}>
-            🪜 {ladders}
-          </T>
-        </View>
-        {active ? (
-          <View style={styles.lvTick}>
-            <Ionicons name="checkmark" size={12} color="#3B1D00" />
-          </View>
-        ) : null}
-      </View>
-    </Pressable>
+    <View style={styles.lsTrack} onLayout={(e) => setW(e.nativeEvent.layout.width - 8)}>
+      {part > 0 ? (
+        <Animated.View style={[styles.lsThumb, { width: part, transform: [{ translateX: slide.interpolate({ inputRange: [0, 1], outputRange: [0, part] }) }] }]}>
+          <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={StyleSheet.absoluteFill} />
+        </Animated.View>
+      ) : null}
+      {items.map((it, i) => {
+        const on = i === value;
+        return (
+          <Pressable key={it.key} onPress={() => onChange(i)} style={styles.lsPart} accessibilityRole="radio" accessibilityState={{ selected: on }}>
+            <Row gap={5}>
+              <Ionicons name={LEVEL_ICON[it.key]} size={15} color={on ? '#3B1D00' : '#FDE68A'} />
+              <T style={[styles.lsName, { color: on ? '#3B1D00' : '#FFFFFF' }]} numberOfLines={1} maxFontSizeMultiplier={1}>
+                {it.title}
+              </T>
+            </Row>
+            <T style={[styles.lsStat, { color: on ? 'rgba(59,29,0,0.8)' : 'rgba(255,255,255,0.75)' }]} numberOfLines={1} maxFontSizeMultiplier={1}>
+              🐍 {it.snakes} · 🪜 {it.ladders}
+            </T>
+          </Pressable>
+        );
+      })}
+    </View>
   );
 }
 
@@ -193,7 +187,9 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const [min, max] = PARTY_LIMITS[kind];
   const board = isBoardGame(kind);
   const [rounds, setRounds] = useState(5);
-  const [entry, setEntry] = useState(0);
+  const [stake, setStake] = useState<'free' | 'coins' | 'amount'>('free');
+  const [entry, setEntry] = useState(10);
+  const [amount, setAmount] = useState('10');
   const [boardNo, setBoardNo] = useState(SNL_PER_LEVEL); // medium, board 1
   const level = snlLevelOf(boardNo);
   const [design, setDesign] = useState(0);
@@ -236,7 +232,9 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const create = async () => {
     setBusy('create');
     try {
-      const res = await partyService.create(kind, board ? 1 : rounds, entry, kind === 'chamma' ? opts : kind === 'snakes' ? { board: boardNo, theme: design, icons: pictures } : null);
+      const kindOpts = kind === 'chamma' ? opts : kind === 'snakes' ? { board: boardNo, theme: design, icons: pictures } : {};
+      const playFor = stake === 'amount' ? { stake: 'amount' as const, amount: Number(amount) || 0 } : {};
+      const res = await partyService.create(kind, board ? 1 : rounds, stake === 'coins' ? entry : 0, { ...kindOpts, ...playFor });
       navigation.navigate('Party', { partyId: res.id });
     } catch (err) {
       showToast({ variant: 'error', title: errorMessage(err) });
@@ -330,45 +328,106 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
           </Row>
         )}
 
-        {/* Entry coins */}
+        {/* Play for — like Housie: Free · Coins (entry, winner takes the pot) · ₹ Amount (score only). */}
         <View>
-          <Row style={{ justifyContent: 'space-between' }}>
-            <T variant="bodyMedium">{t('party.entry')}</T>
-            <Row gap={4}>
-              <CoinIcon size={14} />
-              <T variant="tiny" muted>
-                {t('party.youHave', { count: coins })}
-              </T>
-            </Row>
-          </Row>
-          <T variant="tiny" muted>
-            {t('party.entryDesc')}
+          <T variant="bodyMedium" style={{ marginBottom: 6 }}>
+            {t('create.stakeTitle')}
           </T>
-          <Row style={{ justifyContent: 'space-between', marginTop: spacing.sm }}>
-            {ENTRY_PRESETS.map((v) => {
-              const on = entry === v;
-              const short = v > coins;
-              return (
-                <Pressable key={v} onPress={() => setEntry(v)} disabled={short} style={({ pressed }) => [{ width: '18.5%', opacity: short ? 0.4 : 1 }, pressed && { transform: [{ scale: 0.95 }] }]}>
-                  {on ? (
-                    <LinearGradient colors={look.colors} style={styles.entryChip}>
-                      {v ? <CoinIcon size={13} /> : null}
-                      <T variant="smallBold" color="#fff" maxFontSizeMultiplier={1}>
-                        {v ? v : t('party.free')}
-                      </T>
-                    </LinearGradient>
-                  ) : (
-                    <View style={[styles.entryChip, { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }]}>
-                      {v ? <CoinIcon size={13} /> : null}
-                      <T variant="smallBold" maxFontSizeMultiplier={1}>
-                        {v ? v : t('party.free')}
-                      </T>
-                    </View>
-                  )}
-                </Pressable>
-              );
-            })}
+          <Row gap={spacing.sm} style={{ alignItems: 'stretch' }}>
+            {(['free', 'coins', 'amount'] as const).map((m) => (
+              <ChoiceTile
+                key={m}
+                active={stake === m}
+                compact
+                icon={m === 'free' ? 'gift' : 'cash-outline'}
+                iconNode={m === 'coins' ? <CoinIcon size={24} /> : undefined}
+                title={t(`create.stake_${m}`)}
+                desc={t(`create.stake_${m}_desc`)}
+                onPress={() => setStake(m)}
+              />
+            ))}
           </Row>
+          {stake === 'coins' ? (
+            <>
+              <Row style={{ justifyContent: 'space-between', marginTop: spacing.md }}>
+                <T variant="tiny" muted style={{ flex: 1 }}>
+                  {t('party.entryDesc')}
+                </T>
+                <Row gap={4}>
+                  <CoinIcon size={14} />
+                  <T variant="tiny" muted>
+                    {t('party.youHave', { count: coins })}
+                  </T>
+                </Row>
+              </Row>
+              <Row gap={6} style={{ marginTop: spacing.sm }}>
+                {COIN_PRESETS.map((v) => {
+                  const on = entry === v;
+                  const short = v > coins;
+                  return (
+                    <Pressable key={v} onPress={() => setEntry(v)} disabled={short} style={({ pressed }) => [{ flex: 1, opacity: short ? 0.4 : 1 }, pressed && { transform: [{ scale: 0.95 }] }]}>
+                      {on ? (
+                        <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} style={styles.entryChip}>
+                          <CoinIcon size={13} />
+                          <T variant="smallBold" color="#3B1D00" maxFontSizeMultiplier={1}>
+                            {v}
+                          </T>
+                        </LinearGradient>
+                      ) : (
+                        <View style={[styles.entryChip, { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }]}>
+                          <CoinIcon size={13} />
+                          <T variant="smallBold" maxFontSizeMultiplier={1}>
+                            {v}
+                          </T>
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </Row>
+            </>
+          ) : stake === 'amount' ? (
+            <>
+              <T variant="tiny" muted style={{ marginTop: spacing.md, marginBottom: 6 }}>
+                {t('party.amountDesc')}
+              </T>
+              <LinearGradient colors={['#FFF1A8', '#D4A017', '#8A6100', '#F5D06F']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.amountFrame}>
+                <View style={[styles.amountInner, { backgroundColor: colors.surfaceAlt }]}>
+                  <T style={[styles.amountRupee, { color: colors.goldDark }]}>₹</T>
+                  <TextInput
+                    value={amount}
+                    onChangeText={(v) => setAmount(v.replace(/[^0-9]/g, '').slice(0, 6))}
+                    keyboardType="number-pad"
+                    placeholder="0"
+                    placeholderTextColor={colors.textMuted}
+                    style={[styles.amountInput, centeredInput, { color: colors.text }]}
+                  />
+                </View>
+              </LinearGradient>
+              <Row gap={6} style={{ marginTop: spacing.sm }}>
+                {AMOUNT_PRESETS.map((v) => {
+                  const on = Number(amount) === v;
+                  return (
+                    <Pressable key={v} onPress={() => setAmount(String(v))} style={({ pressed }) => [{ flex: 1 }, pressed && { transform: [{ scale: 0.95 }] }]}>
+                      {on ? (
+                        <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} style={styles.entryChip}>
+                          <T variant="smallBold" color="#3B1D00" maxFontSizeMultiplier={1}>
+                            ₹{v}
+                          </T>
+                        </LinearGradient>
+                      ) : (
+                        <View style={[styles.entryChip, { backgroundColor: colors.surfaceAlt, borderWidth: 1, borderColor: colors.border }]}>
+                          <T variant="smallBold" maxFontSizeMultiplier={1}>
+                            ₹{v}
+                          </T>
+                        </View>
+                      )}
+                    </Pressable>
+                  );
+                })}
+              </Row>
+            </>
+          ) : null}
         </View>
 
         {/* Snakes & Ladders: level → pictures → design (light cards) → placement (5 buttons) → one
@@ -378,22 +437,16 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
             <T variant="bodyMedium" style={{ marginBottom: 8 }}>
               {t('party.snakes.level')}
             </T>
-            <Row gap={spacing.sm} style={{ marginBottom: spacing.md, alignItems: 'stretch' }}>
-              {SNL_LEVELS.map((lv, li) => {
-                const b = SNL_BOARDS[li * SNL_PER_LEVEL + (boardNo % SNL_PER_LEVEL)];
-                return (
-                  <LevelCard
-                    key={lv}
-                    level={lv}
-                    active={level === lv}
-                    title={t('party.snakes.' + lv)}
-                    snakes={Object.keys(b.snakes).length}
-                    ladders={Object.keys(b.ladders).length}
-                    onPress={() => setBoardNo(li * SNL_PER_LEVEL + (boardNo % SNL_PER_LEVEL))}
-                  />
-                );
-              })}
-            </Row>
+            <View style={{ marginBottom: spacing.md }}>
+              <LevelSwitch
+                value={SNL_LEVELS.indexOf(level)}
+                items={SNL_LEVELS.map((lv, li) => {
+                  const b = SNL_BOARDS[li * SNL_PER_LEVEL + (boardNo % SNL_PER_LEVEL)];
+                  return { key: lv, title: t('party.snakes.' + lv), snakes: Object.keys(b.snakes).length, ladders: Object.keys(b.ladders).length };
+                })}
+                onChange={(li) => setBoardNo(li * SNL_PER_LEVEL + (boardNo % SNL_PER_LEVEL))}
+              />
+            </View>
 
             <Row gap={spacing.md} style={styles.picRow}>
               <View style={{ flex: 1 }}>
@@ -565,21 +618,20 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
 }
 
 const styles = StyleSheet.create({
+  lsTrack: { flexDirection: 'row', padding: 4, borderRadius: 20, backgroundColor: 'rgba(15,23,42,0.6)', borderWidth: 1, borderColor: 'rgba(255,255,255,0.18)' },
+  lsThumb: { position: 'absolute', left: 4, top: 4, bottom: 4, borderRadius: 16, overflow: 'hidden', borderWidth: 1.5, borderColor: '#FFF7D6' },
+  lsPart: { flex: 1, paddingVertical: 10, alignItems: 'center', justifyContent: 'center', gap: 3 },
+  lsName: { fontFamily: fonts.bold, fontSize: 14, lineHeight: 18 },
+  lsStat: { fontFamily: fonts.semibold, fontSize: 10.5, lineHeight: 14 },
+  amountFrame: { borderRadius: 16, padding: 2 },
+  amountInner: { borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', height: 60 },
+  amountRupee: { fontFamily: fonts.display, fontSize: 28, lineHeight: 34 },
+  amountInput: { minWidth: 90, fontFamily: fonts.display, fontSize: 30, height: 56, paddingVertical: 0 },
   newEdge: { marginTop: spacing.lg, borderRadius: 22, padding: 2 },
   newCard: { borderRadius: 20, overflow: 'hidden' },
   newHead: { flexDirection: 'row', alignItems: 'center', gap: 10, paddingHorizontal: spacing.md, paddingVertical: 12 },
   newHeadIcon: { width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(0,0,0,0.25)', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: 'rgba(253,230,138,0.6)' },
   newTitle: { fontFamily: fonts.display, fontSize: 18, lineHeight: 24, color: '#FFFFFF' },
-  lvCard: { borderRadius: 16, paddingVertical: 12, paddingHorizontal: 8, alignItems: 'center', backgroundColor: 'rgba(15,23,42,0.55)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.22)', overflow: 'hidden', minHeight: 112, justifyContent: 'center' },
-  lvCardOn: { borderWidth: 2.5, borderColor: '#F5B700', backgroundColor: 'rgba(15,23,42,0.75)' },
-  lvGlow: { backgroundColor: 'rgba(245,183,0,0.16)' },
-  lvMeter: { flexDirection: 'row', alignItems: 'flex-end', gap: 3, height: 20, marginBottom: 6 },
-  lvBar: { width: 7, borderRadius: 2 },
-  lvName: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22 },
-  lvRow: { flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 },
-  lvStat: { fontFamily: fonts.semibold, fontSize: 11.5, lineHeight: 15, color: 'rgba(255,255,255,0.9)' },
-  lvDot: { width: 3, height: 3, borderRadius: 2, backgroundColor: 'rgba(255,255,255,0.5)' },
-  lvTick: { position: 'absolute', right: 6, top: 6, width: 20, height: 20, borderRadius: 10, backgroundColor: '#F5B700', alignItems: 'center', justifyContent: 'center' },
   designRing: { borderRadius: 14, padding: 3 },
   designFrame: { width: 94, height: 94, borderRadius: 11, borderWidth: 2, padding: 4, alignItems: 'center', justifyContent: 'center' },
   mosaic: { width: 80, height: 80, flexDirection: 'row', flexWrap: 'wrap', borderRadius: 4, overflow: 'hidden' },

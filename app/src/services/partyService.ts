@@ -95,6 +95,9 @@ export interface PartyOptions {
   board?: number;
   theme?: number;
   icons?: boolean;
+  // Play for ₹ Amount (score only; no coins move)
+  stake?: 'amount';
+  amount?: number;
   // Ashta Chamma
   start?: 'enter' | 'board';
   safe?: 'corners' | 'straight';

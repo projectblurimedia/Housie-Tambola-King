@@ -152,9 +152,19 @@ export function PartyLobby({
         <Row style={{ justifyContent: 'space-between' }}>
           <Row gap={6}>
             <CoinIcon size={18} />
-            <T variant="smallBold">{state.game.entryCoins ? t('party.entryEach', { count: state.game.entryCoins }) : t('party.freeGame')}</T>
+            <T variant="smallBold">
+              {state.game.options?.stake === 'amount'
+                ? t('party.amountEach', { amount: state.game.options.amount ?? 0 })
+                : state.game.entryCoins
+                  ? t('party.entryEach', { count: state.game.entryCoins })
+                  : t('party.freeGame')}
+            </T>
           </Row>
-          {state.game.entryCoins ? (
+          {state.game.options?.stake === 'amount' ? (
+            <T variant="smallBold" color={colors.goldDark}>
+              {t('party.amountPot', { amount: (state.game.options.amount ?? 0) * players.length })}
+            </T>
+          ) : state.game.entryCoins ? (
             <T variant="smallBold" color={colors.goldDark}>
               {t('party.potWillBe', { count: state.game.entryCoins * players.length })}
             </T>

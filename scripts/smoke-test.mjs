@@ -452,6 +452,12 @@ try {
       `the chosen board (${nL} ladders, ${nS} snakes, none to 100, no shared ends)`);
     check(board.ladders['18'] === 83 && board.snakes['91'] === 11 && Object.keys(board.snakes).length === 9, 'hard board 3 (of 15) is the one the host picked');
     check(snlState.game.options?.theme === 7 && snlState.game.options?.icons === false, 'board design 8 with pictures off is saved for everyone');
+    {
+      const amt = await host.rpc('create_party', { p_kind: 'seeta', p_rounds: 3, p_entry: 25, p_options: { stake: 'amount', amount: 50 } });
+      const amtState = await host.rpc('get_party_state', { p_game: amt.id });
+      check(amtState.game.options?.stake === 'amount' && Number(amtState.game.options?.amount) === 50 && amtState.game.entryCoins === 0, 'party Play for ₹ Amount: ₹50 saved, no coins charged');
+      await host.rpc('leave_party', { p_game: amt.id });
+    }
     check(Object.entries(board.snakes).some(([h, t]) => h - t >= 50), 'the board has a big snake');
     const jump = (p) => board.ladders[p] ?? board.snakes[p] ?? p;
     const duo = { [snlState.me.userId]: host, [(await stateOf(friend, snl.id)).me.userId]: friend };

@@ -1062,6 +1062,9 @@
     "joinHint": "Enter the 6-letter code your friend shared",
     "autoLeave_one": "Leaving the game in {{count}} s",
     "autoLeave_other": "Leaving the game in {{count}} s",
-    "newGameSub": "Pick your options and invite your friends"
+    "newGameSub": "Pick your options and invite your friends",
+    "amountDesc": "₹ per player, for the score only — the app moves no money; players settle among themselves.",
+    "amountEach": "₹{{amount}} each (score only)",
+    "amountPot": "Pot ₹{{amount}}"
   }
 }
