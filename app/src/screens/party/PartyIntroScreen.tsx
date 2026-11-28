@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Pressable, ScrollView, StyleSheet, TextInput, useWindowDimensions, View } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import { useTranslation } from 'react-i18next';
@@ -17,9 +17,9 @@ import type { ScreenProps } from '@/navigation/types';
 import { PARTY_LOOK, PARTY_THEME } from './parts/Premium';
 import { GAME_ART } from './parts/gameArt';
 import { RulesModal } from './parts/RulesModal';
-import { DesignPreview, MiniBoard } from './parts/SnakesBoard';
+import { MiniBoard } from './parts/SnakesBoard';
 import { useAfterOpen } from '@/hooks/useAfterOpen';
-import { BOARD_DESIGNS } from './parts/snakesThemes';
+import { BOARD_DESIGNS, designTile } from './parts/snakesThemes';
 import { CodeInput } from './parts/CodeInput';
 import { SNL_BOARDS, SNL_LEVELS, SNL_PER_LEVEL, snlLevelOf } from '@/game/engine/board';
 
@@ -94,78 +94,91 @@ function Choice({
 /** Easy / Medium / Hard: each in its own colours (green, amber, red) with its badge; the chosen one
  * lifts a little with a gold rim and a tick, the others dim. */
 const LEVEL_LOOK = {
-  easy: { colors: ['#34D399', '#059669'], ink: '#047857', soft: '#ECFDF5', icon: '🌱' },
-  medium: { colors: ['#FBBF24', '#D97706'], ink: '#B45309', soft: '#FFFBEB', icon: '⚡' },
-  hard: { colors: ['#F87171', '#DC2626'], ink: '#B91C1C', soft: '#FEF2F2', icon: '🔥' },
+  easy: { colors: ['#4ADE80', '#16A34A', '#166534'], icon: '🌱' },
+  medium: { colors: ['#FCD34D', '#F59E0B', '#B45309'], icon: '⚡' },
+  hard: { colors: ['#FB7185', '#E11D48', '#881337'], icon: '🔥' },
 } as const;
+
 /**
- * Easy / Medium / Hard: light cards, easy to read — the level's colour on the badge, title and
- * border. The chosen one fills with its colour (white text), gets a gold rim and a tick.
+ * Easy / Medium / Hard: bold game cards in the level's colours — a glossy shine, the icon in a
+ * white medal, the name, and how many snakes and ladders the board has. The chosen one has a
+ * white ring, lifts a little and gets a gold tick.
  */
-function LevelTile({ level, active, title, desc, onPress }: { level: keyof typeof LEVEL_LOOK; active: boolean; title: string; desc: string; onPress: () => void }) {
+function LevelCard({ level, active, title, snakes, ladders, onPress }: { level: keyof typeof LEVEL_LOOK; active: boolean; title: string; snakes: number; ladders: number; onPress: () => void }) {
   const lk = LEVEL_LOOK[level];
   const pop = useRef(new Animated.Value(active ? 1 : 0)).current;
   useEffect(() => {
     Animated.spring(pop, { toValue: active ? 1 : 0, friction: 6, tension: 160, useNativeDriver: true }).start();
   }, [active, pop]);
-  const inner = (
-    <>
-      <View style={[styles.levelBadge, { backgroundColor: active ? 'rgba(255,255,255,0.95)' : lk.colors[0] }]}>
-        <T style={{ fontSize: 20, lineHeight: 26 }} maxFontSizeMultiplier={1}>
-          {lk.icon}
-        </T>
-      </View>
-      <T style={[styles.levelTitle, { color: active ? '#FFFFFF' : lk.ink }]} numberOfLines={1}>
-        {title}
-      </T>
-      <T style={[styles.levelDesc, { color: active ? 'rgba(255,255,255,0.95)' : '#4B5563' }]} numberOfLines={2}>
-        {desc}
-      </T>
-      {active ? (
-        <View style={styles.choiceTick}>
-          <Ionicons name="checkmark" size={12} color="#fff" />
-        </View>
-      ) : null}
-    </>
-  );
   return (
-    <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.9 }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
-      <Animated.View style={{ transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }] }}>
-        {active ? (
-          <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400']} style={styles.levelRim}>
-            <LinearGradient colors={[...lk.colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.levelTile}>
-              {inner}
-            </LinearGradient>
-          </LinearGradient>
-        ) : (
-          <View style={[styles.levelRim, { backgroundColor: lk.colors[0] }]}>
-            <View style={[styles.levelTile, { backgroundColor: lk.soft }]}>{inner}</View>
+    <Pressable onPress={onPress} style={{ flex: 1 }} accessibilityRole="radio" accessibilityState={{ selected: active }}>
+      <Animated.View style={[styles.levelOuter, active && styles.levelOuterOn, { transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [0.96, 1.03] }) }] }]}>
+        <LinearGradient colors={[...lk.colors]} start={{ x: 0.2, y: 0 }} end={{ x: 0.8, y: 1 }} style={styles.levelCard}>
+          <LinearGradient colors={['rgba(255,255,255,0.45)', 'rgba(255,255,255,0)']} start={{ x: 0, y: 0 }} end={{ x: 0, y: 0.55 }} style={styles.levelShine} />
+          <View style={styles.levelMedal}>
+            <T style={{ fontSize: 22, lineHeight: 28 }} maxFontSizeMultiplier={1}>
+              {lk.icon}
+            </T>
           </View>
-        )}
+          <T style={styles.levelName} numberOfLines={1} maxFontSizeMultiplier={1}>
+            {title}
+          </T>
+          <View style={styles.levelChips}>
+            <View style={styles.levelChip}>
+              <T style={styles.levelChipText} maxFontSizeMultiplier={1}>
+                🐍 {snakes}
+              </T>
+            </View>
+            <View style={styles.levelChip}>
+              <T style={styles.levelChipText} maxFontSizeMultiplier={1}>
+                🪜 {ladders}
+              </T>
+            </View>
+          </View>
+          {active ? (
+            <View style={styles.levelTick}>
+              <Ionicons name="checkmark" size={13} color="#3B1D00" />
+            </View>
+          ) : null}
+        </LinearGradient>
       </Animated.View>
     </Pressable>
   );
 }
 
-/** The design cards all show this one layout (medium, 1), so changing level or layout never redraws them. */
-const SAMPLE_BOARD = SNL_BOARDS[SNL_PER_LEVEL];
-/** Preview card size (width) and height (frame + strip + board). */
-const CARD = 150;
-const CARD_H = 160;
-
-/** Grey boxes with a spinner while the board pictures are being drawn. */
-function Placeholders({ size, count }: { size: number; count: number }) {
-  const { colors } = useThemeColors();
+/**
+ * A board design as a light card (no heavy drawing): the design's frame, a 5 × 5 mosaic of its
+ * square colours, its picture in the middle and its name. The chosen one gets a gold ring + tick.
+ */
+const DesignCard = React.memo(function DesignCard({ index, active, name, pictures, onPress }: { index: number; active: boolean; name: string; pictures: boolean; onPress: () => void }) {
+  const d = BOARD_DESIGNS[index];
   return (
-    <ScrollView horizontal scrollEnabled={false} showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
-      {Array.from({ length: count }, (_, i) => (
-        <View key={i} style={[styles.placeholder, { width: size + 6, height: CARD_H + 6, backgroundColor: colors.surfaceAlt }]}>
-          {i === 0 ? <ActivityIndicator color={colors.primary} /> : null}
+    <Pressable onPress={onPress} style={({ pressed }) => [{ alignItems: 'center', gap: 4, width: 104 }, pressed && { transform: [{ scale: 0.96 }] }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
+      <LinearGradient colors={active ? ['#FFF1A8', '#F5B700', '#B87400'] : ['transparent', 'transparent']} style={styles.designRing}>
+        <View style={[styles.designFrame, { backgroundColor: d.frame, borderColor: d.edge }]}>
+          <View style={styles.mosaic}>
+            {Array.from({ length: 25 }, (_, i) => (
+              <View key={i} style={[styles.mosaicTile, { backgroundColor: designTile(d, 76 + i) }]} />
+            ))}
+          </View>
+          <View style={styles.designBadge}>
+            <T style={{ fontSize: 18, lineHeight: 24 }} maxFontSizeMultiplier={1}>
+              {pictures ? d.icons[0] : d.topIcon}
+            </T>
+          </View>
         </View>
-      ))}
-    </ScrollView>
+      </LinearGradient>
+      <T variant="tiny" style={{ fontFamily: active ? fonts.bold : fonts.medium }} numberOfLines={1}>
+        {name}
+      </T>
+      {active ? (
+        <View style={styles.designTick}>
+          <Ionicons name="checkmark" size={12} color="#fff" />
+        </View>
+      ) : null}
+    </Pressable>
   );
-}
+});
 
 export function PartyIntroScreen(props: ScreenProps<'PartyIntro'>) {
   // The whole page in the game's own colours (cards, text, pop-ups) — not just the header.
@@ -190,15 +203,10 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const level = snlLevelOf(boardNo);
   const [design, setDesign] = useState(0);
   const [pictures, setPictures] = useState(true);
-  const [preview, setPreview] = useState<number | null>(null);
   const opened = useAfterOpen();
-  // Full previews are heavy: show them one after another (one every 70 ms) so the page stays smooth.
-  const [shown, setShown] = useState(0);
-  useEffect(() => {
-    if (!opened || shown >= BOARD_DESIGNS.length) return;
-    const id = setTimeout(() => setShown((n) => n + 1), 70);
-    return () => clearTimeout(id);
-  }, [opened, shown]);
+  const { width: screenW } = useWindowDimensions();
+  /** The one big preview: as wide as the page allows. */
+  const previewSize = Math.min(screenW - spacing.lg * 2 - 8, 380);
   const [opts, setOpts] = useState<Required<Pick<PartyOptions, 'start' | 'safe' | 'teams' | 'needCut'>>>({
     start: 'enter',
     safe: 'corners',
@@ -296,20 +304,6 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
         </Row>
       </LinearGradient>
       <RulesModal kind={kind} visible={rulesOpen} onClose={() => setRulesOpen(false)} />
-      {kind === 'snakes' ? (
-        <DesignPreview
-          design={preview}
-          board={SNL_BOARDS[boardNo]}
-          icons={pictures}
-          title={preview === null ? '' : t('party.snakes.designs.' + BOARD_DESIGNS[preview].key)}
-          useLabel={t('party.snakes.useDesign')}
-          onUse={() => {
-            if (preview !== null) setDesign(preview);
-            setPreview(null);
-          }}
-          onClose={() => setPreview(null)}
-        />
-      ) : null}
 
       {/* Your open games */}
       {myGames.length ? (
@@ -400,25 +394,28 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
           </Row>
         </View>
 
-        {/* Snakes & Ladders: level → board design (mini boards like the game, with a preview) →
-            pictures on/off → snakes & ladders placement. The heavy drawings wait until the screen
-            has opened (placeholders first), so tapping the game card opens it at once. */}
+        {/* Snakes & Ladders: level → pictures → design (light cards) → placement (5 buttons) → one
+            big preview of exactly what's chosen. Only that one board is drawn, so nothing lags. */}
         {kind === 'snakes' ? (
           <View>
-            <T variant="bodyMedium" style={{ marginBottom: 6 }}>
+            <T variant="bodyMedium" style={{ marginBottom: 8 }}>
               {t('party.snakes.level')}
             </T>
-            <Row gap={spacing.sm} style={{ marginBottom: spacing.md }}>
-              {SNL_LEVELS.map((lv, li) => (
-                <LevelTile
-                  key={lv}
-                  level={lv}
-                  active={level === lv}
-                  title={t('party.snakes.' + lv)}
-                  desc={t('party.snakes.' + lv + 'Desc')}
-                  onPress={() => setBoardNo(li * SNL_PER_LEVEL + (boardNo % SNL_PER_LEVEL))}
-                />
-              ))}
+            <Row gap={spacing.sm} style={{ marginBottom: spacing.md, alignItems: 'stretch' }}>
+              {SNL_LEVELS.map((lv, li) => {
+                const b = SNL_BOARDS[li * SNL_PER_LEVEL + (boardNo % SNL_PER_LEVEL)];
+                return (
+                  <LevelCard
+                    key={lv}
+                    level={lv}
+                    active={level === lv}
+                    title={t('party.snakes.' + lv)}
+                    snakes={Object.keys(b.snakes).length}
+                    ladders={Object.keys(b.ladders).length}
+                    onPress={() => setBoardNo(li * SNL_PER_LEVEL + (boardNo % SNL_PER_LEVEL))}
+                  />
+                );
+              })}
             </Row>
 
             <Row gap={spacing.md} style={styles.picRow}>
@@ -430,38 +427,18 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
               </View>
               <Toggle value={pictures} onValueChange={setPictures} tint="#F5B700" />
             </Row>
-            <T variant="bodyMedium">{t('party.snakes.design')}</T>
+
+            <T variant="bodyMedium" style={{ marginTop: spacing.sm }}>
+              {t('party.snakes.design')}
+            </T>
             <T variant="tiny" muted>
               {t('party.snakes.designDesc')}
             </T>
-            {opened ? (
-              <ScrollView horizontal removeClippedSubviews showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
-                {BOARD_DESIGNS.map((d, i) => {
-                  const on = design === i;
-                  return (
-                    <Pressable key={d.key} onPress={() => setDesign(i)} style={({ pressed }) => [{ alignItems: 'center', gap: 4 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
-                      <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : ['transparent', 'transparent']} style={styles.boardEdge}>
-                        {i < shown ? <MiniBoard design={i} board={SAMPLE_BOARD} size={CARD} label={String(i + 1)} icons={pictures} /> : <View style={[styles.placeholder, { width: CARD, height: CARD_H, backgroundColor: d.frame }]} />}
-                      </LinearGradient>
-                      <T variant="tiny" style={{ fontFamily: on ? fonts.bold : fonts.medium }} numberOfLines={1}>
-                        {t('party.snakes.designs.' + d.key)}
-                      </T>
-                      <Pressable onPress={() => setPreview(i)} hitSlop={8} style={styles.eye} accessibilityLabel={t('party.snakes.preview')}>
-                        <Ionicons name="eye" size={15} color="#fff" />
-                      </Pressable>
-                      {on ? (
-                        <View style={[styles.boardTick, { left: 8, right: undefined }]}>
-                          <Ionicons name="checkmark" size={14} color="#3B1D00" />
-                        </View>
-                      ) : null}
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            ) : (
-              <Placeholders size={CARD} count={3} />
-            )}
-
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm, paddingRight: spacing.sm }}>
+              {BOARD_DESIGNS.map((d, i) => (
+                <DesignCard key={d.key} index={i} active={design === i} name={t('party.snakes.designs.' + d.key)} pictures={pictures} onPress={() => setDesign(i)} />
+              ))}
+            </ScrollView>
 
             <T variant="bodyMedium" style={{ marginTop: spacing.sm }}>
               {t('party.snakes.chooseBoard')}
@@ -469,28 +446,38 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
             <T variant="tiny" muted>
               {t('party.snakes.chooseBoardDesc')}
             </T>
-            {opened && shown >= BOARD_DESIGNS.length ? (
-              <ScrollView horizontal removeClippedSubviews showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
-                {SNL_BOARDS.map((b, i) => {
-                  if (snlLevelOf(i) !== level) return null;
-                  const on = boardNo === i;
-                  return (
-                    <Pressable key={i} onPress={() => setBoardNo(i)} style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
-                      <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : [colors.border, colors.border]} style={styles.boardEdge}>
-                        <MiniBoard design={design} board={b} size={CARD} label={String((i % SNL_PER_LEVEL) + 1)} icons={pictures} />
-                      </LinearGradient>
-                      {on ? (
-                        <View style={styles.boardTick}>
-                          <Ionicons name="checkmark" size={14} color="#3B1D00" />
-                        </View>
+            <Row gap={spacing.sm} style={{ marginTop: spacing.sm }}>
+              {Array.from({ length: SNL_PER_LEVEL }, (_, k) => {
+                const idx = SNL_BOARDS.findIndex((_b, i) => snlLevelOf(i) === level) + k;
+                const on = boardNo === idx;
+                const giant = SNL_BOARDS[idx]?.snakes['99'] === 1;
+                return (
+                  <Pressable key={k} onPress={() => setBoardNo(idx)} style={({ pressed }) => [{ flex: 1 }, pressed && { transform: [{ scale: 0.95 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
+                    <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#D97706'] : [colors.surfaceAlt, colors.surfaceAlt]} style={[styles.placeBtn, !on && { borderWidth: 1, borderColor: colors.border }]}>
+                      <T style={[styles.placeNum, { color: on ? '#3B1D00' : colors.text }]} maxFontSizeMultiplier={1}>
+                        {k + 1}
+                      </T>
+                      {giant ? (
+                        <T style={[styles.placeTag, { color: on ? '#7C2D12' : colors.textMuted }]} maxFontSizeMultiplier={1} numberOfLines={1}>
+                          🐍 99→1
+                        </T>
                       ) : null}
-                    </Pressable>
-                  );
-                })}
-              </ScrollView>
-            ) : (
-              <Placeholders size={CARD} count={3} />
-            )}
+                    </LinearGradient>
+                  </Pressable>
+                );
+              })}
+            </Row>
+
+            {/* The one big preview: exactly the board everyone will play on. */}
+            <View style={{ alignItems: 'center', marginTop: spacing.md }}>
+              {opened ? (
+                <MiniBoard design={design} board={SNL_BOARDS[boardNo]} size={previewSize} icons={pictures} still={false} />
+              ) : (
+                <View style={[styles.placeholder, { width: previewSize, height: previewSize + 10, backgroundColor: colors.surfaceAlt }]}>
+                  <ActivityIndicator color={colors.primary} />
+                </View>
+              )}
+            </View>
           </View>
         ) : null}
 
@@ -566,6 +553,25 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
 }
 
 const styles = StyleSheet.create({
+  levelOuter: { borderRadius: 20, padding: 3, backgroundColor: 'transparent' },
+  levelOuterOn: { backgroundColor: '#FFFFFF', shadowColor: '#F5B700', shadowOpacity: 0.6, shadowRadius: 10, shadowOffset: { width: 0, height: 4 }, elevation: 8 },
+  levelCard: { borderRadius: 17, paddingTop: 12, paddingBottom: 10, paddingHorizontal: 6, alignItems: 'center', overflow: 'hidden', minHeight: 128 },
+  levelShine: { position: 'absolute', left: 0, right: 0, top: 0, height: '60%' },
+  levelMedal: { width: 44, height: 44, borderRadius: 22, backgroundColor: '#FFFFFF', alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.6)', elevation: 4, shadowColor: '#000', shadowOpacity: 0.2, shadowRadius: 4, shadowOffset: { width: 0, height: 2 } },
+  levelName: { fontFamily: fonts.display, fontSize: 17, lineHeight: 22, color: '#FFFFFF', marginTop: 6, textShadowColor: 'rgba(0,0,0,0.3)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
+  levelChips: { flexDirection: 'row', gap: 4, marginTop: 6 },
+  levelChip: { paddingHorizontal: 6, height: 20, borderRadius: 10, backgroundColor: 'rgba(255,255,255,0.28)', justifyContent: 'center' },
+  levelChipText: { fontFamily: fonts.bold, fontSize: 11, lineHeight: 14, color: '#FFFFFF' },
+  levelTick: { position: 'absolute', right: 6, top: 6, width: 22, height: 22, borderRadius: 11, backgroundColor: '#FDE047', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' },
+  designRing: { borderRadius: 14, padding: 3 },
+  designFrame: { width: 94, height: 94, borderRadius: 11, borderWidth: 2, padding: 4, alignItems: 'center', justifyContent: 'center' },
+  mosaic: { width: 80, height: 80, flexDirection: 'row', flexWrap: 'wrap', borderRadius: 4, overflow: 'hidden' },
+  mosaicTile: { width: 16, height: 16, borderWidth: 0.5, borderColor: 'rgba(0,0,0,0.12)' },
+  designBadge: { position: 'absolute', width: 34, height: 34, borderRadius: 17, backgroundColor: 'rgba(255,255,255,0.92)', alignItems: 'center', justifyContent: 'center' },
+  designTick: { position: 'absolute', right: 2, top: 2, width: 20, height: 20, borderRadius: 10, backgroundColor: '#16A34A', alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: '#FFFFFF' },
+  placeBtn: { height: 52, borderRadius: 14, alignItems: 'center', justifyContent: 'center' },
+  placeNum: { fontFamily: fonts.display, fontSize: 20, lineHeight: 25 },
+  placeTag: { fontFamily: fonts.bold, fontSize: 9, lineHeight: 12 },
   hero: { borderRadius: 26, padding: spacing.lg, paddingTop: spacing.sm, overflow: 'hidden', borderWidth: 1, borderColor: 'rgba(255,255,255,0.12)' },
   heroWatermark: { position: 'absolute', right: -14, bottom: -24, fontSize: 130, lineHeight: 150, opacity: 0.2 },
   heroBadge: { width: 50, height: 50, borderRadius: 16, backgroundColor: 'rgba(255,255,255,0.24)', alignItems: 'center', justifyContent: 'center' },
@@ -579,11 +585,6 @@ const styles = StyleSheet.create({
   entryChip: { height: 38, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
   choice: { borderRadius: radius.md, padding: spacing.sm, alignItems: 'center', minHeight: 70, justifyContent: 'center' },
   choiceOn: { borderWidth: 2, borderColor: '#FFFFFF' },
-  levelRim: { borderRadius: 18, padding: 2.5 },
-  levelTile: { borderRadius: 16, paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', minHeight: 112 },
-  levelBadge: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
-  levelTitle: { fontFamily: fonts.display, fontSize: 16, lineHeight: 21 },
-  levelDesc: { fontFamily: fonts.semibold, fontSize: 10.5, lineHeight: 14, textAlign: 'center', marginTop: 2 },
   choiceTick: { position: 'absolute', right: 5, top: 5, width: 18, height: 18, borderRadius: 9, backgroundColor: '#16A34A', alignItems: 'center', justifyContent: 'center' },
   diagram: { width: 46, height: 46, flexDirection: 'row', flexWrap: 'wrap', gap: 1.5 },
   diagramCell: { width: 8, height: 8, borderRadius: 2 },

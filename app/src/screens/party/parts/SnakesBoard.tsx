@@ -624,7 +624,7 @@ const styles = StyleSheet.create({
 const SNAPSHOTS = new Map<string, string>();
 
 /** The game board in small, exactly as in the game: its frame, the yellow title strip, the full board (pictures as chosen). */
-export function MiniBoard({ design, board, size, label, icons = true }: { design: number; board: SnlBoard; size: number; label?: string; icons?: boolean }) {
+export function MiniBoard({ design, board, size, label, icons = true, still = true }: { design: number; board: SnlBoard; size: number; label?: string; icons?: boolean; /** Save as a picture (for scrolling lists); false = keep drawing live (one big board). */ still?: boolean }) {
   const d = BOARD_DESIGNS[design] ?? BOARD_DESIGNS[0];
   const inner = size - 10;
   // Drawn once, saved as a picture (kept for next time), then shown as an image — images scroll
@@ -633,6 +633,7 @@ export function MiniBoard({ design, board, size, label, icons = true }: { design
   const [uri, setUri] = useState<string | undefined>(SNAPSHOTS.get(key));
   const svg = useRef<Svg>(null);
   useEffect(() => {
+    if (!still) return;
     const cached = SNAPSHOTS.get(key);
     if (cached) {
       setUri(cached);
@@ -647,13 +648,13 @@ export function MiniBoard({ design, board, size, label, icons = true }: { design
       });
     }, 60);
     return () => clearTimeout(id);
-  }, [key]);
+  }, [key, still]);
   return (
     // Kept as a ready-made picture while scrolling (no redraw of hundreds of shapes every frame).
     <View renderToHardwareTextureAndroid shouldRasterizeIOS style={[styles.mini, { width: size, backgroundColor: d.frame, borderColor: d.edge }]}>
       <View style={styles.miniBanner} />
       <View style={{ width: inner, height: inner, borderRadius: 3, overflow: 'hidden' }}>
-        {uri ? (
+        {still && uri ? (
           <Image source={{ uri }} style={{ width: inner, height: inner }} fadeDuration={0} />
         ) : (
           <BoardArt size={inner} board={board} design={design} icons={icons} idPrefix={`m${design}_${size}`} svgRef={svg} />
