@@ -606,15 +606,15 @@ const styles = StyleSheet.create({
   thumbNumText: { color: '#fff', fontSize: 11, lineHeight: 14, fontWeight: '700' },
 });
 
-/** A mini version of the game board in a design: its frame, the yellow title strip and the board (light drawing). */
-export function MiniBoard({ design, board, size, label }: { design: number; board: SnlBoard; size: number; label?: string }) {
+/** The game board in small, exactly as in the game: its frame, the yellow title strip, the full board (pictures as chosen). */
+export function MiniBoard({ design, board, size, label, icons = true }: { design: number; board: SnlBoard; size: number; label?: string; icons?: boolean }) {
   const d = BOARD_DESIGNS[design] ?? BOARD_DESIGNS[0];
   const inner = size - 10;
   return (
     <View style={[styles.mini, { width: size, backgroundColor: d.frame, borderColor: d.edge }]}>
       <View style={styles.miniBanner} />
       <View style={{ width: inner, height: inner, borderRadius: 3, overflow: 'hidden' }}>
-        <BoardArt size={inner} board={board} design={design} numbers={false} idPrefix={`m${design}`} />
+        <BoardArt size={inner} board={board} design={design} icons={icons} idPrefix={`m${design}_${size}`} />
       </View>
       {label ? (
         <View style={styles.thumbNum}>

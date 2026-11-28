@@ -17,7 +17,7 @@ import type { ScreenProps } from '@/navigation/types';
 import { PARTY_LOOK, PARTY_THEME } from './parts/Premium';
 import { GAME_ART } from './parts/gameArt';
 import { RulesModal } from './parts/RulesModal';
-import { BoardThumb, DesignPreview, MiniBoard } from './parts/SnakesBoard';
+import { DesignPreview, MiniBoard } from './parts/SnakesBoard';
 import { useAfterOpen } from '@/hooks/useAfterOpen';
 import { BOARD_DESIGNS } from './parts/snakesThemes';
 import { CodeInput } from './parts/CodeInput';
@@ -46,7 +46,7 @@ function SafeDiagram({ mode, on }: { mode: 'corners' | 'straight'; on: boolean }
   );
 }
 
-/** One of two choices: the chosen one fills with the game's colours. */
+/** One of a few choices: the chosen one turns gold with a tick (the page itself is in the game's colours, so gold stands out). */
 function Choice({
   active,
   title,
@@ -66,10 +66,10 @@ function Choice({
   const body = (
     <>
       {children}
-      <T variant="smallBold" color={active ? '#fff' : c.text} center style={{ marginTop: children ? 6 : 0 }}>
+      <T variant="smallBold" color={active ? '#3B1D00' : c.text} center style={{ marginTop: children ? 6 : 0 }}>
         {title}
       </T>
-      <T variant="tiny" color={active ? 'rgba(255,255,255,0.85)' : c.textMuted} center>
+      <T variant="tiny" color={active ? 'rgba(59,29,0,0.8)' : c.textMuted} center>
         {desc}
       </T>
     </>
@@ -77,8 +77,11 @@ function Choice({
   return (
     <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
       {active ? (
-        <LinearGradient colors={colors} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.choice}>
+        <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={[styles.choice, styles.choiceOn]}>
           {body}
+          <View style={styles.choiceTick}>
+            <Ionicons name="checkmark" size={12} color="#fff" />
+          </View>
         </LinearGradient>
       ) : (
         <View style={[styles.choice, { backgroundColor: c.surfaceAlt, borderWidth: 1, borderColor: c.border }]}>{body}</View>
@@ -127,6 +130,13 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
   const [pictures, setPictures] = useState(true);
   const [preview, setPreview] = useState<number | null>(null);
   const opened = useAfterOpen();
+  // Full previews are heavy: show them one after another (one every 70 ms) so the page stays smooth.
+  const [shown, setShown] = useState(0);
+  useEffect(() => {
+    if (!opened || shown >= BOARD_DESIGNS.length) return;
+    const id = setTimeout(() => setShown((n) => n + 1), 70);
+    return () => clearTimeout(id);
+  }, [opened, shown]);
   const [opts, setOpts] = useState<Required<Pick<PartyOptions, 'start' | 'safe' | 'teams' | 'needCut'>>>({
     start: 'enter',
     safe: 'corners',
@@ -364,7 +374,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                   return (
                     <Pressable key={d.key} onPress={() => setDesign(i)} style={({ pressed }) => [{ alignItems: 'center', gap: 4 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
                       <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : ['transparent', 'transparent']} style={styles.boardEdge}>
-                        <MiniBoard design={i} board={SNL_BOARDS[boardNo]} size={112} label={String(i + 1)} />
+                        {i < shown ? <MiniBoard design={i} board={SNL_BOARDS[boardNo]} size={150} label={String(i + 1)} icons={pictures} /> : <View style={[styles.placeholder, { width: 150, height: 158, backgroundColor: d.frame }]} />}
                       </LinearGradient>
                       <T variant="tiny" style={{ fontFamily: on ? fonts.bold : fonts.medium }} numberOfLines={1}>
                         {t('party.snakes.designs.' + d.key)}
@@ -392,7 +402,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                   {t('party.snakes.picturesDesc')}
                 </T>
               </View>
-              <Toggle value={pictures} onValueChange={setPictures} tint={look.colors[0]} />
+              <Toggle value={pictures} onValueChange={setPictures} tint="#F5B700" />
             </Row>
 
             <T variant="bodyMedium" style={{ marginTop: spacing.sm }}>
@@ -401,7 +411,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
             <T variant="tiny" muted>
               {t('party.snakes.chooseBoardDesc')}
             </T>
-            {opened ? (
+            {opened && shown >= BOARD_DESIGNS.length ? (
               <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: spacing.sm, paddingVertical: spacing.sm }}>
                 {SNL_BOARDS.map((b, i) => {
                   if (snlLevelOf(i) !== level) return null;
@@ -409,7 +419,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                   return (
                     <Pressable key={i} onPress={() => setBoardNo(i)} style={({ pressed }) => [pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
                       <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : [colors.border, colors.border]} style={styles.boardEdge}>
-                        <BoardThumb index={i} board={b} design={design} size={on ? 132 : 116} />
+                        <MiniBoard design={design} board={b} size={150} label={String((i % SNL_PER_LEVEL) + 1)} icons={pictures} />
                       </LinearGradient>
                       {on ? (
                         <View style={styles.boardTick}>
@@ -510,6 +520,8 @@ const styles = StyleSheet.create({
   mineBadge: { width: 40, height: 40, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   entryChip: { height: 38, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 3 },
   choice: { borderRadius: radius.md, padding: spacing.sm, alignItems: 'center', minHeight: 70, justifyContent: 'center' },
+  choiceOn: { borderWidth: 2, borderColor: '#FFFFFF' },
+  choiceTick: { position: 'absolute', right: 5, top: 5, width: 18, height: 18, borderRadius: 9, backgroundColor: '#16A34A', alignItems: 'center', justifyContent: 'center' },
   diagram: { width: 46, height: 46, flexDirection: 'row', flexWrap: 'wrap', gap: 1.5 },
   diagramCell: { width: 8, height: 8, borderRadius: 2 },
   boardEdge: { borderRadius: 11, padding: 3 },
