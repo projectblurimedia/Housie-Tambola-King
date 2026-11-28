@@ -26,7 +26,7 @@ export function CodeInput({
   return (
     <View style={[styles.pill, { borderColor: focused ? accent : 'rgba(255,255,255,0.18)' }]}>
       <View style={[styles.key, { backgroundColor: accent }]}>
-        <Ionicons name="key" size={16} color="#fff" />
+        <Ionicons name="key" size={20} color="#fff" />
       </View>
       <TextInput
         value={value}
@@ -50,7 +50,7 @@ export function CodeInput({
           end={{ x: 1, y: 1 }}
           style={styles.go}
         >
-          {busy ? <ActivityIndicator color="#3B1D00" /> : <Ionicons name="arrow-forward" size={22} color={ready ? '#3B1D00' : 'rgba(255,255,255,0.5)'} />}
+          {busy ? <ActivityIndicator color="#3B1D00" /> : <Ionicons name="arrow-forward" size={20} color={ready ? '#3B1D00' : 'rgba(255,255,255,0.5)'} />}
         </LinearGradient>
       </Pressable>
     </View>
@@ -58,9 +58,10 @@ export function CodeInput({
 }
 
 const styles = StyleSheet.create({
-  pill: { flexDirection: 'row', alignItems: 'center', height: 60, borderRadius: 30, borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.35)', paddingLeft: 8, paddingRight: 6, gap: 8 },
-  key: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
+  pill: { flexDirection: 'row', alignItems: 'center', height: 60, borderRadius: 30, borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.35)', paddingLeft: 6, paddingRight: 6, gap: 8 },
+  // The key (left) and the arrow (right) are the same size, mirrored.
+  key: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.55)' },
   // Android pads text for accents and Poppins sits off-centre: no font padding, centred line.
   input: { flex: 1, height: 56, color: '#fff', fontFamily: fonts.display, fontSize: 24, lineHeight: 30, letterSpacing: 8, textAlign: 'center', textAlignVertical: 'center', includeFontPadding: false, paddingVertical: 0 },
-  go: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
+  go: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.55)' },
 });

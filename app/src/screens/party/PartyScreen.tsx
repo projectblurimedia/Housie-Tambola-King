@@ -1,5 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { View } from 'react-native';
+import { Pressable, StyleSheet, View } from 'react-native';
+import { Ionicons } from '@expo/vector-icons';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
@@ -48,6 +50,7 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
   const { partyId } = route.params;
   const { t } = useTranslation();
   const qc = useQueryClient();
+  const insets = useSafeAreaInsets();
   const [busy, setBusy] = useState(false);
   const [confirm, setConfirm] = useState<'leave' | 'end' | null>(null);
   const [rulesOpen, setRulesOpen] = useState(false);
@@ -282,9 +285,6 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
             />
           )}
           {isBoardGame(g.kind) ? null : <ScoreStrip players={state.players} meId={state.me.userId} />}
-          <View style={{ marginTop: spacing.md }}>
-            <Button title={t('party.leave')} variant="ghost" icon="exit-outline" onPress={() => setConfirm('leave')} />
-          </View>
         </>
       )}
       {/* Room for the floating chat button below the last item. */}
@@ -308,7 +308,20 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
         onCancel={() => setConfirm(null)}
       />
     </Screen>
+      {/* During a game, Leave sits at the bottom of the screen (opposite the chat button), not under the board. */}
+      {g.status === 'playing' ? (
+        <Pressable onPress={() => setConfirm('leave')} accessibilityLabel={t('party.leave')} style={({ pressed }) => [styles.leave, { bottom: spacing.lg + insets.bottom }, pressed && { opacity: 0.85 }]}>
+          <Ionicons name="exit-outline" size={18} color="#fff" />
+          <T variant="smallBold" color="#fff">
+            {t('party.leave')}
+          </T>
+        </Pressable>
+      ) : null}
       <PartyChat partyId={partyId} meId={state.me.userId} colors={PARTY_LOOK[g.kind].colors} players={state.players.filter((p) => p.active).length} />
     </View>
   );
 }
+
+const styles = StyleSheet.create({
+  leave: { position: 'absolute', right: spacing.lg, height: 48, paddingHorizontal: 18, borderRadius: 24, flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: 'rgba(185,28,28,0.92)', borderWidth: 1.5, borderColor: 'rgba(255,255,255,0.6)', elevation: 6, zIndex: 20 },
+});

@@ -111,23 +111,29 @@ function SnakeArt({ head, tail, cell, skin, lite }: { head: Pt; tail: Pt; cell: 
         />,
       );
   }
-  // Head, pointing away from the neck.
+  // Head: pinned on the body's very first point (so it always sits on the neck), pointing along
+  // it, sized to the body (slim snake = small head) but never bigger than its square.
   const h0 = at(0);
-  const h1 = at(0.04);
+  const h1 = at(0.025);
   const dl = Math.hypot(h0.x - h1.x, h0.y - h1.y) || 1;
   const dx = (h0.x - h1.x) / dl;
   const dy = (h0.y - h1.y) / dl;
   const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
-  // The head is sized to the body (slim snake = small head) and sits on the neck.
-  const cx = head.x - dx * W * 0.2;
-  const cy = head.y - dy * W * 0.2;
-  const hl = W * 1.5;
-  const hw = W * 1.18;
-  const tip = hl * 0.5;
-  const hp = `M${f1(tip)} 0 C${f1(tip)} ${f1(-hw * 0.3)} ${f1(hl * 0.1)} ${f1(-hw * 0.5)} ${f1(-hl * 0.18)} ${f1(-hw * 0.5)} C${f1(-hl * 0.42)} ${f1(-hw * 0.48)} ${f1(-hl * 0.5)} ${f1(-hw * 0.2)} ${f1(-hl * 0.5)} 0 C${f1(-hl * 0.5)} ${f1(hw * 0.2)} ${f1(-hl * 0.42)} ${f1(hw * 0.48)} ${f1(-hl * 0.18)} ${f1(hw * 0.5)} C${f1(hl * 0.1)} ${f1(hw * 0.5)} ${f1(tip)} ${f1(hw * 0.3)} ${f1(tip)} 0 Z`;
-  const crown = `M${f1(tip * 0.9)} 0 C${f1(tip * 0.8)} ${f1(-hw * 0.3)} ${f1(-hl * 0.1)} ${f1(-hw * 0.4)} ${f1(-hl * 0.42)} ${f1(-hw * 0.2)} L${f1(-hl * 0.42)} ${f1(hw * 0.2)} C${f1(-hl * 0.1)} ${f1(hw * 0.4)} ${f1(tip * 0.8)} ${f1(hw * 0.3)} ${f1(tip * 0.9)} 0 Z`;
+  const hl = Math.min(W * 1.55, cell * 0.52);
+  const hw = Math.min(W * 1.2, cell * 0.44);
+  const tip = hl * 0.48;
+  const gid = `hd${skin}_${Math.round(head.x)}_${Math.round(head.y)}_${Math.round(cell)}`;
+  // A viper's head: wide at the jaws, narrowing to a rounded snout.
+  const hp = `M${f1(tip)} 0 C${f1(tip)} ${f1(-hw * 0.26)} ${f1(hl * 0.18)} ${f1(-hw * 0.42)} ${f1(-hl * 0.12)} ${f1(-hw * 0.5)} C${f1(-hl * 0.36)} ${f1(-hw * 0.56)} ${f1(-hl * 0.52)} ${f1(-hw * 0.42)} ${f1(-hl * 0.56)} ${f1(-hw * 0.3)} L${f1(-hl * 0.56)} ${f1(hw * 0.3)} C${f1(-hl * 0.52)} ${f1(hw * 0.42)} ${f1(-hl * 0.36)} ${f1(hw * 0.56)} ${f1(-hl * 0.12)} ${f1(hw * 0.5)} C${f1(hl * 0.18)} ${f1(hw * 0.42)} ${f1(tip)} ${f1(hw * 0.26)} ${f1(tip)} 0 Z`;
   return (
     <G>
+      <Defs>
+        <RadialGradient id={gid} cx="40%" cy="35%" r="75%">
+          <Stop offset="0" stopColor={s.light} />
+          <Stop offset="0.5" stopColor={s.base} />
+          <Stop offset="1" stopColor={s.mid} />
+        </RadialGradient>
+      </Defs>
       <Path d={band(1, 0)} fill="rgba(0,0,0,0.25)" transform="translate(3 4)" />
       <Path d={band(1, 0)} fill={s.dark} />
       <Path d={band(0.9, 0.05)} fill={s.mid} />
@@ -136,23 +142,26 @@ function SnakeArt({ head, tail, cell, skin, lite }: { head: Pt; tail: Pt; cell: 
       <Path d={band(0.5, -0.75)} fill={s.dark} opacity={0.22} />
       <Path d={band(0.42, 0.42)} fill={s.light} opacity={0.38} />
       <Path d={band(0.16, 0.62, 0.82)} fill={s.hi} opacity={0.55} />
-      <G transform={`translate(${f1(cx)} ${f1(cy)}) rotate(${f1(ang)})`}>
+      <G transform={`translate(${f1(h0.x)} ${f1(h0.y)}) rotate(${f1(ang)})`}>
         <Path
-          d={`M${f1(tip - 1)} 0 L${f1(tip + W * 0.3)} 0 l${f1(W * 0.14)} ${f1(-W * 0.12)} M${f1(tip + W * 0.3)} 0 l${f1(W * 0.14)} ${f1(W * 0.12)}`}
-          stroke="#B91C1C"
-          strokeWidth={Math.max(1, W * 0.08)}
+          d={`M${f1(tip - 1)} 0 L${f1(tip + hl * 0.2)} 0 l${f1(hl * 0.09)} ${f1(-hl * 0.07)} M${f1(tip + hl * 0.2)} 0 l${f1(hl * 0.09)} ${f1(hl * 0.07)}`}
+          stroke="#DC2626"
+          strokeWidth={Math.max(1, hl * 0.05)}
           strokeLinecap="round"
           fill="none"
         />
-        <Path d={hp} fill="rgba(0,0,0,0.28)" transform="translate(2.5 3.5)" />
-        <Path d={hp} fill={s.mid} stroke={s.dark} strokeWidth={1} />
-        <Path d={crown} fill={s.base} />
-        <Ellipse cx={-hl * 0.1} cy={-hw * 0.12} rx={hl * 0.25} ry={hw * 0.12} fill={s.hi} opacity={0.35} />
+        <Path d={hp} fill="rgba(0,0,0,0.3)" transform="translate(2 3)" />
+        <Path d={hp} fill={`url(#${gid})`} stroke={s.dark} strokeWidth={1.1} />
+        {/* Head scales: a centre plate, brow lines and the mouth line */}
+        <Path d={`M${f1(tip * 0.55)} 0 L${f1(-hl * 0.05)} ${f1(-hw * 0.12)} L${f1(-hl * 0.4)} 0 L${f1(-hl * 0.05)} ${f1(hw * 0.12)} Z`} fill={s.dark} opacity={0.3} />
         {[-1, 1].map((k) => (
           <G key={k}>
-            <Ellipse cx={hl * 0.12} cy={k * hw * 0.34} rx={hw * 0.14} ry={hw * 0.1} fill="#D4A017" stroke={s.dark} strokeWidth={0.8} />
-            <Ellipse cx={hl * 0.12} cy={k * hw * 0.34} rx={hw * 0.028} ry={hw * 0.085} fill="#000" />
-            <Circle cx={tip * 0.8} cy={k * hw * 0.1} r={hw * 0.028} fill={s.dark} />
+            <Path d={`M${f1(hl * 0.22)} ${f1(k * hw * 0.2)} Q${f1(hl * 0.02)} ${f1(k * hw * 0.48)} ${f1(-hl * 0.22)} ${f1(k * hw * 0.3)}`} stroke={s.dark} strokeWidth={1} fill="none" opacity={0.5} />
+            <Path d={`M${f1(tip * 0.92)} ${f1(k * hw * 0.12)} Q${f1(hl * 0.05)} ${f1(k * hw * 0.5)} ${f1(-hl * 0.3)} ${f1(k * hw * 0.46)}`} stroke={s.dark} strokeWidth={0.9} fill="none" opacity={0.55} />
+            <Ellipse cx={hl * 0.06} cy={k * hw * 0.3} rx={hw * 0.15} ry={hw * 0.12} fill="#FDE047" stroke={s.dark} strokeWidth={0.9} />
+            <Ellipse cx={hl * 0.07} cy={k * hw * 0.3} rx={hw * 0.035} ry={hw * 0.1} fill="#0A0A0A" />
+            <Circle cx={hl * 0.03} cy={k * hw * 0.3 - hw * 0.04} r={hw * 0.035} fill="#fff" />
+            <Circle cx={tip * 0.82} cy={k * hw * 0.09} r={hw * 0.03} fill={s.dark} />
           </G>
         ))}
       </G>
@@ -233,7 +242,7 @@ export const BoardArt = React.memo(
         {Array.from({ length: 100 }, (_, i) => {
           const sq = i + 1;
           const { row, col } = snlCell(sq);
-          const fill = sq === 100 ? `url(#${idPrefix}gold)` : (row + col) % 2 ? `url(#${idPrefix}tb)` : `url(#${idPrefix}ta)`;
+          const fill = sq === 100 ? `url(#${idPrefix}gold)` : tileColor(sq, row, col);
           const x0 = col * cell;
           const y0 = row * cell;
           return (
@@ -269,6 +278,17 @@ export const BoardArt = React.memo(
   },
   (a, b) => a.size === b.size && a.numbers === b.numbers && a.level === b.level && JSON.stringify(a.board) === JSON.stringify(b.board),
 );
+
+/** A soft rainbow across the board (warm at the start, cool and violet near 100), checkered light / lighter. */
+function tileColor(sq: number, row: number, col: number) {
+  const h = (((9 - row) * 10 + col) * 2.9) % 360;
+  const l = (row + col) % 2 ? 0.8 : 0.9;
+  const sat = 0.85;
+  const k = (n: number) => (n + h / 30) % 12;
+  const a = sat * Math.min(l, 1 - l);
+  const ch = (n: number) => Math.round(255 * (l - a * Math.max(-1, Math.min(k(n) - 3, 9 - k(n), 1)))).toString(16).padStart(2, '0');
+  return `#${ch(0)}${ch(8)}${ch(4)}`;
+}
 
 /** Which level a running game's board belongs to. */
 function levelOfBoard(board: SnlBoard, option?: number): SnlLevel {

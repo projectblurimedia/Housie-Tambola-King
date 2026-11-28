@@ -129,7 +129,8 @@ export function snakeCurve(head: Pt, tail: Pt, cell: number) {
   const waves = Math.max(1, Math.min(2.2, len / (cell * 2.6)));
   const make = (amp: number, lean = 0) => (t: number): Pt => {
     const env = Math.sin(Math.PI * Math.min(1, t * 1.15)) * 0.85 + 0.15;
-    const off = amp * env * (Math.sin(2 * Math.PI * waves * t) + lean);
+    // The lean fades out at both ends, so the curve starts exactly on the head square's centre.
+    const off = amp * (env * Math.sin(2 * Math.PI * waves * t) + lean * Math.sin(Math.PI * t));
     return { x: head.x + dx * t + nx * off, y: head.y + dy * t + ny * off };
   };
   const fits = (f: (t: number) => Pt) => {
