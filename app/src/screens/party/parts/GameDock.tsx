@@ -23,7 +23,9 @@ export type DockPlayer = {
   badge?: string;
 };
 
-const STAGE = 124;
+const STAGE = 112;
+/** The round pad (smaller than the stage, leaving room for the label under it). */
+const PAD = 80;
 const CHIP_H = 40;
 
 /**
@@ -89,9 +91,7 @@ export function GameDock({
 
   const turn = players.find((p) => p.userId === turnId);
   const ring = turn?.color.hex ?? '#F5D06F';
-  const R = 56;
-  const C = 2 * Math.PI * R;
-  const left01 = Math.max(0, Math.min(1, seconds / total));
+  const R = PAD / 2;
 
   const column = (list: DockPlayer[], side: 'left' | 'right') => (
     <View style={[styles.col, { alignItems: side === 'left' ? 'flex-end' : 'flex-start' }]}>
@@ -106,21 +106,9 @@ export function GameDock({
       <LinearGradient colors={['rgba(0,0,0,0.38)', 'rgba(0,0,0,0.22)']} style={[styles.dock, { height }]}>
         {column(left, 'left')}
         <Pressable onPress={onAct} disabled={!canAct || busy} accessibilityLabel={actLabel} style={styles.stage}>
-          {/* Turn timer ring */}
-          <Svg width={STAGE} height={STAGE} style={StyleSheet.absoluteFill}>
-            <Circle cx={STAGE / 2} cy={STAGE / 2} r={R} stroke="rgba(255,255,255,0.12)" strokeWidth={5} fill={felt} />
-            <Circle
-              cx={STAGE / 2}
-              cy={STAGE / 2}
-              r={R}
-              stroke={canAct ? '#FACC15' : ring}
-              strokeWidth={5}
-              fill="none"
-              strokeLinecap="round"
-              strokeDasharray={`${C} ${C}`}
-              strokeDashoffset={C * (1 - left01)}
-              transform={`rotate(-90 ${STAGE / 2} ${STAGE / 2})`}
-            />
+          {/* The pad the die / seeds land on (edge in the colour of whoever's turn it is) */}
+          <Svg width={PAD + 4} height={PAD + 4} style={styles.pad}>
+            <Circle cx={R + 2} cy={R + 2} r={R} stroke={canAct ? '#FACC15' : ring} strokeWidth={2.5} fill={felt} />
           </Svg>
           {canAct ? (
             <Animated.View
@@ -138,11 +126,12 @@ export function GameDock({
             {canAct ? (
               <LinearGradient colors={['#FFF1A8', '#F5B700', '#D97706']} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.label}>
                 <T style={styles.labelText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE} numberOfLines={1}>
-                  {actLabel}
+                  {actLabel} · {seconds}s
                 </T>
               </LinearGradient>
             ) : (
               <View style={[styles.secs, { borderColor: ring }]}>
+                <Ionicons name="time-outline" size={11} color="#fff" />
                 <T style={styles.secsText} maxFontSizeMultiplier={FIXED_SHAPE_SCALE}>
                   {seconds}s
                 </T>
@@ -207,12 +196,13 @@ const styles = StyleSheet.create({
   dock: { flexDirection: 'row', alignItems: 'center', borderRadius: 22, borderWidth: 1.5, borderColor: 'rgba(245,208,111,0.45)', paddingHorizontal: 6 },
   col: { flex: 1, gap: 6, justifyContent: 'center' },
   stage: { width: STAGE, height: STAGE, alignItems: 'center', justifyContent: 'center', marginHorizontal: 2 },
-  glow: { position: 'absolute', width: STAGE - 6, height: STAGE - 6, borderRadius: STAGE, borderWidth: 4, borderColor: '#FACC15', backgroundColor: 'rgba(250,204,21,0.12)' },
-  center: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 14, alignItems: 'center', justifyContent: 'center' },
+  pad: { position: 'absolute', top: (STAGE - 18 - PAD) / 2 - 2, alignSelf: 'center' },
+  glow: { position: 'absolute', top: (STAGE - 18 - PAD) / 2 - 4, width: PAD + 8, height: PAD + 8, borderRadius: PAD, borderWidth: 3, borderColor: '#FACC15', backgroundColor: 'rgba(250,204,21,0.12)' },
+  center: { position: 'absolute', left: 0, right: 0, top: 0, bottom: 18, alignItems: 'center', justifyContent: 'center' },
   labelWrap: { position: 'absolute', bottom: 4, left: 0, right: 0, alignItems: 'center' },
   label: { paddingHorizontal: 10, height: 20, borderRadius: 10, justifyContent: 'center', borderWidth: 1, borderColor: '#92400E' },
   labelText: { fontFamily: fonts.bold, fontSize: 10, lineHeight: 13, color: '#3B1D00', letterSpacing: 0.4 },
-  secs: { paddingHorizontal: 8, height: 18, borderRadius: 9, borderWidth: 1.5, justifyContent: 'center', backgroundColor: 'rgba(0,0,0,0.55)' },
+  secs: { flexDirection: 'row', alignItems: 'center', gap: 3, paddingHorizontal: 8, height: 20, borderRadius: 10, borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.55)' },
   secsText: { fontFamily: fonts.bold, fontSize: 10, lineHeight: 13, color: '#fff' },
   chipEdge: { borderRadius: 14, padding: 1.2, width: '100%', maxWidth: 160 },
   chip: { height: CHIP_H - 2.4, flexDirection: 'row', alignItems: 'center', gap: 5, borderRadius: 13, paddingHorizontal: 5, backgroundColor: '#1A1030' },

@@ -65,7 +65,8 @@ export function Cube({ top, size }: { top: number; size: number }) {
  * gold flash.
  */
 export function RollingDie({ value, rollKey, rolling, size = 54 }: { value: number; rollKey?: number; rolling: boolean; size?: number }) {
-  const spin = useRef(new Animated.Value(0)).current;
+  // 1 = at rest (flat, face-on) — the first die shown is whole, not mid-spin.
+  const spin = useRef(new Animated.Value(1)).current;
   const hop = useRef(new Animated.Value(0)).current;
   const flash = useRef(new Animated.Value(0)).current;
   const [face, setFace] = useState(value || 1);

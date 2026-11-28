@@ -1039,6 +1039,8 @@
     "wonEach": "+{{count}} coins each",
     "rules": "Rules",
     "congrats": "CONGRATULATIONS!",
-    "joinHint": "Enter the 6-letter code your friend shared"
+    "joinHint": "Enter the 6-letter code your friend shared",
+    "autoLeave_one": "Leaving the game in {{count}} s",
+    "autoLeave_other": "Leaving the game in {{count}} s"
   }
 }

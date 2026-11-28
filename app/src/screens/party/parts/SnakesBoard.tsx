@@ -18,131 +18,137 @@ export const SNL_THEME: Record<SnlLevel, { a: string; b: string; num: string; fr
   medium: { a: '#FFF6DE', b: '#FFD98E', num: '#8A5210', frame: '#7A4513', edge: '#F5D06F' },
   hard: { a: '#FFF3F0', b: '#FFC9B8', num: '#9A3412', frame: '#7C2D12', edge: '#FDA4AF' },
 };
-/** Snake skins: body, outline / dark marks, light, the bright pattern. */
-const SKINS = [
-  { base: '#43A047', dark: '#1B5E20', light: '#B9F6CA', mark: '#FDD835' },
-  { base: '#E53935', dark: '#7F0000', light: '#FFCDD2', mark: '#FFE082' },
-  { base: '#1E88E5', dark: '#0D2F6B', light: '#BBDEFB', mark: '#FFF59D' },
-  { base: '#FB8C00', dark: '#7A3300', light: '#FFE0B2', mark: '#5D2E0B' },
-  { base: '#8E24AA', dark: '#3B0A57', light: '#F3E5F5', mark: '#FFD54F' },
-];
 const CLASSIC: SnlBoard = { ladders: LADDERS, snakes: SNAKES };
 const f1 = (v: number) => v.toFixed(1);
-/** Light comes from the top-left: highlights shift this way along the body. */
-const LX = -0.55;
-const LY = -0.83;
+
+/** Real snake skins: base, light (sheen), dark (outline / shade), pattern colour and kind. */
+const SKINS = [
+  { base: '#C9A25A', light: '#F3E2B3', dark: '#4A3014', blot: '#6B4A22', kind: 'blotch' },
+  { base: '#2E9E4F', light: '#A8F0C0', dark: '#0B3D1D', blot: '#F5F5DC', kind: 'spots' },
+  { base: '#1F2937', light: '#6B7280', dark: '#05070A', blot: '#F4D03F', kind: 'bands' },
+  { base: '#C0392B', light: '#F5B7B1', dark: '#3B0A06', blot: '#111111', kind: 'bands2' },
+  { base: '#7D8B3A', light: '#D6E29A', dark: '#2B3010', blot: '#3E4A16', kind: 'zig' },
+] as const;
+
+/** Shared shading for every snake on a board: a lit sphere per skin (body and pattern). */
+function SkinDefs({ prefix }: { prefix: string }) {
+  return (
+    <Defs>
+      {SKINS.map((s, i) => (
+        <React.Fragment key={i}>
+          <RadialGradient id={`${prefix}g${i}`} cx="35%" cy="30%" r="75%">
+            <Stop offset="0" stopColor={s.light} />
+            <Stop offset="0.45" stopColor={s.base} />
+            <Stop offset="1" stopColor={s.dark} />
+          </RadialGradient>
+          <RadialGradient id={`${prefix}p${i}`} cx="35%" cy="30%" r="75%">
+            <Stop offset="0" stopColor={s.blot} />
+            <Stop offset="1" stopColor={s.dark} />
+          </RadialGradient>
+        </React.Fragment>
+      ))}
+    </Defs>
+  );
+}
 
 /**
- * A glossy snake: a round body along a natural wave (thick in the middle, a fine pointed tail),
- * lit from the top-left like a tube, with a diamond pattern down its back — and a proper head
- * (eyes with slit pupils, nostrils, a forked tongue) that stays inside its own square.
+ * A realistic snake: the body is built from overlapping lit segments along a natural wave (thick
+ * in the middle, a fine pointed tail), so it looks round like a real body, with its species'
+ * pattern (python blotches, tree-snake spots, krait bands, coral rings, viper zig-zag), a soft
+ * shadow on the board, and a real head — narrow eyes with slit pupils, nostrils, a forked
+ * tongue — kept inside its own square.
  */
-function SnakeArt({ head, tail, cell, skin, id }: { head: Pt; tail: Pt; cell: number; skin: (typeof SKINS)[number]; id: string }) {
+function SnakeArt({ head, tail, cell, skin, prefix, lite }: { head: Pt; tail: Pt; cell: number; skin: number; prefix: string; lite?: boolean }) {
+  const s = SKINS[skin];
   const { at } = snakeCurve(head, tail, cell);
-  const W = cell * 0.42;
-  const width = (t: number) => W * (t < 0.12 ? 0.75 + (t / 0.12) * 0.25 : t < 0.55 ? 1 : Math.max(0.07, 1 - (t - 0.55) / 0.45));
-  const fr = (t: number) => {
+  const R = cell * 0.21;
+  const rad = (t: number) => R * (t < 0.1 ? 0.8 + (t / 0.1) * 0.2 : t < 0.55 ? 1 : Math.max(0.12, 1 - (t - 0.55) / 0.45));
+  // Points along the body by length (so segments are evenly spaced).
+  const pts: { t: number; p: Pt; l: number }[] = [];
+  let prev = at(0);
+  let L = 0;
+  for (let i = 0; i <= 400; i++) {
+    const t = i / 400;
+    const p = at(t);
+    L += Math.hypot(p.x - prev.x, p.y - prev.y);
+    prev = p;
+    pts.push({ t, p, l: L });
+  }
+  const segs: { t: number; p: Pt; l: number }[] = [];
+  let next = 0;
+  for (const q of pts) {
+    if (q.t < 0.03 || q.l < next) continue;
+    segs.push(q);
+    next = q.l + rad(q.t) * (lite ? 0.9 : 0.5);
+  }
+  segs.reverse(); // tail first, so the neck lies on top
+  // Shadow: one outline of the whole body, offset.
+  const left: string[] = [];
+  const right: string[] = [];
+  for (let i = 0; i <= 50; i++) {
+    const t = 0.03 + (i / 50) * 0.97;
     const p = at(t);
     const q = at(Math.min(1, t + 0.004));
-    const r = at(Math.max(0, t - 0.004));
-    const l = Math.hypot(q.x - r.x, q.y - r.y) || 1;
-    return { p, tx: (q.x - r.x) / l, ty: (q.y - r.y) / l, ux: -(q.y - r.y) / l, uy: (q.x - r.x) / l };
-  };
-  const N = 60;
-  const T0 = 0.05;
-  const band = (k: number, shift: number, t1 = 1) => {
-    const L: string[] = [];
-    const R: string[] = [];
-    for (let i = 0; i <= N; i++) {
-      const t = T0 + (i / N) * (t1 - T0);
-      const { p, ux, uy } = fr(t);
-      const w = width(t) / 2;
-      const cx = p.x + LX * w * shift;
-      const cy = p.y + LY * w * shift;
-      L.push(`${f1(cx + ux * w * k)} ${f1(cy + uy * w * k)}`);
-      R.push(`${f1(cx - ux * w * k)} ${f1(cy - uy * w * k)}`);
-    }
-    return `M${L.join(' L')} L${R.reverse().join(' L')} Z`;
-  };
-  // Diamond pattern down the back.
-  const marks: React.ReactNode[] = [];
-  const step = W * 0.6;
-  let acc = 0;
-  let prev = at(T0 + 0.03);
-  for (let i = 1, k = 0; i <= 300; i++) {
-    const t = T0 + 0.03 + (i / 300) * (0.92 - T0);
-    const p = at(t);
-    acc += Math.hypot(p.x - prev.x, p.y - prev.y);
-    prev = p;
-    if (acc < step) continue;
-    acc = 0;
-    k++;
-    const { tx, ty, ux, uy } = fr(t);
-    const w = width(t) / 2;
-    const a = w * 0.6;
-    const b = w * 0.52;
-    marks.push(
-      <Path
-        key={k}
-        d={`M${f1(p.x + tx * a)} ${f1(p.y + ty * a)} L${f1(p.x + ux * b)} ${f1(p.y + uy * b)} L${f1(p.x - tx * a)} ${f1(p.y - ty * a)} L${f1(p.x - ux * b)} ${f1(p.y - uy * b)} Z`}
-        fill={k % 2 ? skin.mark : skin.dark}
-        opacity={k % 2 ? 0.9 : 0.45}
-      />,
-    );
+    const l = Math.hypot(q.x - p.x, q.y - p.y) || 1;
+    const ux = -(q.y - p.y) / l;
+    const uy = (q.x - p.x) / l;
+    const r = rad(t);
+    left.push(`${f1(p.x + ux * r)} ${f1(p.y + uy * r)}`);
+    right.push(`${f1(p.x - ux * r)} ${f1(p.y - uy * r)}`);
   }
-  // Head: points away from the neck, set back a little so the tongue stays in the square.
+  const shadow = `M${left.join(' L')} L${right.reverse().join(' L')} Z`;
+  const patterned = (l: number) => {
+    const u = l / (R * 1.6);
+    if (s.kind === 'bands') return Math.floor(u) % 2 === 0 && u % 1 < 0.35;
+    if (s.kind === 'bands2') return u % 1.6 < 0.5;
+    if (s.kind === 'blotch') return u % 1.4 < 0.6;
+    if (s.kind === 'zig') return u % 1 < 0.45;
+    return false;
+  };
+  // Head, pointing away from the neck.
   const h0 = at(0);
-  const h1 = at(0.05);
+  const h1 = at(0.04);
   const dl = Math.hypot(h0.x - h1.x, h0.y - h1.y) || 1;
   const dx = (h0.x - h1.x) / dl;
   const dy = (h0.y - h1.y) / dl;
-  const hl = cell * 0.5;
-  const hw = cell * 0.44;
-  const cx = head.x - dx * cell * 0.1;
-  const cy = head.y - dy * cell * 0.1;
   const ang = (Math.atan2(dy, dx) * 180) / Math.PI;
+  const cx = head.x - dx * cell * 0.08;
+  const cy = head.y - dy * cell * 0.08;
+  const hl = cell * 0.56;
+  const hw = cell * 0.42;
   const tip = hl * 0.5;
-  const headPath = `M${f1(tip)} 0 C${f1(tip)} ${f1(-hw * 0.4)} ${f1(hl * 0.05)} ${f1(-hw * 0.56)} ${f1(-hl * 0.28)} ${f1(-hw * 0.44)} C${f1(-hl * 0.52)} ${f1(-hw * 0.34)} ${f1(-hl * 0.52)} ${f1(hw * 0.34)} ${f1(-hl * 0.28)} ${f1(hw * 0.44)} C${f1(hl * 0.05)} ${f1(hw * 0.56)} ${f1(tip)} ${f1(hw * 0.4)} ${f1(tip)} 0 Z`;
+  const hp = `M${f1(tip)} 0 C${f1(tip)} ${f1(-hw * 0.3)} ${f1(hl * 0.1)} ${f1(-hw * 0.5)} ${f1(-hl * 0.18)} ${f1(-hw * 0.5)} C${f1(-hl * 0.42)} ${f1(-hw * 0.48)} ${f1(-hl * 0.5)} ${f1(-hw * 0.2)} ${f1(-hl * 0.5)} 0 C${f1(-hl * 0.5)} ${f1(hw * 0.2)} ${f1(-hl * 0.42)} ${f1(hw * 0.48)} ${f1(-hl * 0.18)} ${f1(hw * 0.5)} C${f1(hl * 0.1)} ${f1(hw * 0.5)} ${f1(tip)} ${f1(hw * 0.3)} ${f1(tip)} 0 Z`;
   return (
     <G>
-      <Defs>
-        <RadialGradient id={id} cx="35%" cy="40%" r="70%">
-          <Stop offset="0" stopColor={skin.light} />
-          <Stop offset="0.5" stopColor={skin.base} />
-          <Stop offset="1" stopColor={skin.dark} />
-        </RadialGradient>
-      </Defs>
-      <Path d={band(1, 0)} fill="rgba(0,0,0,0.3)" transform="translate(2.5 3.5)" />
-      <Path d={band(1, 0)} fill={skin.dark} />
-      <Path d={band(0.84, 0)} fill={skin.base} />
-      {marks}
-      <Path d={band(0.42, -0.5)} fill="#000" opacity={0.16} />
-      <Path d={band(0.3, 0.5)} fill={skin.light} opacity={0.45} />
-      <Path d={band(0.1, 0.6, 0.85)} fill="#fff" opacity={0.6} />
+      <Path d={shadow} fill="rgba(0,0,0,0.22)" transform="translate(2.5 3.5)" />
+      {segs.map((q, i) => (
+        <Circle key={i} cx={q.p.x} cy={q.p.y} r={rad(q.t)} fill={`url(#${prefix}${patterned(q.l) ? 'p' : 'g'}${skin})`} />
+      ))}
+      {s.kind === 'spots' && !lite
+        ? segs
+            .filter((q) => Math.floor((q.l / R) * 0.8) % 3 === 0 && ((q.l / R) * 0.8) % 1 < 0.25)
+            .map((q, i) => <Circle key={`d${i}`} cx={q.p.x - rad(q.t) * 0.2} cy={q.p.y - rad(q.t) * 0.25} r={rad(q.t) * 0.28} fill={s.blot} opacity={0.9} />)
+        : null}
       <G transform={`translate(${f1(cx)} ${f1(cy)}) rotate(${f1(ang)})`}>
         <Path
-          d={`M${f1(tip - 1)} 0 L${f1(tip + cell * 0.1)} 0 l${f1(cell * 0.06)} ${f1(-cell * 0.05)} M${f1(tip + cell * 0.1)} 0 l${f1(cell * 0.06)} ${f1(cell * 0.05)}`}
-          stroke="#E11D48"
-          strokeWidth={cell * 0.04}
+          d={`M${f1(tip - 1)} 0 L${f1(tip + cell * 0.09)} 0 l${f1(cell * 0.05)} ${f1(-cell * 0.04)} M${f1(tip + cell * 0.09)} 0 l${f1(cell * 0.05)} ${f1(cell * 0.04)}`}
+          stroke="#B91C1C"
+          strokeWidth={cell * 0.03}
           strokeLinecap="round"
-          strokeLinejoin="round"
           fill="none"
         />
-        <Path d={headPath} fill="rgba(0,0,0,0.3)" transform="translate(2 3)" />
-        <Path d={headPath} fill={`url(#${id})`} stroke={skin.dark} strokeWidth={1.5} />
-        <Line x1={-hl * 0.3} y1={0} x2={hl * 0.15} y2={0} stroke={skin.dark} strokeWidth={1} opacity={0.35} />
-        {[-1, 1].map((s) => {
-          const ex = hl * 0.02;
-          const ey = s * hw * 0.27;
-          return (
-            <G key={s}>
-              <Circle cx={ex} cy={ey} r={cell * 0.09} fill="#FFEE58" stroke={skin.dark} strokeWidth={1.1} />
-              <Ellipse cx={ex + 0.5} cy={ey} rx={cell * 0.064} ry={cell * 0.025} fill="#111" />
-              <Circle cx={ex - cell * 0.03} cy={ey - cell * 0.03} r={cell * 0.022} fill="#fff" />
-              <Circle cx={tip * 0.72} cy={s * hw * 0.1} r={cell * 0.018} fill={skin.dark} />
-            </G>
-          );
-        })}
+        <Path d={hp} fill="rgba(0,0,0,0.28)" transform="translate(2.5 3.5)" />
+        <Path d={hp} fill={`url(#${prefix}g${skin})`} stroke={s.dark} strokeWidth={0.8} />
+        <Path d={`M${f1(-hl * 0.35)} ${f1(-hw * 0.18)} Q${f1(hl * 0.05)} ${f1(-hw * 0.3)} ${f1(hl * 0.3)} 0 Q${f1(hl * 0.05)} ${f1(hw * 0.3)} ${f1(-hl * 0.35)} ${f1(hw * 0.18)} Z`} fill={s.dark} opacity={0.28} />
+        {[-1, 1].map((k) => (
+          <G key={k}>
+            <Ellipse cx={hl * 0.12} cy={k * hw * 0.33} rx={cell * 0.06} ry={cell * 0.045} fill="#E8B923" stroke={s.dark} strokeWidth={0.8} />
+            <Ellipse cx={hl * 0.12} cy={k * hw * 0.33} rx={cell * 0.012} ry={cell * 0.038} fill="#000" />
+            <Circle cx={hl * 0.1} cy={k * hw * 0.33 - cell * 0.015} r={cell * 0.01} fill="#fff" />
+            <Circle cx={tip * 0.78} cy={k * hw * 0.1} r={cell * 0.012} fill={s.dark} />
+          </G>
+        ))}
+        <Path d={`M${f1(-hl * 0.4)} ${f1(-hw * 0.12)} Q0 ${f1(-hw * 0.32)} ${f1(tip * 0.7)} ${f1(-hw * 0.12)}`} stroke="#fff" strokeOpacity={0.35} strokeWidth={1.2} fill="none" />
       </G>
     </G>
   );
@@ -223,8 +229,9 @@ export const BoardArt = React.memo(
         {Object.entries(board.ladders).map(([f, to]) => (
           <LadderArt key={`l${f}`} from={c(Number(f))} to={c(to)} cell={cell} />
         ))}
+        <SkinDefs prefix={idPrefix} />
         {Object.entries(board.snakes).map(([h, tl], i) => (
-          <SnakeArt key={`s${h}`} id={`${idPrefix}s${h}`} head={c(Number(h))} tail={c(tl)} cell={cell} skin={SKINS[i % SKINS.length]} />
+          <SnakeArt key={`s${h}`} prefix={idPrefix} skin={i % SKINS.length} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
         ))}
       </Svg>
     );
@@ -409,7 +416,7 @@ export function SnakesBoard({ state, seconds, busy, onRoll }: { state: PartyStat
         name: nameOf(uid),
         avatarKey: p.avatarKey,
         color: colorOf(uid),
-        value: outOf(uid) ? t('party.board.out') : sq === 0 ? t('party.snakes.notIn') : `#${sq}`,
+        value: outOf(uid) ? t('party.board.out') : sq === 0 ? '' : `#${sq}`,
         misses: s.misses?.[uid] ?? 0,
         out: outOf(uid),
       },

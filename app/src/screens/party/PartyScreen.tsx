@@ -4,7 +4,7 @@ import * as Haptics from 'expo-haptics';
 import { useTranslation } from 'react-i18next';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { ConfirmModal } from '@/components/ConfirmModal';
-import { Button, EmptyState, IconButton, Loading, Screen } from '@/components/ui';
+import { Button, EmptyState, IconButton, Loading, Screen, T } from '@/components/ui';
 import { partyKey, useParty, type PartyEvent } from '@/hooks/useParty';
 import { isBoardGame, partyService, type PartyOptions, type PartyPlayer, type PartyState, type ShowItem } from '@/services/partyService';
 import { errorMessage } from '@/localization/errorMessages';
@@ -22,6 +22,9 @@ import { PARTY_LOOK, PARTY_THEME } from './parts/Premium';
 import { RulesModal } from './parts/RulesModal';
 import { PartyWinner } from './parts/PartyWinner';
 import { PartyChat } from './parts/PartyChat';
+
+/** Seconds a finished game stays on screen before everyone leaves by themselves. */
+const AUTO_LEAVE_S = 12;
 
 const buzz = (kind: 'light' | 'heavy' | 'success') => {
   if (!useSettingsStore.getState().haptics) return;
@@ -153,6 +156,24 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
     navigation.goBack();
   };
 
+  // Game over: show the result (winner card, podium) for a while, then leave by ourselves.
+  // The host's "Play again" in that time turns the game back to the lobby and stops this.
+  const finished = state?.game.status === 'finished';
+  const [leaveIn, setLeaveIn] = useState<number | null>(null);
+  useEffect(() => {
+    if (!finished) {
+      setLeaveIn(null);
+      return;
+    }
+    setLeaveIn(AUTO_LEAVE_S);
+    const id = setInterval(() => setLeaveIn((n) => (n === null ? null : Math.max(0, n - 1))), 1000);
+    return () => clearInterval(id);
+  }, [finished]);
+  useEffect(() => {
+    if (leaveIn === 0 && !leaving.current) leave();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [leaveIn]);
+
   const title = state ? t(`party.${state.game.kind}.title`) : '';
 
   if (party.isLoading) {
@@ -198,13 +219,22 @@ function PartyContent({ navigation, route }: ScreenProps<'Party'>) {
           }
         />
       ) : g.status === 'finished' ? (
-        <PartyFinished
-          state={state}
-          busy={busy}
-          onAgain={() => act(() => partyService.playAgain(partyId))}
-          onEnd={() => setConfirm('end')}
-          onLeave={() => setConfirm('leave')}
-        />
+        <>
+          <PartyFinished
+            state={state}
+            busy={busy}
+            onAgain={() => act(() => partyService.playAgain(partyId))}
+            onEnd={() => setConfirm('end')}
+            onLeave={() => setConfirm('leave')}
+          />
+          {leaveIn !== null ? (
+            <View style={{ marginTop: spacing.md, alignSelf: 'center', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 16, backgroundColor: 'rgba(0,0,0,0.35)' }}>
+              <T variant="small" color="#fff" center>
+                {t('party.autoLeave', { count: leaveIn })}
+              </T>
+            </View>
+          ) : null}
+        </>
       ) : (
         <>
           {g.kind === 'seeta' ? (

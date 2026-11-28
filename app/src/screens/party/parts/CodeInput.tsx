@@ -60,6 +60,7 @@ export function CodeInput({
 const styles = StyleSheet.create({
   pill: { flexDirection: 'row', alignItems: 'center', height: 60, borderRadius: 30, borderWidth: 1.5, backgroundColor: 'rgba(0,0,0,0.35)', paddingLeft: 8, paddingRight: 6, gap: 8 },
   key: { width: 36, height: 36, borderRadius: 18, alignItems: 'center', justifyContent: 'center' },
-  input: { flex: 1, height: 56, color: '#fff', fontFamily: fonts.display, fontSize: 24, letterSpacing: 8, textAlign: 'center', paddingVertical: 0 },
+  // Android pads text for accents and Poppins sits off-centre: no font padding, centred line.
+  input: { flex: 1, height: 56, color: '#fff', fontFamily: fonts.display, fontSize: 24, lineHeight: 30, letterSpacing: 8, textAlign: 'center', textAlignVertical: 'center', includeFontPadding: false, paddingVertical: 0 },
   go: { width: 48, height: 48, borderRadius: 24, alignItems: 'center', justifyContent: 'center' },
 });
