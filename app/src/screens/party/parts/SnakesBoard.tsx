@@ -42,6 +42,8 @@ const ellipsePath = (cx: number, cy: number, rx: number, ry: number, deg: number
  */
 function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail: Pt; cell: number; style: SnakeStyle; paint: SnakePaint; lite?: boolean; id: string }) {
   const p = paint;
+  /** Line widths follow the board size, so a small preview looks just like the game board. */
+  const k = Math.max(0.35, cell / 40);
   const { at } = snakeCurve(head, tail, cell);
   const rows = Math.abs(tail.y - head.y) / cell;
   const [wMin, wMax] = style === 'python' ? [0.22, 0.37] : style === 'cute' ? [0.26, 0.38] : [0.2, 0.34];
@@ -95,13 +97,13 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail
     pattern = (
       <>
         {per.map((d, i) => (d ? <Path key={i} d={d} stroke={p.bands![i]} strokeWidth={W * 0.45} /> : null))}
-        <Path d={band(1)} fill="none" stroke={p.line} strokeWidth={1.2} />
+        <Path d={band(1)} fill="none" stroke={p.line} strokeWidth={1.2 * k} />
       </>
     );
   } else if (!lite && style === 'python') {
     let d = '';
     for (const { f, w } of along(1.1)) d += ellipsePath(f.p.x, f.p.y, w * 0.55, w * 0.78, (Math.atan2(f.ty, f.tx) * 180) / Math.PI);
-    pattern = <Path d={d} fill={p.mark} stroke={p.line} strokeWidth={0.6} />;
+    pattern = <Path d={d} fill={p.mark} stroke={p.line} strokeWidth={0.6 * k} />;
   } else if (!lite && (style === 'dots' || style === 'cute')) {
     let d = '';
     for (const { f, w, k } of along(0.8)) d += circlePath(f.p.x + f.ux * w * 0.4 * (k % 2 ? 1 : -1), f.p.y + f.uy * w * 0.4 * (k % 2 ? 1 : -1), w * 0.24);
@@ -114,7 +116,7 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail
   const dl = Math.hypot(h0.x - h1.x, h0.y - h1.y) || 1;
   const ang = (Math.atan2((h0.y - h1.y) / dl, (h0.x - h1.x) / dl) * 180) / Math.PI;
   const tongue = (x0: number, L: number) => (
-    <Path d={`M${f1(x0)} 0 L${f1(x0 + L)} 0 l${f1(L * 0.4)} ${f1(-L * 0.32)} M${f1(x0 + L)} 0 l${f1(L * 0.4)} ${f1(L * 0.32)}`} stroke="#D32F2F" strokeWidth={1.3} strokeLinecap="round" fill="none" />
+    <Path d={`M${f1(x0)} 0 L${f1(x0 + L)} 0 l${f1(L * 0.4)} ${f1(-L * 0.32)} M${f1(x0 + L)} 0 l${f1(L * 0.4)} ${f1(L * 0.32)}`} stroke="#D32F2F" strokeWidth={1.3 * k} strokeLinecap="round" fill="none" />
   );
   let headArt: React.ReactNode;
   if (style === 'cute') {
@@ -122,11 +124,11 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail
     headArt = (
       <>
         {tongue(r * 0.9, r * 0.35)}
-        <Ellipse rx={r} ry={r * 0.9} fill={p.head} stroke={p.line} strokeWidth={1.8} />
+        <Ellipse rx={r} ry={r * 0.9} fill={p.head} stroke={p.line} strokeWidth={1.8 * k} />
         <Path d={circlePath(r * 0.1, -r * 0.42, r * 0.32) + circlePath(r * 0.1, r * 0.42, r * 0.32)} fill="#fff" stroke={p.line} strokeWidth={1} />
         <Path d={circlePath(r * 0.2, -r * 0.42, r * 0.17) + circlePath(r * 0.2, r * 0.42, r * 0.17)} fill="#111" />
         <Path d={circlePath(r * 0.14, -r * 0.5, r * 0.06) + circlePath(r * 0.14, r * 0.34, r * 0.06)} fill="#fff" />
-        <Path d={`M${f1(r * 0.62)} ${f1(-r * 0.3)} Q${f1(r * 0.85)} 0 ${f1(r * 0.62)} ${f1(r * 0.3)}`} stroke={p.line} strokeWidth={1.1} fill="none" strokeLinecap="round" />
+        <Path d={`M${f1(r * 0.62)} ${f1(-r * 0.3)} Q${f1(r * 0.85)} 0 ${f1(r * 0.62)} ${f1(r * 0.3)}`} stroke={p.line} strokeWidth={1.1 * k} fill="none" strokeLinecap="round" />
       </>
     );
   } else {
@@ -146,12 +148,12 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail
         {neon ? (
           <>
             <Path d={hp} fill={p.body} opacity={0.3} transform="scale(1.3)" />
-            <Path d={hp} fill="#0B0F1E" stroke={p.body} strokeWidth={2} />
+            <Path d={hp} fill="#0B0F1E" stroke={p.body} strokeWidth={2 * k} />
           </>
         ) : (
-          <Path d={hp} fill={lite ? p.head : `url(#${id})`} stroke={p.line} strokeWidth={1.2} strokeLinejoin="round" />
+          <Path d={hp} fill={lite ? p.head : `url(#${id})`} stroke={p.line} strokeWidth={1.2 * k} strokeLinejoin="round" />
         )}
-        <Path d={eyes} fill={neon ? p.belly ?? '#fff' : '#fff'} stroke={neon ? undefined : p.line} strokeWidth={0.8} />
+        <Path d={eyes} fill={neon ? p.belly ?? '#fff' : '#fff'} stroke={neon ? undefined : p.line} strokeWidth={0.8 * k} />
         <Path d={pupils} fill="#111" />
       </>
     );
@@ -163,14 +165,14 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail
       <>
         <Path d={band(1.9)} fill={p.body} opacity={0.18} />
         <Path d={band(1.3)} fill={p.body} opacity={0.3} />
-        <Path d={band(1)} fill="#0B0F1E" stroke={p.body} strokeWidth={2} />
+        <Path d={band(1)} fill="#0B0F1E" stroke={p.body} strokeWidth={2 * k} />
       </>
     );
   } else {
     body = (
       <>
-        {lite ? null : <Path d={band(1)} fill="rgba(0,0,0,0.22)" transform="translate(2 2.5)" />}
-        <Path d={band(1)} fill={p.body} stroke={p.line} strokeWidth={style === 'cute' ? 1.8 : 1.2} strokeLinejoin="round" />
+        {lite ? null : <Path d={band(1)} fill="rgba(0,0,0,0.22)" transform={`translate(${f1(2 * k)} ${f1(2.5 * k)})`} />}
+        <Path d={band(1)} fill={p.body} stroke={p.line} strokeWidth={(style === 'cute' ? 1.8 : 1.2) * k} strokeLinejoin="round" />
         {pattern}
         {style === 'cute' || lite ? null : (
           <>
@@ -250,6 +252,9 @@ function LadderArt({ from, to, cell, look, lite }: { from: Pt; to: Pt; cell: num
 export const BoardArt = React.memo(
   function BoardArt({ size, board, design, icons = true, numbers = true, idPrefix = 'b' }: { size: number; board: SnlBoard; design: number; icons?: boolean; numbers?: boolean; idPrefix?: string }) {
     const cell = size / 10;
+    const k = Math.max(0.35, cell / 40);
+    // Small previews: the number in each badge would be unreadable — the badge shape is enough.
+    const small = size < 240;
     const d = BOARD_DESIGNS[design] ?? BOARD_DESIGNS[0];
     const c = (sq: number) => snlCentre(sq, size);
     const pics = icons && numbers ? designIcons(d) : null;
@@ -283,11 +288,11 @@ export const BoardArt = React.memo(
         {[...fills.entries()].map(([fill, path]) => (
           <Path key={fill} d={path} fill={fill} />
         ))}
-        {light ? <Path d={light} stroke="#fff" strokeOpacity={0.5} strokeWidth={1.2} fill="none" /> : null}
-        {dark ? <Path d={dark} stroke="#000" strokeOpacity={0.18} strokeWidth={1.2} fill="none" /> : null}
-        {waves ? <Path d={waves} stroke={d.waves} strokeWidth={1} fill="none" opacity={0.55} /> : null}
-        {bubbles ? <Path d={bubbles} fill="none" stroke={d.bubbles} strokeWidth={0.8} opacity={0.7} /> : null}
-        {badges ? <Path d={badges} fill={d.badge} stroke={d.badgeLine ?? 'rgba(0,0,0,0.35)'} strokeWidth={0.6} /> : null}
+        {light ? <Path d={light} stroke="#fff" strokeOpacity={0.5} strokeWidth={1.2 * k} fill="none" /> : null}
+        {dark ? <Path d={dark} stroke="#000" strokeOpacity={0.18} strokeWidth={1.2 * k} fill="none" /> : null}
+        {waves ? <Path d={waves} stroke={d.waves} strokeWidth={k} fill="none" opacity={0.55} /> : null}
+        {bubbles ? <Path d={bubbles} fill="none" stroke={d.bubbles} strokeWidth={0.8 * k} opacity={0.7} /> : null}
+        {badges ? <Path d={badges} fill={d.badge} stroke={d.badgeLine ?? 'rgba(0,0,0,0.35)'} strokeWidth={0.6 * k} /> : null}
         {numbers
           ? Array.from({ length: 100 }, (_, i) => {
               const sq = i + 1;
@@ -302,7 +307,7 @@ export const BoardArt = React.memo(
                       {pics[i]}
                     </SvgText>
                   ) : null}
-                  {pics ? (
+                  {pics && small ? null : pics ? (
                     <SvgText x={x0 + 1.8 + (cell * wide) / 2} y={y0 + cell * 0.26} fontSize={cell * 0.22} fontWeight="800" fill={d.numC} textAnchor="middle">
                       {sq}
                     </SvgText>

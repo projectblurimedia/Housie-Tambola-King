@@ -91,6 +91,9 @@ function Choice({
 }
 
 /** A party game's details: what it is, how it goes, then create (with its options) or join. */
+/** The design cards all show this one layout (medium, 1), so changing level or layout never redraws them. */
+const SAMPLE_BOARD = SNL_BOARDS[SNL_PER_LEVEL];
+
 /** Grey boxes with a spinner while the board pictures are being drawn. */
 function Placeholders({ size, count }: { size: number; count: number }) {
   const { colors } = useThemeColors();
@@ -363,6 +366,15 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
               ))}
             </Row>
 
+            <Row gap={spacing.md} style={styles.picRow}>
+              <View style={{ flex: 1 }}>
+                <T variant="bodyMedium">{t('party.snakes.pictures')}</T>
+                <T variant="tiny" muted>
+                  {t('party.snakes.picturesDesc')}
+                </T>
+              </View>
+              <Toggle value={pictures} onValueChange={setPictures} tint="#F5B700" />
+            </Row>
             <T variant="bodyMedium">{t('party.snakes.design')}</T>
             <T variant="tiny" muted>
               {t('party.snakes.designDesc')}
@@ -374,7 +386,7 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
                   return (
                     <Pressable key={d.key} onPress={() => setDesign(i)} style={({ pressed }) => [{ alignItems: 'center', gap: 4 }, pressed && { transform: [{ scale: 0.97 }] }]} accessibilityRole="radio" accessibilityState={{ selected: on }}>
                       <LinearGradient colors={on ? ['#FFF1A8', '#F5B700', '#B87400'] : ['transparent', 'transparent']} style={styles.boardEdge}>
-                        {i < shown ? <MiniBoard design={i} board={SNL_BOARDS[boardNo]} size={150} label={String(i + 1)} icons={pictures} /> : <View style={[styles.placeholder, { width: 150, height: 158, backgroundColor: d.frame }]} />}
+                        {i < shown ? <MiniBoard design={i} board={SAMPLE_BOARD} size={150} label={String(i + 1)} icons={pictures} /> : <View style={[styles.placeholder, { width: 150, height: 158, backgroundColor: d.frame }]} />}
                       </LinearGradient>
                       <T variant="tiny" style={{ fontFamily: on ? fonts.bold : fonts.medium }} numberOfLines={1}>
                         {t('party.snakes.designs.' + d.key)}
@@ -395,15 +407,6 @@ function PartyIntroContent({ navigation, route }: ScreenProps<'PartyIntro'>) {
               <Placeholders size={124} count={3} />
             )}
 
-            <Row gap={spacing.md} style={styles.picRow}>
-              <View style={{ flex: 1 }}>
-                <T variant="bodyMedium">{t('party.snakes.pictures')}</T>
-                <T variant="tiny" muted>
-                  {t('party.snakes.picturesDesc')}
-                </T>
-              </View>
-              <Toggle value={pictures} onValueChange={setPictures} tint="#F5B700" />
-            </Row>
 
             <T variant="bodyMedium" style={{ marginTop: spacing.sm }}>
               {t('party.snakes.chooseBoard')}
