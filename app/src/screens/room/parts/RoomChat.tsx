@@ -337,9 +337,9 @@ export function RoomChat({
                   const who = item.userId === meId ? t('common.you') : item.name;
                   return (
                     <View style={[styles.system, { backgroundColor: colors.surfaceAlt }]}>
-                      <Ionicons name={kind === 'join' ? 'log-in-outline' : 'log-out-outline'} size={13} color={kind === 'join' ? colors.success : colors.textMuted} />
+                      <Ionicons name={kind === 'join' ? 'log-in-outline' : kind === 'removed' ? 'remove-circle-outline' : 'log-out-outline'} size={13} color={kind === 'join' ? colors.success : kind === 'removed' ? colors.error : colors.textMuted} />
                       <T variant="tiny" muted>
-                        {t(kind === 'join' ? 'chat.joinedLine' : 'chat.leftLine', { name: who })} · {timeOf(item.at)}
+                        {t(kind === 'join' ? 'chat.joinedLine' : kind === 'removed' ? 'chat.removedLine' : 'chat.leftLine', { name: who })} · {timeOf(item.at)}
                       </T>
                     </View>
                   );

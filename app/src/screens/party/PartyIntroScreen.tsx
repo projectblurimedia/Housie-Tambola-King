@@ -94,39 +94,54 @@ function Choice({
 /** Easy / Medium / Hard: each in its own colours (green, amber, red) with its badge; the chosen one
  * lifts a little with a gold rim and a tick, the others dim. */
 const LEVEL_LOOK = {
-  easy: { colors: ['#34D399', '#059669'], icon: '🌱' },
-  medium: { colors: ['#FBBF24', '#D97706'], icon: '⚡' },
-  hard: { colors: ['#F87171', '#B91C1C'], icon: '🔥' },
+  easy: { colors: ['#34D399', '#059669'], ink: '#047857', soft: '#ECFDF5', icon: '🌱' },
+  medium: { colors: ['#FBBF24', '#D97706'], ink: '#B45309', soft: '#FFFBEB', icon: '⚡' },
+  hard: { colors: ['#F87171', '#DC2626'], ink: '#B91C1C', soft: '#FEF2F2', icon: '🔥' },
 } as const;
+/**
+ * Easy / Medium / Hard: light cards, easy to read — the level's colour on the badge, title and
+ * border. The chosen one fills with its colour (white text), gets a gold rim and a tick.
+ */
 function LevelTile({ level, active, title, desc, onPress }: { level: keyof typeof LEVEL_LOOK; active: boolean; title: string; desc: string; onPress: () => void }) {
   const lk = LEVEL_LOOK[level];
-  const lift = useRef(new Animated.Value(active ? 1 : 0)).current;
+  const pop = useRef(new Animated.Value(active ? 1 : 0)).current;
   useEffect(() => {
-    Animated.spring(lift, { toValue: active ? 1 : 0, friction: 6, tension: 140, useNativeDriver: true }).start();
-  }, [active, lift]);
+    Animated.spring(pop, { toValue: active ? 1 : 0, friction: 6, tension: 160, useNativeDriver: true }).start();
+  }, [active, pop]);
+  const inner = (
+    <>
+      <View style={[styles.levelBadge, { backgroundColor: active ? 'rgba(255,255,255,0.95)' : lk.colors[0] }]}>
+        <T style={{ fontSize: 20, lineHeight: 26 }} maxFontSizeMultiplier={1}>
+          {lk.icon}
+        </T>
+      </View>
+      <T style={[styles.levelTitle, { color: active ? '#FFFFFF' : lk.ink }]} numberOfLines={1}>
+        {title}
+      </T>
+      <T style={[styles.levelDesc, { color: active ? 'rgba(255,255,255,0.95)' : '#4B5563' }]} numberOfLines={2}>
+        {desc}
+      </T>
+      {active ? (
+        <View style={styles.choiceTick}>
+          <Ionicons name="checkmark" size={12} color="#fff" />
+        </View>
+      ) : null}
+    </>
+  );
   return (
-    <Pressable onPress={onPress} style={{ flex: 1 }} accessibilityRole="radio" accessibilityState={{ selected: active }}>
-      <Animated.View style={{ opacity: lift.interpolate({ inputRange: [0, 1], outputRange: [0.6, 1] }), transform: [{ scale: lift.interpolate({ inputRange: [0, 1], outputRange: [0.95, 1.03] }) }] }}>
-        <LinearGradient colors={active ? ['#FFF1A8', '#F5B700', '#B87400'] : ['rgba(255,255,255,0.25)', 'rgba(255,255,255,0.25)']} style={styles.levelRim}>
-          <LinearGradient colors={[...lk.colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.levelTile}>
-            <View style={styles.levelBadge}>
-              <T style={{ fontSize: 20, lineHeight: 26 }} maxFontSizeMultiplier={1}>
-                {lk.icon}
-              </T>
-            </View>
-            <T style={styles.levelTitle} numberOfLines={1}>
-              {title}
-            </T>
-            <T style={styles.levelDesc} numberOfLines={2}>
-              {desc}
-            </T>
-            {active ? (
-              <View style={styles.choiceTick}>
-                <Ionicons name="checkmark" size={12} color="#fff" />
-              </View>
-            ) : null}
+    <Pressable onPress={onPress} style={({ pressed }) => [{ flex: 1 }, pressed && { opacity: 0.9 }]} accessibilityRole="radio" accessibilityState={{ selected: active }}>
+      <Animated.View style={{ transform: [{ scale: pop.interpolate({ inputRange: [0, 1], outputRange: [1, 1.04] }) }] }}>
+        {active ? (
+          <LinearGradient colors={['#FFF1A8', '#F5B700', '#B87400']} style={styles.levelRim}>
+            <LinearGradient colors={[...lk.colors]} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }} style={styles.levelTile}>
+              {inner}
+            </LinearGradient>
           </LinearGradient>
-        </LinearGradient>
+        ) : (
+          <View style={[styles.levelRim, { backgroundColor: lk.colors[0] }]}>
+            <View style={[styles.levelTile, { backgroundColor: lk.soft }]}>{inner}</View>
+          </View>
+        )}
       </Animated.View>
     </Pressable>
   );
@@ -566,9 +581,9 @@ const styles = StyleSheet.create({
   choiceOn: { borderWidth: 2, borderColor: '#FFFFFF' },
   levelRim: { borderRadius: 18, padding: 2.5 },
   levelTile: { borderRadius: 16, paddingVertical: 10, paddingHorizontal: 6, alignItems: 'center', minHeight: 112 },
-  levelBadge: { width: 38, height: 38, borderRadius: 19, backgroundColor: 'rgba(255,255,255,0.9)', alignItems: 'center', justifyContent: 'center', marginBottom: 4, elevation: 3 },
-  levelTitle: { fontFamily: fonts.display, fontSize: 16, lineHeight: 21, color: '#FFFFFF', textShadowColor: 'rgba(0,0,0,0.25)', textShadowRadius: 3, textShadowOffset: { width: 0, height: 1 } },
-  levelDesc: { fontFamily: fonts.semibold, fontSize: 10.5, lineHeight: 14, color: 'rgba(255,255,255,0.95)', textAlign: 'center', marginTop: 2 },
+  levelBadge: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', marginBottom: 4 },
+  levelTitle: { fontFamily: fonts.display, fontSize: 16, lineHeight: 21 },
+  levelDesc: { fontFamily: fonts.semibold, fontSize: 10.5, lineHeight: 14, textAlign: 'center', marginTop: 2 },
   choiceTick: { position: 'absolute', right: 5, top: 5, width: 18, height: 18, borderRadius: 9, backgroundColor: '#16A34A', alignItems: 'center', justifyContent: 'center' },
   diagram: { width: 46, height: 46, flexDirection: 'row', flexWrap: 'wrap', gap: 1.5 },
   diagramCell: { width: 8, height: 8, borderRadius: 2 },

@@ -391,7 +391,7 @@
     "notCheckedYet": "Not checked yet (tap ✕ to remove):",
     "continueGame": "Continue the game",
     "notCheckedYetPlain": "Not checked yet:",
-    "strikeMissedFirst": "Check your ticket: tap the numbers you missed to mark them, then press “I have it too” again.",
+    "strikeMissedFirst": "Glowing numbers were called — tap them, then tap “I have it too” again.",
     "thisPhone": "On this phone",
     "autoRuleHint": "Auto: numbers are struck for you and prizes are awarded automatically.",
     "claimedPrizes": "claimed {{prizes}}",
@@ -765,7 +765,8 @@
     "seenBy_one": "Seen by {{count}}",
     "seenBy_other": "Seen by {{count}}",
     "deleteForEveryone": "Delete for everyone",
-    "deleteConfirm": "Delete this message for everyone in the room?"
+    "deleteConfirm": "Delete this message for everyone in the room?",
+    "removedLine": "{{name}} was removed by the host"
   },
   "prizeSetup": {
     "fast": "Fast numbers",
@@ -776,7 +777,9 @@
     "columnsDesc": "Left (1–3), Centre (4–6), Right (7–9) column groups",
     "fullHouse": "Full Housie",
     "fullHouseDesc": "All 15 numbers",
-    "alwaysOn": "Always on"
+    "alwaysOn": "Always on",
+    "sameLines": "Same prize for every line",
+    "sameColumns": "Same prize for every column"
   },
   "ready": {
     "title": "Prizes are set — get ready!",

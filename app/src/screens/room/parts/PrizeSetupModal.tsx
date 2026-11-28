@@ -52,6 +52,32 @@ const GROUPS: {
 ];
 
 /**
+ * An amount box: the first tap selects the old amount (so typing replaces it); after that typing
+ * goes on normally — Android kept the whole text selected after each change, so typing 1 then 0
+ * replaced the 1 ("0" instead of "10").
+ */
+function AmountInput({ value, onChange, onFocus, style }: { value: string; onChange: (v: string) => void; onFocus: () => void; style: React.ComponentProps<typeof TextInput>['style'] }) {
+  const [sel, setSel] = useState<{ start: number; end: number } | undefined>(undefined);
+  return (
+    <TextInput
+      value={value}
+      selection={sel}
+      onFocus={() => {
+        setSel({ start: 0, end: value.length });
+        onFocus();
+      }}
+      onChangeText={(v) => {
+        setSel(undefined);
+        onChange(v);
+      }}
+      onBlur={() => setSel(undefined)}
+      keyboardType="decimal-pad"
+      style={style}
+    />
+  );
+}
+
+/**
  * Host's prize setup for THIS game, shown before every game: which prizes are on (players
  * may have joined, so the host can change their mind) and how much each pays. The amounts
  * must add up exactly to the pot (tickets × price).
@@ -82,6 +108,8 @@ export function PrizeSetupModal({
   const { colors } = useThemeColors();
   const [enabled, setEnabled] = useState<Set<PrizeType>>(new Set());
   const [values, setValues] = useState<Record<string, string>>({});
+  /** One amount for every line / every column (host's choice). */
+  const [same, setSame] = useState<{ lines: boolean; columns: boolean }>({ lines: false, columns: false });
 
   useEffect(() => {
     if (!visible) return;
@@ -138,12 +166,30 @@ export function PrizeSetupModal({
   /** Typing a prize's amount: Full Housie takes the balance (typing Full Housie itself just sets it). */
   const setAmount = (p: PrizeType, text: string) => {
     const clean = text.replace(/[^0-9.]/g, '').slice(0, 9);
+    const group: PrizeType[] | null = same.lines && LINE_PRIZES.includes(p) ? LINE_PRIZES : same.columns && COLUMN_PRIZES.includes(p) ? COLUMN_PRIZES : null;
     setValues((cur) => {
       const nextValues = { ...cur, [p]: clean };
+      if (group) group.forEach((x) => enabled.has(x) && (nextValues[x] = clean));
       if (p === 'full_house' || !enabled.has('full_house')) return nextValues;
       const amounts = Object.fromEntries([...enabled].map((x) => [x, Number(nextValues[x]) || 0])) as Partial<
         Record<PrizeType, number>
       >;
+      return { ...nextValues, full_house: String(balanceFullHouse(pot, amounts).full_house ?? 0) };
+    });
+  };
+
+  const toggleSame = (key: 'lines' | 'columns') => {
+    const on = !same[key];
+    setSame((x) => ({ ...x, [key]: on }));
+    if (!on) return;
+    const list = (key === 'lines' ? LINE_PRIZES : COLUMN_PRIZES).filter((x) => enabled.has(x));
+    if (!list.length) return;
+    const v = values[list[0]] ?? '0';
+    setValues((cur) => {
+      const nextValues = { ...cur };
+      list.forEach((x) => (nextValues[x] = v));
+      if (!enabled.has('full_house')) return nextValues;
+      const amounts = Object.fromEntries([...enabled].map((x) => [x, Number(nextValues[x]) || 0])) as Partial<Record<PrizeType, number>>;
       return { ...nextValues, full_house: String(balanceFullHouse(pot, amounts).full_house ?? 0) };
     });
   };
@@ -287,6 +333,14 @@ export function PrizeSetupModal({
                   </Row>
                   {groupOn ? (
                     <View style={{ padding: spacing.sm, paddingBottom: 2 }}>
+                      {(g.key === 'lines' || g.key === 'columns') && g.prizes.filter((x) => enabled.has(x)).length > 1 ? (
+                        <Pressable onPress={() => toggleSame(g.key as 'lines' | 'columns')} style={[styles.sameRow, { borderColor: colors.border }]} accessibilityRole="checkbox" accessibilityState={{ checked: same[g.key as 'lines' | 'columns'] }}>
+                          <Ionicons name={same[g.key as 'lines' | 'columns'] ? 'checkbox' : 'square-outline'} size={22} color={colors.primary} />
+                          <T variant="smallBold" style={{ flex: 1 }}>
+                            {t(g.key === 'lines' ? 'prizeSetup.sameLines' : 'prizeSetup.sameColumns')}
+                          </T>
+                        </Pressable>
+                      ) : null}
                       {g.prizes.map((p) => {
                         const on = enabled.has(p);
                         const locked = p === 'full_house';
@@ -317,11 +371,9 @@ export function PrizeSetupModal({
                                 <T variant="smallBold" color={colors.goldDark}>
                                   ₹
                                 </T>
-                                <TextInput
+                                <AmountInput
                                   value={values[p] ?? '0'}
-                                  onChangeText={(v) => setAmount(p, v)}
-                                  keyboardType="decimal-pad"
-                                  selectTextOnFocus
+                                  onChange={(v) => setAmount(p, v)}
                                   onFocus={() => revealRow(p)}
                                   style={[styles.inputText, centeredInput, { color: colors.text }]}
                                 />
@@ -359,6 +411,7 @@ export function PrizeSetupModal({
 }
 
 const styles = StyleSheet.create({
+  sameRow: { flexDirection: 'row', alignItems: 'center', gap: 8, paddingVertical: 8, paddingHorizontal: 10, borderWidth: 1, borderRadius: radius.md, marginBottom: 6 },
   backdrop: { flex: 1, justifyContent: 'flex-end' },
   sheet: {
     borderTopLeftRadius: radius.xl,

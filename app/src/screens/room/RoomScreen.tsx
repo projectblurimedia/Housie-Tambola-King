@@ -388,9 +388,10 @@ function LobbyPanel({
         ? { label: m.userId === me.id ? `✓ ${t('lobby.readyWithTickets', { count: m.tickets })}` : `✓ ${t('lobby.ticketsTaken')}`, color: colors.success }
         : { label: t('lobby.notReady'), color: colors.warning };
     if (m.tickets === 0) return { label: t('lobby.watching'), color: colors.textMuted };
+    // Tickets are all taken now (host is setting prizes): everyone sees how many each player took.
     return readySet.has(m.userId)
-      ? { label: `✓ ${t('lobby.ready')}`, color: colors.success }
-      : { label: t('lobby.notReadyYet'), color: colors.warning };
+      ? { label: `✓ ${t('lobby.ready')} · 🎫 ${m.tickets}`, color: colors.success }
+      : { label: `${t('lobby.notReadyYet')} · 🎫 ${m.tickets}`, color: colors.warning };
   };
 
   return (
@@ -507,7 +508,7 @@ function LobbyPanel({
           {myTickets === 0 ? (
             <>
               <T muted>{t('lobby.noTickets')}</T>
-              <PulseButton title={t('lobby.chooseTickets')} sub={t('lobby.chooseTicketsSub', { count: room.maxTickets ?? 3 })} icon="ticket" onPress={onOpenPicker} />
+              <Button title={t('lobby.chooseTickets')} variant="gold" icon="ticket" onPress={onOpenPicker} />
             </>
           ) : (
             // The tickets themselves appear once the game starts.

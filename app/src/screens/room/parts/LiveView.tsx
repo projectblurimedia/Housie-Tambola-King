@@ -23,13 +23,14 @@ import { useNow } from '@/hooks/useNow';
 import { roomService } from '@/services/roomService';
 import { errorMessage } from '@/localization/errorMessages';
 import { showToast } from '@/state/toastStore';
+import { useMissedHint } from '@/state/missedHintStore';
 import { useMarksStore } from '@/state/marksStore';
 import { useSettingsStore } from '@/state/settingsStore';
 import { playStrikeSound } from '@/services/sounds';
 import { ClaimCheck, useClaimCheckStore } from '@/state/claimCheckStore';
 import { Button } from '@/components/ui';
 import { isPrizeComplete, prizeCompletedAt, prizeNumbers, remainingFor } from '@/game/engine/ticket';
-import { heroGradient, radius, spacing, useThemeColors } from '@/theme';
+import { fonts, heroGradient, radius, spacing, useThemeColors } from '@/theme';
 import type { Me, RoomState, Ticket } from '@/types/api';
 import { StandingsList } from './StandingsList';
 import { GameSettingsSheet } from './GameSettingsSheet';
@@ -99,16 +100,22 @@ export function LiveView({ state, me, serverNow, connected }: { state: RoomState
       ),
     [state.myTickets, marks, calledSet, autoRule],
   );
+  // "I have it too" pressed during this check: every called number not struck yet glows.
+  const missedGame = useMissedHint((x) => x.gameId);
+  const missedCall = useMissedHint((x) => x.call);
+  const showMissed = missedGame === game.id && missedCall === called.length;
   const hintSets = useMemo(
     () =>
-      !autoHint
+      showMissed
+        ? state.myTickets.map((tk, i) => new Set(tk.cells.filter((n) => n > 0 && calledSet.has(n) && !struckSets[i].has(n))))
+        : !autoHint
         ? null
         : room.hintMode === 'next'
           ? // Only the newest number, until the next one is called.
             state.myTickets.map((tk, i) => new Set(last !== null && tk.cells.includes(last) && !struckSets[i].has(last) ? [last] : []))
           : // Every called number, until it's struck.
             state.myTickets.map((tk, i) => new Set(tk.cells.filter((n) => n > 0 && calledSet.has(n) && !struckSets[i].has(n)))),
-    [autoHint, room.hintMode, last, state.myTickets, calledSet, struckSets],
+    [showMissed, autoHint, room.hintMode, last, state.myTickets, calledSet, struckSets],
   );
 
   const msToNext = game.nextCallAt ? new Date(game.nextCallAt).getTime() - serverNow() : 0;
@@ -597,7 +604,7 @@ const styles = StyleSheet.create({
   pauseAskBtn: { flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFEDD5', borderRadius: 999, paddingHorizontal: 12, paddingVertical: 6 },
   checkedBtn: { height: 40, borderRadius: 12, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6 },
   checkedDone: { backgroundColor: 'rgba(22,163,74,0.28)', borderRadius: 12, paddingHorizontal: 10, paddingVertical: 8 },
-  notice: { marginTop: spacing.sm, backgroundColor: '#FFF7D6', borderRadius: radius.md, padding: spacing.sm },
+  notice: { marginTop: 6, backgroundColor: '#FFF7D6', borderRadius: radius.md, paddingVertical: 5, paddingHorizontal: 8 },
   waitChip: { backgroundColor: 'rgba(255,255,255,0.14)', borderRadius: 999, paddingLeft: 3, paddingRight: 9, paddingVertical: 3 },
   pendingBox: { marginTop: spacing.sm, borderRadius: radius.md, padding: spacing.sm, gap: 6 },
   pendingChip: {
@@ -708,6 +715,9 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
     mutationFn: async () => {
       let best: 'none' | 'shared' | 'late' | 'strikeFirst' = 'none';
       const calledSet = new Set(called);
+      // Any called number on my tickets not struck yet? Make them glow so I can tap them.
+      const missedAny = state.myTickets.some((tk) => tk.cells.some((n) => n > 0 && calledSet.has(n) && !(marks[tk.id] ?? []).includes(n)));
+      if (missedAny) useMissedHint.getState().set(game.id, called.length);
       for (const tk of state.myTickets) {
         const struck = new Set((marks[tk.id] ?? []).filter((n) => calledSet.has(n)));
         for (const p of state.prizes) {
@@ -804,9 +814,9 @@ function ClaimHeader({ state, me, serverNow }: { state: RoomState; me: Me; serve
 
       {/* After "I have it too": what to do next, right here (not a passing toast). */}
       {notice ? (
-        <Row gap={spacing.sm} style={styles.notice}>
-          <T style={{ fontSize: 18, lineHeight: 22 }}>{notice === 'strikeFirst' ? '📝' : notice === 'late' ? '⏱️' : '🔍'}</T>
-          <T variant="small" color="#3B0764" style={{ flex: 1 }}>
+        <Row gap={6} style={styles.notice}>
+          <T style={{ fontSize: 14, lineHeight: 18 }}>{notice === 'strikeFirst' ? '📝' : notice === 'late' ? '⏱️' : '🔍'}</T>
+          <T variant="tiny" color="#3B0764" style={{ flex: 1, fontFamily: fonts.semibold }} numberOfLines={2}>
             {notice === 'strikeFirst'
               ? t('game.strikeMissedFirst')
               : notice === 'late'

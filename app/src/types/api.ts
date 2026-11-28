@@ -118,7 +118,7 @@ export interface ChatMessage {
   body: string;
   at: string;
   /** 'join' / 'leave' lines are written by the server when someone joins or leaves. */
-  kind?: 'user' | 'join' | 'leave';
+  kind?: 'user' | 'join' | 'leave' | 'removed';
   /** Deleted for everyone (body is null then). */
   deleted?: boolean;
 }

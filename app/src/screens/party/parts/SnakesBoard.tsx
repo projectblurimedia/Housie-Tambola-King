@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { ActivityIndicator, Animated, Easing, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
+import { ActivityIndicator, Animated, Easing, Image, Modal, Pressable, StyleSheet, useWindowDimensions, View } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Button } from '@/components/ui';
 import { useAfterOpen } from '@/hooks/useAfterOpen';
@@ -40,7 +40,7 @@ const ellipsePath = (cx: number, cy: number, rx: number, ry: number, deg: number
  * smile) or glowing neon — on one smooth body along a natural wave (slim for short snakes, thicker
  * for long ones, fine pointed tail), with its head pinned on the neck inside its own square.
  */
-function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail: Pt; cell: number; style: SnakeStyle; paint: SnakePaint; lite?: boolean; id: string }) {
+function SnakeArt({ head, tail, cell, style, paint, lite, id, part }: { head: Pt; tail: Pt; cell: number; style: SnakeStyle; paint: SnakePaint; lite?: boolean; id: string; part: 'body' | 'head' }) {
   const p = paint;
   /** Line widths follow the board size, so a small preview looks just like the game board. */
   const k = Math.max(0.35, cell / 40);
@@ -183,6 +183,7 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail
       </>
     );
   }
+  if (part === 'body') return <G>{body}</G>;
   return (
     <G>
       {lite || style === 'neon' || style === 'cute' ? null : (
@@ -194,21 +195,21 @@ function SnakeArt({ head, tail, cell, style, paint, lite, id }: { head: Pt; tail
           </RadialGradient>
         </Defs>
       )}
-      {body}
       <G transform={`translate(${f1(h0.x)} ${f1(h0.y)}) rotate(${f1(ang)})`}>{headArt}</G>
     </G>
   );
 }
 
 /** A ladder in the design's style: rope, rainbow steps, gold, candy stripes or white (merged paths). */
-function LadderArt({ from, to, cell, look, lite }: { from: Pt; to: Pt; cell: number; look: LadderLook; lite?: boolean }) {
+function LadderArt({ from, to, cell, look, lite, foot }: { from: Pt; to: Pt; cell: number; look: LadderLook; lite?: boolean; foot?: boolean }) {
   const dx = to.x - from.x;
   const dy = to.y - from.y;
   const len = Math.hypot(dx, dy) || 1;
   const ux = dx / len;
   const uy = dy / len;
   const A = { x: from.x - ux * cell * 0.2, y: from.y - uy * cell * 0.2 };
-  const B = { x: to.x + ux * cell * 0.15, y: to.y + uy * cell * 0.15 };
+  // Foot only: the ladder's first square (its entry point), drawn again over any snake passing it.
+  const B = foot ? { x: from.x + ux * cell * 0.55, y: from.y + uy * cell * 0.55 } : { x: to.x + ux * cell * 0.15, y: to.y + uy * cell * 0.15 };
   const half = cell * (look.half ?? 0.19);
   const px = -uy * half;
   const py = ux * half;
@@ -250,7 +251,7 @@ function LadderArt({ from, to, cell, look, lite }: { from: Pt; to: Pt; cell: num
  * ladders and snakes (every snake its own colour). `numbers={false}` = a light mini version.
  */
 export const BoardArt = React.memo(
-  function BoardArt({ size, board, design, icons = true, numbers = true, idPrefix = 'b' }: { size: number; board: SnlBoard; design: number; icons?: boolean; numbers?: boolean; idPrefix?: string }) {
+  function BoardArt({ size, board, design, icons = true, numbers = true, idPrefix = 'b', svgRef }: { size: number; board: SnlBoard; design: number; icons?: boolean; numbers?: boolean; idPrefix?: string; svgRef?: React.Ref<Svg> }) {
     const cell = size / 10;
     const k = Math.max(0.35, cell / 40);
     // Small previews: the number in each badge would be unreadable — the badge shape is enough.
@@ -283,7 +284,7 @@ export const BoardArt = React.memo(
       if (pics) badges += rectPath(x0 + 1.8, y0 + 1.8, cell * (sq > 99 ? 0.5 : sq > 9 ? 0.4 : 0.3), cell * 0.3, cell * 0.15);
     }
     return (
-      <Svg width={size} height={size}>
+      <Svg ref={svgRef} width={size} height={size}>
         <Rect x={0} y={0} width={size} height={size} fill={d.grout} />
         {[...fills.entries()].map(([fill, path]) => (
           <Path key={fill} d={path} fill={fill} />
@@ -327,8 +328,16 @@ export const BoardArt = React.memo(
         {Object.entries(board.ladders).map(([f, to]) => (
           <LadderArt key={`l${f}`} from={c(Number(f))} to={c(to)} cell={cell} look={LADDER_LOOKS[d.ladder]} lite={!numbers} />
         ))}
+        {/* Layers: ladders, snake bodies, then every ladder's foot (its entry square) over any snake
+            passing it, then every snake's head over any ladder passing it. */}
         {Object.entries(board.snakes).map(([h, tl], i) => (
-          <SnakeArt key={`s${h}`} id={`${idPrefix}h${h}`} style={d.snake} paint={paints[i % paints.length]} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
+          <SnakeArt key={`s${h}`} part="body" id={`${idPrefix}h${h}`} style={d.snake} paint={paints[i % paints.length]} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
+        ))}
+        {Object.entries(board.ladders).map(([f, to]) => (
+          <LadderArt key={`lf${f}`} foot from={c(Number(f))} to={c(to)} cell={cell} look={LADDER_LOOKS[d.ladder]} lite />
+        ))}
+        {Object.entries(board.snakes).map(([h, tl], i) => (
+          <SnakeArt key={`sh${h}`} part="head" id={`${idPrefix}h${h}`} style={d.snake} paint={paints[i % paints.length]} head={c(Number(h))} tail={c(tl)} cell={cell} lite={!numbers} />
         ))}
       </Svg>
     );
@@ -611,16 +620,44 @@ const styles = StyleSheet.create({
   thumbNumText: { color: '#fff', fontSize: 11, lineHeight: 14, fontWeight: '700' },
 });
 
+/** Saved pictures of preview boards (design + pictures + size + layout). */
+const SNAPSHOTS = new Map<string, string>();
+
 /** The game board in small, exactly as in the game: its frame, the yellow title strip, the full board (pictures as chosen). */
 export function MiniBoard({ design, board, size, label, icons = true }: { design: number; board: SnlBoard; size: number; label?: string; icons?: boolean }) {
   const d = BOARD_DESIGNS[design] ?? BOARD_DESIGNS[0];
   const inner = size - 10;
+  // Drawn once, saved as a picture (kept for next time), then shown as an image — images scroll
+  // smoothly, hundreds of vector shapes don't.
+  const key = `${design}|${icons ? 1 : 0}|${inner}|${JSON.stringify(board)}`;
+  const [uri, setUri] = useState<string | undefined>(SNAPSHOTS.get(key));
+  const svg = useRef<Svg>(null);
+  useEffect(() => {
+    const cached = SNAPSHOTS.get(key);
+    if (cached) {
+      setUri(cached);
+      return;
+    }
+    setUri(undefined);
+    const id = setTimeout(() => {
+      svg.current?.toDataURL((b64: string) => {
+        const u = `data:image/png;base64,${b64}`;
+        SNAPSHOTS.set(key, u);
+        setUri(u);
+      });
+    }, 60);
+    return () => clearTimeout(id);
+  }, [key]);
   return (
     // Kept as a ready-made picture while scrolling (no redraw of hundreds of shapes every frame).
     <View renderToHardwareTextureAndroid shouldRasterizeIOS style={[styles.mini, { width: size, backgroundColor: d.frame, borderColor: d.edge }]}>
       <View style={styles.miniBanner} />
       <View style={{ width: inner, height: inner, borderRadius: 3, overflow: 'hidden' }}>
-        <BoardArt size={inner} board={board} design={design} icons={icons} idPrefix={`m${design}_${size}`} />
+        {uri ? (
+          <Image source={{ uri }} style={{ width: inner, height: inner }} fadeDuration={0} />
+        ) : (
+          <BoardArt size={inner} board={board} design={design} icons={icons} idPrefix={`m${design}_${size}`} svgRef={svg} />
+        )}
       </View>
       {label ? (
         <View style={styles.thumbNum}>
